@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ResinLogic Ops Console</title>
+    <style>
+      :root {
+        --bg: #f5f2ea;
+        --panel: #fffdf8;
+        --ink: #1d2a33;
+        --muted: #5b6770;
+        --accent: #0a7f6f;
+        --accent-soft: #d2efe9;
+        --warn: #a35a00;
+        --border: #d7d1c3;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Avenir Next", "Segoe UI", Tahoma, sans-serif;
+        color: var(--ink);
+        background: radial-gradient(circle at 20% 0%, #faf7f1 0%, var(--bg) 40%, #efe9dc 100%);
+      }
+
+      .shell {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 24px 18px 32px;
+      }
+
+      .hero {
+        background: linear-gradient(120deg, #0a7f6f 0%, #1c6e9f 100%);
+        color: white;
+        border-radius: 16px;
+        padding: 22px;
+        box-shadow: 0 16px 30px rgba(13, 31, 45, 0.14);
+      }
+
+      .hero h1 {
+        margin: 0 0 6px;
+        font-size: 1.6rem;
+        letter-spacing: 0.2px;
+      }
+
+      .hero p {
+        margin: 0;
+        opacity: 0.9;
+      }
+
+      .auth-bar {
+        margin-top: 16px;
+        display: grid;
+        gap: 10px;
+        grid-template-columns: 1fr 1fr auto auto;
+      }
+
+      .tabs {
+        margin-top: 18px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .tab {
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 8px 14px;
+        background: #f6f2e8;
+        color: var(--ink);
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+
+      .tab.active {
+        background: var(--accent-soft);
+        border-color: #8ac3b8;
+        color: #0d4f44;
+        font-weight: 600;
+      }
+
+      .panel {
+        margin-top: 14px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 8px 24px rgba(38, 46, 60, 0.08);
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .grid {
+        display: grid;
+        gap: 10px;
+      }
+
+      .grid-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      label {
+        font-size: 0.83rem;
+        color: var(--muted);
+      }
+
+      input,
+      select,
+      textarea,
+      button {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 9px 10px;
+        font-size: 0.95rem;
+        font-family: inherit;
+      }
+
+      textarea {
+        min-height: 160px;
+        resize: vertical;
+      }
+
+      button {
+        background: var(--accent);
+        color: white;
+        border: none;
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      button.secondary {
+        background: #6d7c89;
+      }
+
+      button.warn {
+        background: var(--warn);
+      }
+
+      .row {
+        display: flex;
+        gap: 10px;
+      }
+
+      .row > * {
+        flex: 1;
+      }
+
+      pre {
+        background: #18242e;
+        color: #d8ebff;
+        border-radius: 12px;
+        padding: 12px;
+        overflow: auto;
+        font-size: 0.82rem;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.86rem;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid #ebe3d2;
+        text-align: left;
+        padding: 8px 6px;
+        vertical-align: top;
+      }
+
+      .status {
+        margin-top: 10px;
+        font-size: 0.84rem;
+        color: #0d4f44;
+      }
+
+      @media (max-width: 900px) {
+        .auth-bar,
+        .grid-2,
+        .grid-3 {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <section class="hero">
+        <h1>ResinLogic Ops Console</h1>
+        <p>Pipeline execution, technical catalog management, sync automation, and ops monitoring.</p>
+        <div class="auth-bar">
+          <input id="apiKey" placeholder="X-API-Key (optional in dev mode)" />
+          <input id="actor" placeholder="X-Actor (example: ops-admin)" value="ops-admin" />
+          <button onclick="checkWhoAmI()">Check Auth</button>
+          <button class="secondary" onclick="refreshEverything()">Refresh All</button>
+        </div>
+        <div id="authStatus" class="status"></div>
+      </section>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="pipeline">Pipeline</button>
+        <button class="tab" data-tab="catalog">Catalog</button>
+        <button class="tab" data-tab="sync">Sync + Jobs</button>
+        <button class="tab" data-tab="ops">Ops</button>
+      </div>
+
+      <section id="tab-pipeline" class="panel">
+        <h3>Run Pipeline</h3>
+        <div class="grid grid-3">
+          <div><label>Model</label><input id="pipelineFile" type="file" /></div>
+          <div><label>Resin Type</label><input id="pipelineResin" value="Elegoo 8K Standard" /></div>
+          <div><label>Printer</label><input id="pipelinePrinter" value="Elegoo Mars 5 Ultra" /></div>
+          <div>
+            <label>Use Case</label>
+            <select id="pipelineUseCase">
+              <option value="miniature">miniature</option>
+              <option value="collectible">collectible</option>
+              <option value="heavy_use">heavy_use</option>
+            </select>
+          </div>
+          <div><label>Ambient Temp C</label><input id="pipelineTemp" type="number" step="0.1" /></div>
+          <div><label>Film Releases</label><input id="pipelineFilm" type="number" value="0" /></div>
+        </div>
+        <div class="row" style="margin-top: 10px">
+          <button onclick="runPipeline()">Run Now</button>
+          <button class="secondary" onclick="runPipelineAsync()">Run Async Job</button>
+        </div>
+        <pre id="pipelineOut">No pipeline run yet.</pre>
+      </section>
+
+      <section id="tab-catalog" class="panel hidden">
+        <h3>Catalog Maintenance</h3>
+        <div class="grid grid-2">
+          <div>
+            <label>Add Printer (JSON)</label>
+            <textarea id="printerJson">{ "name": "Anycubic Photon Mono M7 Pro", "xy_resolution_um": 17 }</textarea>
+            <button onclick="postJson('/catalog/printers', 'printerJson', refreshCatalogViews)">Upsert Printer</button>
+          </div>
+          <div>
+            <label>Add Resin (JSON)</label>
+            <textarea id="resinJson">{ "name": "Anycubic ABS-Like Pro 2", "viscosity_cp": 210 }</textarea>
+            <button onclick="postJson('/catalog/resins', 'resinJson', refreshCatalogViews)">Upsert Resin</button>
+          </div>
+        </div>
+        <div style="margin-top: 10px" class="grid grid-2">
+          <div>
+            <label>Add Profile (JSON)</label>
+            <textarea id="profileJson">{ "printer_name": "Elegoo Mars 5 Ultra", "resin_name": "Elegoo 8K Standard", "profile_name": "Default Detail", "layer_height_mm": 0.05, "exposure_s": 2.3, "bottom_exposure_s": 30.0, "is_default": true }</textarea>
+            <button onclick="postJson('/catalog/profiles', 'profileJson', refreshCatalogViews)">Upsert Profile</button>
+          </div>
+          <div>
+            <label>Import CSV</label>
+            <select id="csvEntity">
+              <option value="printers">printers</option>
+              <option value="resins">resins</option>
+              <option value="profiles">profiles</option>
+            </select>
+            <input id="csvFile" type="file" />
+            <button onclick="importCsv()">Import CSV</button>
+            <button class="secondary" onclick="snapshotCatalog()">Create Catalog Snapshot</button>
+          </div>
+        </div>
+        <div class="grid grid-3" style="margin-top: 12px">
+          <div><h4>Printers</h4><pre id="printersOut">Loading...</pre></div>
+          <div><h4>Resins</h4><pre id="resinsOut">Loading...</pre></div>
+          <div><h4>Profiles</h4><pre id="profilesOut">Loading...</pre></div>
+        </div>
+      </section>
+
+      <section id="tab-sync" class="panel hidden">
+        <h3>Technical Sync + Jobs</h3>
+        <div class="grid grid-3">
+          <div>
+            <label>Sync Source</label>
+            <input id="syncSource" value="manual_console" />
+            <label>Sync Payload JSON</label>
+            <textarea id="syncPayload">{ "replace_existing": false, "printers": [], "resins": [], "profiles": [] }</textarea>
+            <div class="row">
+              <button onclick="runSync()">Apply Sync</button>
+              <button class="secondary" onclick="runSyncJob()">Run Sync as Job</button>
+            </div>
+          </div>
+          <div>
+            <label>Upload Sync JSON File</label>
+            <input id="syncFile" type="file" />
+            <button onclick="runSyncFile()">Apply File Sync</button>
+            <button class="secondary" onclick="seedLegacyJob()">Queue Legacy Seed Job</button>
+            <h4 style="margin: 14px 0 6px">Jobs</h4>
+            <button onclick="refreshJobs()">Refresh Jobs</button>
+            <div class="row" style="margin-top: 8px">
+              <input id="cancelJobId" placeholder="Job ID to cancel" />
+              <button class="warn" onclick="cancelJobById()">Cancel</button>
+            </div>
+            <div class="row" style="margin-top: 8px">
+              <input id="cleanupDays" type="number" value="30" />
+              <button class="secondary" onclick="cleanupJobs()">Cleanup Jobs</button>
+            </div>
+            <pre id="jobsOut">No jobs loaded yet.</pre>
+          </div>
+          <div>
+            <label>Schedule JSON</label>
+            <textarea id="schedulePayload">{ "name": "daily_sync", "source": "scheduled_daily", "interval_seconds": 86400, "enabled": true, "replace_existing": false, "payload": { "printers": [], "resins": [], "profiles": [] } }</textarea>
+            <div class="row">
+              <button onclick="saveSchedule()">Upsert Schedule</button>
+              <button class="secondary" onclick="refreshSchedules()">Refresh Schedules</button>
+            </div>
+            <div class="row" style="margin-top: 8px">
+              <button onclick="tickScheduler()">Run Due Now</button>
+              <button class="secondary" onclick="refreshSchedulerHealth()">Scheduler Health</button>
+            </div>
+            <pre id="schedulesOut">No schedules loaded yet.</pre>
+            <pre id="schedulerHealthOut">No scheduler data yet.</pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-ops" class="panel hidden">
+        <h3>Operations</h3>
+        <div class="row">
+          <button onclick="refreshMetrics()">Refresh Metrics</button>
+          <button onclick="refreshAudit()">Refresh Audit</button>
+          <button class="warn" onclick="restoreLatestCatalog()">Restore Latest Catalog Version</button>
+        </div>
+        <div class="grid grid-2" style="margin-top: 10px">
+          <div><h4>Metrics</h4><pre id="metricsOut">Loading...</pre></div>
+          <div><h4>Catalog Versions</h4><pre id="versionsOut">Loading...</pre></div>
+        </div>
+        <h4>Audit Events</h4>
+        <pre id="auditOut">Loading...</pre>
+      </section>
+    </div>
+
+    <script>
+      function headers(json = true) {
+        const out = {};
+        const key = document.getElementById("apiKey").value.trim();
+        const actor = document.getElementById("actor").value.trim();
+        if (key) out["X-API-Key"] = key;
+        if (actor) out["X-Actor"] = actor;
+        if (json) out["Content-Type"] = "application/json";
+        return out;
+      }
+
+      async function callApi(path, opts = {}) {
+        const res = await fetch(path, opts);
+        const text = await res.text();
+        let body = text;
+        try {
+          body = text ? JSON.parse(text) : {};
+        } catch (_) {}
+        if (!res.ok) throw new Error(typeof body === "string" ? body : JSON.stringify(body));
+        return body;
+      }
+
+      async function checkWhoAmI() {
+        const status = document.getElementById("authStatus");
+        try {
+          const who = await callApi("/auth/whoami", { headers: headers(false) });
+          status.textContent = `Actor: ${who.actor} | Role: ${who.role} | Enforced: ${who.auth_enforced}`;
+        } catch (err) {
+          status.textContent = `Auth check failed: ${err.message}`;
+        }
+      }
+
+      async function runPipeline() {
+        const file = document.getElementById("pipelineFile").files[0];
+        if (!file) return alert("Choose a model file first.");
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("resin_type", document.getElementById("pipelineResin").value);
+        fd.append("printer", document.getElementById("pipelinePrinter").value);
+        fd.append("use_case", document.getElementById("pipelineUseCase").value);
+        fd.append("ambient_temp_c", document.getElementById("pipelineTemp").value || "");
+        fd.append("film_releases", document.getElementById("pipelineFilm").value || "0");
+        try {
+          const body = await callApi("/pipeline", { method: "POST", headers: headers(false), body: fd });
+          document.getElementById("pipelineOut").textContent = JSON.stringify(body, null, 2);
+        } catch (err) {
+          document.getElementById("pipelineOut").textContent = `Error: ${err.message}`;
+        }
+      }
+
+      async function runPipelineAsync() {
+        const file = document.getElementById("pipelineFile").files[0];
+        if (!file) return alert("Choose a model file first.");
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("resin_type", document.getElementById("pipelineResin").value);
+        fd.append("printer", document.getElementById("pipelinePrinter").value);
+        fd.append("use_case", document.getElementById("pipelineUseCase").value);
+        fd.append("ambient_temp_c", document.getElementById("pipelineTemp").value || "");
+        fd.append("film_releases", document.getElementById("pipelineFilm").value || "0");
+        const body = await callApi("/jobs/pipeline", { method: "POST", headers: headers(false), body: fd });
+        document.getElementById("pipelineOut").textContent = JSON.stringify(body, null, 2);
+        refreshJobs();
+      }
+
+      async function postJson(path, textareaId, cb) {
+        try {
+          const payload = JSON.parse(document.getElementById(textareaId).value);
+          const body = await callApi(path, {
+            method: "POST",
+            headers: headers(true),
+            body: JSON.stringify(payload),
+          });
+          alert(`Success: ${path}`);
+          if (cb) cb();
+          return body;
+        } catch (err) {
+          alert(`Error: ${err.message}`);
+        }
+      }
+
+      async function importCsv() {
+        const entity = document.getElementById("csvEntity").value;
+        const file = document.getElementById("csvFile").files[0];
+        if (!file) return alert("Choose CSV file.");
+        const fd = new FormData();
+        fd.append("entity", entity);
+        fd.append("file", file);
+        try {
+          const body = await callApi("/catalog/import/csv", {
+            method: "POST",
+            headers: headers(false),
+            body: fd,
+          });
+          alert(`CSV import complete: ${JSON.stringify(body)}`);
+          refreshCatalogViews();
+        } catch (err) {
+          alert(`CSV import failed: ${err.message}`);
+        }
+      }
+
+      async function refreshCatalogViews() {
+        const [printers, resins, profiles] = await Promise.all([
+          callApi("/catalog/printers", { headers: headers(false) }),
+          callApi("/catalog/resins", { headers: headers(false) }),
+          callApi("/catalog/profiles?active_only=true", { headers: headers(false) }),
+        ]);
+        document.getElementById("printersOut").textContent = JSON.stringify(printers, null, 2);
+        document.getElementById("resinsOut").textContent = JSON.stringify(resins, null, 2);
+        document.getElementById("profilesOut").textContent = JSON.stringify(profiles, null, 2);
+      }
+
+      async function snapshotCatalog() {
+        const note = prompt("Snapshot note", "manual console snapshot");
+        if (note === null) return;
+        await callApi("/catalog/versions/snapshot", {
+          method: "POST",
+          headers: headers(true),
+          body: JSON.stringify({ note }),
+        });
+        refreshVersions();
+      }
+
+      async function runSync() {
+        const source = document.getElementById("syncSource").value || "manual_console";
+        const payload = JSON.parse(document.getElementById("syncPayload").value);
+        const body = await callApi("/sync/technical", {
+          method: "POST",
+          headers: headers(true),
+          body: JSON.stringify({ source, replace_existing: false, payload }),
+        });
+        alert(`Sync complete: ${JSON.stringify(body)}`);
+        refreshCatalogViews();
+        refreshVersions();
+      }
+
+      async function runSyncJob() {
+        const source = document.getElementById("syncSource").value || "manual_console";
+        const payload = JSON.parse(document.getElementById("syncPayload").value);
+        await callApi("/sync/technical/job", {
+          method: "POST",
+          headers: headers(true),
+          body: JSON.stringify({ source, replace_existing: false, payload }),
+        });
+        refreshJobs();
+      }
+
+      async function runSyncFile() {
+        const file = document.getElementById("syncFile").files[0];
+        if (!file) return alert("Choose JSON file.");
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("source", document.getElementById("syncSource").value || "file_upload");
+        const body = await callApi("/sync/technical/file", {
+          method: "POST",
+          headers: headers(false),
+          body: fd,
+        });
+        alert(`File sync complete: ${JSON.stringify(body)}`);
+        refreshCatalogViews();
+      }
+
+      async function seedLegacyJob() {
+        await callApi("/ops/jobs/run/seed-legacy", { method: "POST", headers: headers(false) });
+        refreshJobs();
+      }
+
+      async function saveSchedule() {
+        const payload = JSON.parse(document.getElementById("schedulePayload").value);
+        await callApi("/sync/schedules", {
+          method: "POST",
+          headers: headers(true),
+          body: JSON.stringify(payload),
+        });
+        refreshSchedules();
+      }
+
+      async function refreshSchedules() {
+        const data = await callApi("/sync/schedules?limit=100", { headers: headers(false) });
+        document.getElementById("schedulesOut").textContent = JSON.stringify(data, null, 2);
+      }
+
+      async function refreshSchedulerHealth() {
+        const data = await callApi("/sync/scheduler/health", { headers: headers(false) });
+        document.getElementById("schedulerHealthOut").textContent = JSON.stringify(data, null, 2);
+      }
+
+      async function tickScheduler() {
+        const data = await callApi("/sync/scheduler/tick", { method: "POST", headers: headers(false) });
+        alert(`Scheduler tick: ${JSON.stringify(data)}`);
+        refreshSchedules();
+        refreshJobs();
+      }
+
+      async function refreshJobs() {
+        const jobs = await callApi("/jobs?limit=50", { headers: headers(false) });
+        document.getElementById("jobsOut").textContent = JSON.stringify(jobs, null, 2);
+      }
+
+      async function cancelJobById() {
+        const jobId = document.getElementById("cancelJobId").value.trim();
+        if (!jobId) return alert("Enter job id.");
+        const data = await callApi(`/jobs/${encodeURIComponent(jobId)}/cancel`, {
+          method: "POST",
+          headers: headers(false),
+        });
+        alert(`Cancel requested: ${JSON.stringify(data)}`);
+        refreshJobs();
+      }
+
+      async function cleanupJobs() {
+        const days = Number(document.getElementById("cleanupDays").value || "30");
+        const data = await callApi("/jobs/cleanup", {
+          method: "POST",
+          headers: headers(true),
+          body: JSON.stringify({ max_age_days: days, keep_latest: 200 }),
+        });
+        alert(`Cleanup result: ${JSON.stringify(data)}`);
+        refreshJobs();
+      }
+
+      async function refreshMetrics() {
+        const metrics = await callApi("/ops/metrics", { headers: headers(false) });
+        document.getElementById("metricsOut").textContent = JSON.stringify(metrics, null, 2);
+      }
+
+      async function refreshAudit() {
+        const events = await callApi("/ops/audit/events?limit=120", { headers: headers(false) });
+        document.getElementById("auditOut").textContent = JSON.stringify(events, null, 2);
+      }
+
+      async function refreshVersions() {
+        const versions = await callApi("/catalog/versions?limit=40", { headers: headers(false) });
+        document.getElementById("versionsOut").textContent = JSON.stringify(versions, null, 2);
+      }
+
+      async function restoreLatestCatalog() {
+        const versions = await callApi("/catalog/versions?limit=1", { headers: headers(false) });
+        if (!versions.length) return alert("No versions available.");
+        const id = versions[0].id;
+        const body = await callApi("/catalog/versions/restore", {
+          method: "POST",
+          headers: headers(true),
+          body: JSON.stringify({ version_id: id }),
+        });
+        alert(`Restored version ${id}: ${JSON.stringify(body)}`);
+        refreshCatalogViews();
+      }
+
+      async function refreshEverything() {
+        try {
+          await Promise.all([
+            checkWhoAmI(),
+            refreshCatalogViews(),
+            refreshJobs(),
+            refreshSchedules(),
+            refreshSchedulerHealth(),
+            refreshMetrics(),
+            refreshAudit(),
+            refreshVersions(),
+          ]);
+        } catch (_) {}
+      }
+
+      document.querySelectorAll(".tab").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll(".tab").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          const target = btn.dataset.tab;
+          document.querySelectorAll("section[id^='tab-']").forEach((s) => s.classList.add("hidden"));
+          document.getElementById(`tab-${target}`).classList.remove("hidden");
+        });
+      });
+
+      refreshEverything();
+    </script>
+  </body>
+</html>

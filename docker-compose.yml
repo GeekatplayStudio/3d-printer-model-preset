@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    container_name: resinlogic-api
+    ports:
+      - "8000:8000"
+    environment:
+      RESINLOGIC_ENFORCE_AUTH: "1"
+      RESINLOGIC_ADMIN_API_KEY: "change-me-admin"
+      RESINLOGIC_OPERATOR_API_KEY: "change-me-operator"
+      RESINLOGIC_VIEWER_API_KEY: "change-me-viewer"
+      RESINLOGIC_ENABLE_DEFAULT_KEYS: "0"
+      RESINLOGIC_ENABLE_SCHEDULER: "1"
+    volumes:
+      - ./data:/app/data
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: resinlogic-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./ops/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - api

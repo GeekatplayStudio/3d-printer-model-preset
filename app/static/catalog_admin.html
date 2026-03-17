@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Catalog Admin</title>
+    <style>
+      :root {
+        --bg: #f5f7fa;
+        --panel: #ffffff;
+        --ink: #1c2430;
+        --line: #d8e0ea;
+        --accent: #165dff;
+        --ok: #1a8f3a;
+        --warn: #b56a00;
+      }
+      body {
+        margin: 0;
+        padding: 24px;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Segoe UI", Tahoma, sans-serif;
+      }
+      h1 { margin: 0 0 12px; }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 16px;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px;
+      }
+      .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+      .row + .row { margin-top: 8px; }
+      input, select, button, textarea {
+        font: inherit;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 8px 10px;
+        background: #fff;
+      }
+      textarea { min-height: 120px; width: 100%; }
+      button { cursor: pointer; }
+      button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      th, td {
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        padding: 6px;
+        vertical-align: top;
+      }
+      .log {
+        white-space: pre-wrap;
+        background: #f0f4f8;
+        border: 1px dashed var(--line);
+        border-radius: 8px;
+        padding: 8px;
+        max-height: 220px;
+        overflow: auto;
+      }
+      .badge { padding: 2px 8px; border-radius: 999px; font-size: 12px; }
+      .ok { background: #e7f7ec; color: var(--ok); }
+      .warn { background: #fff3e2; color: var(--warn); }
+      .muted { color: #617084; font-size: 12px; }
+      .table-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+      button.small {
+        padding: 4px 8px;
+        font-size: 12px;
+        border-radius: 6px;
+      }
+      button.danger {
+        background: #8f2d2d;
+        color: #fff;
+        border-color: #8f2d2d;
+      }
+      .table-wrap {
+        max-height: 360px;
+        overflow: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Technical Catalog Admin</h1>
+    <div class="muted">Maintain printers, resins, and compatibility profiles in <code>tech_catalog.db</code>.</div>
+
+    <div class="grid" style="margin-top:12px">
+      <section class="card">
+        <h3>Health</h3>
+        <div class="row">
+          <button class="primary" onclick="loadHealth()">Refresh</button>
+          <span id="healthBadge" class="badge">unknown</span>
+        </div>
+        <div id="healthText" class="log" style="margin-top:8px"></div>
+      </section>
+
+      <section class="card">
+        <h3>Bulk CSV Import</h3>
+        <div class="row">
+          <select id="csvEntity">
+            <option value="printers">printers</option>
+            <option value="resins">resins</option>
+            <option value="profiles">profiles</option>
+          </select>
+          <input type="file" id="csvFile" />
+          <button class="primary" onclick="importCsv()">Import CSV</button>
+        </div>
+        <div class="muted">Expected columns align with API fields. Profiles can use <code>printer_id/resin_id</code> or <code>printer_name/resin_name</code>.</div>
+        <div id="csvResult" class="log" style="margin-top:8px"></div>
+      </section>
+
+      <section class="card">
+        <h3>Create Printer</h3>
+        <div class="row"><input id="pName" placeholder="Name (required)" style="flex:1" /></div>
+        <div class="row">
+          <input id="pBrand" placeholder="Brand" />
+          <input id="pModel" placeholder="Model" />
+          <input id="pXy" placeholder="XY um" />
+        </div>
+        <div class="row">
+          <button class="primary" onclick="createPrinter()">Save Printer</button>
+          <button onclick="loadPrinters()">Refresh List</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>Create Resin</h3>
+        <div class="row"><input id="rName" placeholder="Name (required)" style="flex:1" /></div>
+        <div class="row">
+          <input id="rBrand" placeholder="Brand" />
+          <input id="rSeries" placeholder="Series" />
+          <input id="rVisc" placeholder="Viscosity cP" />
+        </div>
+        <div class="row">
+          <button class="primary" onclick="createResin()">Save Resin</button>
+          <button onclick="loadResins()">Refresh List</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>Create Profile</h3>
+        <div class="row">
+          <input id="prPrinterName" placeholder="Printer name (required)" style="flex:1" />
+        </div>
+        <div class="row">
+          <input id="prResinName" placeholder="Resin name (required)" style="flex:1" />
+        </div>
+        <div class="row">
+          <input id="prName" placeholder="Profile name (required)" style="flex:1" />
+          <input id="prLayer" placeholder="Layer mm" />
+        </div>
+        <div class="row">
+          <input id="prExp" placeholder="Exposure s" />
+          <input id="prBottom" placeholder="Bottom exp s" />
+          <input id="prTilt" placeholder="Tilt ref mm/h" />
+        </div>
+        <div class="row">
+          <button class="primary" onclick="createProfile()">Save Profile</button>
+          <button onclick="loadProfiles()">Refresh List</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>Catalog Export/Import JSON</h3>
+        <div class="row">
+          <button onclick="exportCatalog()">Export JSON</button>
+          <button class="primary" onclick="importJson()">Import JSON</button>
+        </div>
+        <textarea id="jsonArea" placeholder="Paste export JSON here for import"></textarea>
+      </section>
+    </div>
+
+    <div class="grid" style="margin-top:16px">
+      <section class="card">
+        <h3>Printers</h3>
+        <div class="row">
+          <input id="printerQuery" placeholder="Search printers (name/brand/model)" style="flex:1" />
+          <button onclick="loadPrinters()">Search</button>
+        </div>
+        <div class="table-wrap" style="margin-top:8px">
+          <table id="printersTable"></table>
+        </div>
+      </section>
+      <section class="card">
+        <h3>Resins</h3>
+        <div class="row">
+          <input id="resinQuery" placeholder="Search resins (name/brand/series)" style="flex:1" />
+          <button onclick="loadResins()">Search</button>
+        </div>
+        <div class="table-wrap" style="margin-top:8px">
+          <table id="resinsTable"></table>
+        </div>
+      </section>
+      <section class="card" style="grid-column:1/-1">
+        <h3>Profiles</h3>
+        <div class="row">
+          <input id="profileQuery" placeholder="Search profiles (printer/resin/profile)" style="flex:1" />
+          <button onclick="loadProfiles()">Search</button>
+        </div>
+        <div class="row">
+          <label><input id="profileActiveOnly" type="checkbox" checked /> Active only</label>
+        </div>
+        <div class="table-wrap" style="margin-top:8px">
+          <table id="profilesTable"></table>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      async function api(url, options = {}) {
+        const res = await fetch(url, options);
+        const text = await res.text();
+        let data = {};
+        try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
+        if (!res.ok) throw new Error(data.detail || JSON.stringify(data));
+        return data;
+      }
+
+      function setLog(id, value) {
+        document.getElementById(id).textContent = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+      }
+
+      function toNum(v) {
+        if (!v) return null;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : null;
+      }
+
+      async function loadHealth() {
+        try {
+          const data = await api("/catalog/health");
+          setLog("healthText", data);
+          const badge = document.getElementById("healthBadge");
+          badge.textContent = "ok";
+          badge.className = "badge ok";
+        } catch (err) {
+          const badge = document.getElementById("healthBadge");
+          badge.textContent = "error";
+          badge.className = "badge warn";
+          setLog("healthText", String(err));
+        }
+      }
+
+      async function createPrinter() {
+        const payload = {
+          name: document.getElementById("pName").value.trim(),
+          brand: document.getElementById("pBrand").value.trim() || null,
+          model: document.getElementById("pModel").value.trim() || null,
+          xy_resolution_um: toNum(document.getElementById("pXy").value),
+        };
+        await api("/catalog/printers", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+        await loadPrinters();
+      }
+
+      async function createResin() {
+        const payload = {
+          name: document.getElementById("rName").value.trim(),
+          brand: document.getElementById("rBrand").value.trim() || null,
+          series: document.getElementById("rSeries").value.trim() || null,
+          viscosity_cp: toNum(document.getElementById("rVisc").value),
+        };
+        await api("/catalog/resins", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+        await loadResins();
+      }
+
+      async function createProfile() {
+        const payload = {
+          printer_name: document.getElementById("prPrinterName").value.trim(),
+          resin_name: document.getElementById("prResinName").value.trim(),
+          profile_name: document.getElementById("prName").value.trim(),
+          layer_height_mm: toNum(document.getElementById("prLayer").value),
+          exposure_s: toNum(document.getElementById("prExp").value),
+          bottom_exposure_s: toNum(document.getElementById("prBottom").value),
+          tilt_speed_reference_mm_h: toNum(document.getElementById("prTilt").value),
+          is_default: true,
+          is_active: true,
+        };
+        await api("/catalog/profiles", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+        await loadProfiles();
+      }
+
+      let printersCache = [];
+      let resinsCache = [];
+      let profilesCache = [];
+
+      function escapeHtml(value) {
+        return String(value ?? "").replace(/[&<>"']/g, (ch) => {
+          const map = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+          return map[ch] || ch;
+        });
+      }
+
+      function displayCell(value) {
+        if (value === null || value === undefined) return "";
+        if (typeof value === "object") return `<code>${escapeHtml(JSON.stringify(value))}</code>`;
+        if (typeof value === "boolean") return value ? "true" : "false";
+        return escapeHtml(value);
+      }
+
+      function renderTable(id, columns, rows, actions = null) {
+        const table = document.getElementById(id);
+        const head = "<tr>" + columns.map((c) => `<th>${c}</th>`).join("") + (actions ? "<th>actions</th>" : "") + "</tr>";
+        const emptyRow = `<tr><td colspan="${columns.length + (actions ? 1 : 0)}">No records.</td></tr>`;
+        const body = rows.length
+          ? rows
+              .map((row) => {
+                const cols = columns.map((c) => `<td>${displayCell(row[c])}</td>`).join("");
+                const actionCell = actions ? `<td><div class="table-actions">${actions(row)}</div></td>` : "";
+                return `<tr>${cols}${actionCell}</tr>`;
+              })
+              .join("")
+          : emptyRow;
+        table.innerHTML = head + body;
+      }
+
+      function buildPrinterPatchInput(row) {
+        const { id, ...payload } = row;
+        return payload;
+      }
+
+      function buildResinPatchInput(row) {
+        const { id, ...payload } = row;
+        return payload;
+      }
+
+      function buildProfilePatchInput(row) {
+        const { id, printer_name, resin_name, ...payload } = row;
+        return payload;
+      }
+
+      async function editPrinter(id) {
+        const current = printersCache.find((item) => item.id === id);
+        if (!current) return;
+        const raw = prompt("Edit printer JSON", JSON.stringify(buildPrinterPatchInput(current), null, 2));
+        if (raw === null) return;
+        const payload = JSON.parse(raw);
+        await api(`/catalog/printers/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        await Promise.all([loadHealth(), loadPrinters()]);
+      }
+
+      async function deletePrinterById(id) {
+        if (!confirm(`Delete printer ${id}?`)) return;
+        await api(`/catalog/printers/${id}`, { method: "DELETE" });
+        await Promise.all([loadHealth(), loadPrinters(), loadProfiles()]);
+      }
+
+      async function editResin(id) {
+        const current = resinsCache.find((item) => item.id === id);
+        if (!current) return;
+        const raw = prompt("Edit resin JSON", JSON.stringify(buildResinPatchInput(current), null, 2));
+        if (raw === null) return;
+        const payload = JSON.parse(raw);
+        await api(`/catalog/resins/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        await Promise.all([loadHealth(), loadResins()]);
+      }
+
+      async function deleteResinById(id) {
+        if (!confirm(`Delete resin ${id}?`)) return;
+        await api(`/catalog/resins/${id}`, { method: "DELETE" });
+        await Promise.all([loadHealth(), loadResins(), loadProfiles()]);
+      }
+
+      async function editProfile(id) {
+        const current = profilesCache.find((item) => item.id === id);
+        if (!current) return;
+        const raw = prompt(
+          "Edit profile JSON (use printer_id/resin_id to move profile)",
+          JSON.stringify(buildProfilePatchInput(current), null, 2),
+        );
+        if (raw === null) return;
+        const payload = JSON.parse(raw);
+        await api(`/catalog/profiles/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        await Promise.all([loadHealth(), loadProfiles()]);
+      }
+
+      async function deleteProfileById(id) {
+        if (!confirm(`Delete profile ${id}?`)) return;
+        await api(`/catalog/profiles/${id}`, { method: "DELETE" });
+        await Promise.all([loadHealth(), loadProfiles()]);
+      }
+
+      async function loadPrinters() {
+        const query = document.getElementById("printerQuery").value.trim();
+        const path = `/catalog/printers?limit=500${query ? `&query=${encodeURIComponent(query)}` : ""}`;
+        const rows = await api(path);
+        printersCache = rows;
+        renderTable(
+          "printersTable",
+          ["id", "name", "brand", "model", "xy_resolution_um"],
+          rows,
+          (row) =>
+            `<button class="small" onclick="editPrinter(${row.id})">Edit</button>` +
+            `<button class="small danger" onclick="deletePrinterById(${row.id})">Delete</button>`,
+        );
+      }
+
+      async function loadResins() {
+        const query = document.getElementById("resinQuery").value.trim();
+        const path = `/catalog/resins?limit=500${query ? `&query=${encodeURIComponent(query)}` : ""}`;
+        const rows = await api(path);
+        resinsCache = rows;
+        renderTable(
+          "resinsTable",
+          ["id", "name", "brand", "series", "viscosity_cp", "shore_hardness", "shrinkage_percent"],
+          rows,
+          (row) =>
+            `<button class="small" onclick="editResin(${row.id})">Edit</button>` +
+            `<button class="small danger" onclick="deleteResinById(${row.id})">Delete</button>`,
+        );
+      }
+
+      async function loadProfiles() {
+        const query = document.getElementById("profileQuery").value.trim();
+        const activeOnly = document.getElementById("profileActiveOnly").checked;
+        const path =
+          `/catalog/profiles?limit=1000&active_only=${activeOnly}` +
+          (query ? `&query=${encodeURIComponent(query)}` : "");
+        const rows = await api(path);
+        profilesCache = rows;
+        renderTable(
+          "profilesTable",
+          [
+            "id",
+            "printer_name",
+            "resin_name",
+            "profile_name",
+            "layer_height_mm",
+            "exposure_s",
+            "bottom_exposure_s",
+            "tilt_speed_reference_mm_h",
+            "is_default",
+            "is_active",
+          ],
+          rows,
+          (row) =>
+            `<button class="small" onclick="editProfile(${row.id})">Edit</button>` +
+            `<button class="small danger" onclick="deleteProfileById(${row.id})">Delete</button>`,
+        );
+      }
+
+      async function exportCatalog() {
+        const data = await api("/catalog/export");
+        document.getElementById("jsonArea").value = JSON.stringify(data, null, 2);
+      }
+
+      async function importJson() {
+        const raw = document.getElementById("jsonArea").value.trim();
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        await api("/catalog/import", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+        await Promise.all([loadHealth(), loadPrinters(), loadResins(), loadProfiles()]);
+      }
+
+      async function importCsv() {
+        const entity = document.getElementById("csvEntity").value;
+        const fileInput = document.getElementById("csvFile");
+        if (!fileInput.files || !fileInput.files.length) {
+          setLog("csvResult", "Select a CSV file first.");
+          return;
+        }
+        const form = new FormData();
+        form.append("entity", entity);
+        form.append("file", fileInput.files[0]);
+        const data = await api("/catalog/import/csv", { method: "POST", body: form });
+        setLog("csvResult", data);
+        await Promise.all([loadHealth(), loadPrinters(), loadResins(), loadProfiles()]);
+      }
+
+      ["printerQuery", "resinQuery", "profileQuery"].forEach((id) => {
+        document.getElementById(id).addEventListener("keydown", (event) => {
+          if (event.key !== "Enter") return;
+          if (id === "printerQuery") loadPrinters();
+          if (id === "resinQuery") loadResins();
+          if (id === "profileQuery") loadProfiles();
+        });
+      });
+      document.getElementById("profileActiveOnly").addEventListener("change", loadProfiles);
+
+      (async function init() {
+        await Promise.all([loadHealth(), loadPrinters(), loadResins(), loadProfiles()]);
+      })();
+    </script>
+  </body>
+</html>
