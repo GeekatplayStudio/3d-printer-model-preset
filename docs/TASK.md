@@ -1,48 +1,75 @@
-# Agentic Coding Roadmap
+# Agentic Coding Roadmap (Execution Tracker)
 
-## Phase 1: Geometry & Structure Agent
+## Legend
 
-- Extract cross-sectional area per slice (`0.01mm` default requested)
-- Detect suction-cup risk via enclosed-volume analysis
-- Detect unsupported islands layer-by-layer
-- Compute detail density (`triangle_count / surface_area`)
-- Compute Surface Area Ratio (SAR) and infer intent (`miniature`, `collectible`, `heavy_use`)
+- `[x]` completed
+- `[~]` in progress
+- `[ ]` planned
+
+## Phase 1: Geometry and Structure Agent
+
+- `[x]` mesh ingestion and basic geometry features
+- `[x]` cross-section area scan pipeline
+- `[x]` detail density and SAR metrics
+- `[x]` intent estimation heuristic (`miniature`, `collectible`, `heavy_use`)
+- `[~]` suction-cup/island heuristics hardening
+- `[ ]` advanced stress confidence scoring and benchmark suite
 
 Primary module: `app/geometry.py`
 
 ## Phase 2: Parameter Injection Agent
 
-- Apply Mars 5 Ultra tilt-release mapping
-- Generate use-case specific settings
-- Inject multi-parameter slicing guidance
-- Export Chitubox-compatible `.cfg` text and SDCP payload structure
-- Add history-aware adaptation mode to tune exposure using stored Phase 3 outcomes
+- `[x]` use-case routing and baseline parameter templates
+- `[x]` Mars 5 Ultra tilt logic gates
+- `[x]` temperature compensation
+- `[x]` ACF film age compensation
+- `[x]` multi-parameter slicing output structure
+- `[x]` Chitubox cfg text export and SDCP payload structure
+- `[x]` history-aware optimization endpoint
+- `[ ]` direct SDCP bidirectional runtime integration
 
 Primary modules: `app/logic.py`, `app/chitubox.py`
 
 ## Phase 3: Resin Intelligence Agent
 
-- Ingest curated community feedback data
-- Separate likely marketing-style posts from parameter-backed logs
-- Flag blooming/delamination reports for printer+resin combinations
-- Parse Mars 5 Ultra camera/error logs and suggest direct parameter corrections
+- `[x]` community sheet ingestion from file and URL
+- `[x]` YouTube transcript ingestion flow
+- `[x]` camera log parser for warp/empty-plate/delamination/blooming cues
+- `[x]` persisted feedback history with query and summary endpoints
+- `[~]` stronger trust/quality scoring for external feedback sources
+- `[ ]` adaptive weighting by source reliability and recency
+
+Primary modules: `app/feedback_sources.py`, `app/feedback_store.py`, `app/camera_log.py`
 
 ## Catalog Maintenance Agent
 
-- Maintain printer technical metadata for all supported devices
-- Maintain resin technical metadata across vendors and generations
-- Maintain printer-resin compatibility profiles via CRUD and import/export workflows
-- Create versioned catalog snapshots and allow rollback to prior revisions
-- Track all operational mutations in audit history
-- Expose async jobs for long-running maintenance and sync operations
+- `[x]` normalized printer/resin/profile schema
+- `[x]` full CRUD APIs
+- `[x]` JSON and CSV import/export
+- `[x]` catalog snapshot and restore
+- `[x]` audit trail for catalog mutations
+- `[x]` admin UI with search and row-level edit/delete
+- `[ ]` migration/version policy for schema changes
+- `[ ]` stricter data validation and dedupe rules for bulk ingestion
 
-Primary modules: `app/catalog_store.py`, `app/audit_store.py`
+Primary modules: `app/catalog_store.py`, `app/audit_store.py`, `app/static/catalog_admin.html`
 
 ## Operations Agent
 
-- Enforce RBAC policies for viewer/operator/admin workflows
-- Surface request metrics and Prometheus export
-- Run async pipeline/sync jobs and expose live job status APIs
-- Provide a single browser console (`/app`) for operators
+- `[x]` RBAC auth model
+- `[x]` async job queue with persistence
+- `[x]` job cancellation and retention cleanup
+- `[x]` sync schedule store and scheduler tick/health endpoints
+- `[x]` optional background scheduler
+- `[x]` metrics endpoint and Prometheus export
+- `[x]` unified ops console (`/app`)
+- `[ ]` workflow-specific dashboards and SLO alerting presets
 
-Primary modules: `app/auth.py`, `app/job_queue.py`, `app/monitoring.py`
+Primary modules: `app/auth.py`, `app/job_queue.py`, `app/scheduler.py`, `app/monitoring.py`, `app/static/app.html`
+
+## Immediate Next Sprint
+
+1. Harden geometry heuristics with test corpus and confidence outputs.
+2. Add catalog data quality constraints for imported records.
+3. Start frontend redesign plan (React migration, stress-map UX).
+4. Define schema migration strategy and release policy.

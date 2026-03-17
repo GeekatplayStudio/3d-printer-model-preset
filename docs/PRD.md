@@ -1,46 +1,117 @@
-# Product Requirements Document
+# Product Requirements Document (PRD)
 
-## Primary User Goals
+## Product Name
 
-- Auto-derive stable, quality-focused Mars 5 Ultra settings from geometry + resin context
-- Minimize failed prints caused by peel force, blooming, and delamination
-- Provide explainable recommendations per use case
+ResinLogic AI
+
+## Product Vision
+
+Build an agentic assistant for resin printing that converts high-level goals into reliable, explainable printer settings, while also giving operators full control to maintain technical data for all printers and all resins.
+
+## Problem Statement
+
+Resin printing setup is fragmented, manual, and error-prone:
+
+- printer and resin parameters vary by hardware and environment,
+- online recommendations are inconsistent,
+- operators need fast updates to technical profiles without breaking production.
+
+ResinLogic AI solves this by combining geometry analysis, catalog intelligence, and feedback-driven adaptation in a modular workflow.
+
+## Target Users
+
+- Hobby and professional resin print operators.
+- Lab/studio teams maintaining multiple printer models and resin lines.
+- Technical admins managing profile data, sync jobs, and operational auditability.
+
+## Core User Outcomes
+
+- Get high-quality first-pass settings for a model, printer, and resin.
+- Reduce print failures from peel-force stress, blooming, delamination, and environment mismatch.
+- Maintain a shared technical database with safe rollback and clear audit trails.
+
+## Product Scope (Current)
+
+### Workflow
+
+- Upload model and run full pipeline (`/pipeline`).
+- Analyze geometry only (`/phase1/analyze`).
+- Generate optimized settings (`/phase2/optimize` and history-aware variant).
+- Import and summarize feedback from files, URLs, YouTube, and camera logs.
+
+### Data Maintenance
+
+- CRUD APIs for printers, resins, and compatibility profiles.
+- CSV/JSON import/export.
+- Catalog snapshots and restore.
+- Search and row-level editing from admin UI.
+
+### Operations
+
+- RBAC auth with API keys.
+- Async jobs with status, cancel, and cleanup.
+- Scheduled sync definitions and manual/background execution.
+- Metrics and Prometheus export.
 
 ## Use Cases
 
 ### Miniature
 
-- Target: max detail
-- Defaults: 18um XY, 0.02mm layer, 1.8s baseline exposure
+- Priority: maximum detail.
+- Typical defaults: low layer height, fast tilt only when cross-section risk is low.
 
 ### Collectible
 
-- Target: smooth surface
-- Defaults: anti-aliasing 4, grayscale level 2, slower tilt profile
+- Priority: surface finish.
+- Typical defaults: anti-aliasing + slower peel behavior for larger sections.
 
 ### Heavy Use
 
-- Target: structural strength
-- Defaults: +15% bottom exposure, 0.05mm layer, tough-resin recommendation
+- Priority: structural strength and fit.
+- Typical defaults: stronger adhesion and conservative exposure behavior.
 
-## Feature Requirements
+## Functional Requirements
 
-- Tilt-release prediction and tilt-angle recommendation
-- Multi-parameter slicing profile output (supports vs delicate features)
-- Temperature-aware exposure compensation
-- Vat film life compensation once release count is high
-- Persistent feedback memory with query/summary by printer+resin+date
-- History-aware optimization loop: use prior blooming/delamination outcomes to tune next exposure suggestion
-- Camera log loop: parse Warp/Empty-plate errors and suggest next-job overrides
-- Intent classifier with SAR-backed routing between miniature/collectible/heavy-use modes
-- Full catalog maintenance APIs for all printers and all resins (create/update/delete/import/export)
-- Catalog version snapshots and restore workflow for safe rollback
-- Async job execution for heavy operations (pipeline and technical sync)
-- Role-based operational access with API key policy controls
-- Unified browser UI for operators (`/app`)
+1. Geometry Intent Detection
+- compute SAR/detail-density features and stress proxies from mesh input.
 
-## Future Work
+2. Parameter Decision Engine
+- produce explainable settings from geometry + resin + printer + environment.
 
-- Real-time Mars 5 Ultra AI camera/error log feedback loop
-- Direct SDCP bidirectional communication with slicer/printer stack
-- Dedicated React + Three.js 3D stress-map frontend replacing static-console MVP
+3. Catalog Intelligence
+- load profile overrides from maintained printer-resin compatibility catalog.
+
+4. Feedback Intelligence
+- ingest and persist field feedback and use it to adapt future recommendations.
+
+5. Ops and Governance
+- enforce RBAC, track audit events, and provide rollback path for catalog edits.
+
+6. Scalability of Data Maintenance
+- support all printer and resin entries, not only Mars 5 Ultra.
+
+## Non-Functional Requirements
+
+- Deterministic and explainable outputs.
+- Persistent storage for catalog, jobs, audit, schedules, feedback.
+- Secure-by-config auth for production mode.
+- Scriptable and API-first design for automation.
+
+## Success Metrics
+
+- Reduction in failed prints after first recommendation cycle.
+- Catalog update turnaround time.
+- Percentage of jobs completed without manual parameter override.
+- Increase in operator confidence from explainability and rollback tooling.
+
+## Out of Scope (Current Release)
+
+- Full real-time printer control loop for all vendors.
+- Fully automated closed-loop camera correction without operator confirmation.
+- Final polished enterprise frontend beyond current ops/admin UIs.
+
+## Release Priorities
+
+1. Stability and data quality hardening.
+2. Frontend UX uplift.
+3. Wider integration coverage (SDCP and external data connectors).
