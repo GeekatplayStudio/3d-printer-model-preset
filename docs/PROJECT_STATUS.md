@@ -47,13 +47,25 @@ The immediate production target started around Elegoo Mars 5 Ultra behavior, but
 
 ### Operations and Reliability
 
-- RBAC authentication (`viewer`, `operator`, `admin`).
+- Standalone local-first runtime with per-user SQLite storage.
+- Optional RBAC authentication via `Authorization` tokens (`viewer`, `operator`, `admin`).
 - Async jobs with persistent history.
 - Job cancellation and retention cleanup.
 - Scheduled sync definitions and manual/background schedule execution.
 - Request metrics and Prometheus output.
 - Dockerized run path and Prometheus config.
-- Test coverage across core modules and API behavior (currently 45 passing tests).
+- Source-attributed official seed dataset (`data/official_catalog_sync.json`) plus local import script.
+- Wizard pipeline UX hardening for large models:
+  - STL-only upload constraints,
+  - progress messaging while analyze/fix runs,
+  - adaptive timeout windows by analysis depth + model size.
+- Memory-safe minimum analysis path with large-model runtime optimizations and step timing telemetry.
+- Settings provenance surface:
+  - data quality classification (`verified_sources`, `catalog_unverified`, `fallback_defaults`),
+  - confidence score passthrough where available,
+  - source reference list exposed in wizard output.
+- Compatibility-aware wizard dropdown behavior (printer selection filters resin list to real profile coverage).
+- Test coverage across core modules and API behavior (currently 71 passing tests).
 
 ## What Still Needs To Be Done
 
@@ -67,7 +79,7 @@ The immediate production target started around Elegoo Mars 5 Ultra behavior, but
 
 - Replace static console style pages with a dedicated React frontend.
 - Add 3D stress-map visualization (Three.js) for peel-force and suction-risk explanation.
-- Add clearer multi-step guided workflows for non-technical operators.
+- Expand wizard onboarding/tooltips and richer operator guardrails for low-confidence profile recommendations.
 
 ### Integrations
 

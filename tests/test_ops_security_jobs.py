@@ -37,10 +37,10 @@ def _client(tmp_path, monkeypatch) -> TestClient:
     return TestClient(main.app)
 
 
-def _headers(api_key: str | None = None, actor: str = "tester") -> dict[str, str]:
-    headers = {"X-Actor": actor}
-    if api_key:
-        headers["X-API-Key"] = api_key
+def _headers(token: str | None = None, actor: str = "tester") -> dict[str, str]:
+    headers = {"Actor": actor}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
     return headers
 
 
@@ -67,6 +67,7 @@ def test_auth_whoami_default_dev_mode(tmp_path, monkeypatch):
 
 
 def test_auth_enforced_rbac(tmp_path, monkeypatch):
+    monkeypatch.setenv("RESINLOGIC_STANDALONE_MODE", "0")
     monkeypatch.setenv("RESINLOGIC_ENFORCE_AUTH", "1")
     monkeypatch.setenv("RESINLOGIC_ENABLE_DEFAULT_KEYS", "0")
     monkeypatch.setenv("RESINLOGIC_ADMIN_API_KEY", "admin-1")
@@ -94,6 +95,43 @@ def test_auth_enforced_rbac(tmp_path, monkeypatch):
         headers=_headers("operator-1", "operator-user"),
     )
     assert operator.status_code == 200
+
+
+def test_auth_enforced_accepts_bearer_token(tmp_path, monkeypatch):
+    monkeypatch.setenv("RESINLOGIC_STANDALONE_MODE", "0")
+    monkeypatch.setenv("RESINLOGIC_ENFORCE_AUTH", "1")
+    monkeypatch.setenv("RESINLOGIC_ENABLE_DEFAULT_KEYS", "0")
+    monkeypatch.setenv("RESINLOGIC_ADMIN_API_KEY", "admin-1")
+    monkeypatch.setenv("RESINLOGIC_OPERATOR_API_KEY", "operator-1")
+    monkeypatch.setenv("RESINLOGIC_VIEWER_API_KEY", "viewer-1")
+    client = _client(tmp_path, monkeypatch)
+
+    response = client.get("/auth/whoami", headers={"Authorization": "Bearer viewer-1", "Actor": "bearer-user"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["role"] == "viewer"
+    assert body["api_key_present"] is True
+
+    github_style = client.get("/auth/whoami", headers={"Authorization": "token viewer-1", "Actor": "github-user"})
+    assert github_style.status_code == 200
+    assert github_style.json()["role"] == "viewer"
+
+    prom = client.get("/ops/metrics/prometheus", headers={"Authorization": "Bearer viewer-1"})
+    assert prom.status_code == 200
+    assert "resinlogic_requests_total" in prom.text
+
+
+def test_standalone_mode_disables_auth_even_when_enforced(tmp_path, monkeypatch):
+    monkeypatch.setenv("RESINLOGIC_STANDALONE_MODE", "1")
+    monkeypatch.setenv("RESINLOGIC_ENFORCE_AUTH", "1")
+    monkeypatch.setenv("RESINLOGIC_ENABLE_DEFAULT_KEYS", "0")
+    client = _client(tmp_path, monkeypatch)
+
+    response = client.get("/auth/whoami")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["auth_enforced"] is False
+    assert body["role"] == "admin"
 
 
 def test_catalog_audit_and_versions_flow(tmp_path, monkeypatch):
@@ -162,6 +200,7 @@ def test_sync_and_async_job_endpoints(tmp_path, monkeypatch):
     )
     assert sync_response.status_code == 200
     assert sync_response.json()["profiles_upserted"] == 1
+    assert sync_response.json()["curation"]["kept_counts"]["profiles"] == 1
 
     job_submit = client.post(
         "/sync/technical/job",
@@ -186,6 +225,63 @@ def test_sync_and_async_job_endpoints(tmp_path, monkeypatch):
         time.sleep(0.02)
     assert status == "succeeded"
     assert last["result"]["printers_upserted"] == 1
+
+
+def test_sync_technical_github_endpoint(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+
+    def fake_fetch(*, owner: str, repo: str, path: str, ref: str = "main", timeout_s: float = 20.0):
+        assert owner == "my-org"
+        assert repo == "my-repo"
+        assert path == "data/sync.json"
+        assert ref == "main"
+        return (
+            {
+                "printers": [{"name": "GitHub Printer"}],
+                "resins": [{"name": "GitHub Resin"}],
+                "profiles": [
+                    {
+                        "printer_name": "GitHub Printer",
+                        "resin_name": "GitHub Resin",
+                        "profile_name": "GitHub Default",
+                        "layer_height_mm": 0.05,
+                        "exposure_s": 2.4,
+                        "bottom_exposure_s": 30.0,
+                        "is_default": True,
+                        "is_active": True,
+                    }
+                ],
+            },
+            "https://raw.githubusercontent.com/my-org/my-repo/main/data/sync.json",
+        )
+
+    monkeypatch.setattr(main, "fetch_technical_sync_from_github", fake_fetch)
+
+    response = client.post(
+        "/sync/technical/github",
+        json={
+            "owner": "my-org",
+            "repo": "my-repo",
+            "path": "data/sync.json",
+            "ref": "main",
+            "source": "github_repo",
+            "replace_existing": False,
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["owner"] == "my-org"
+    assert body["repo"] == "my-repo"
+    assert body["path"] == "data/sync.json"
+    assert body["profiles_upserted"] == 1
+    assert body["curation"]["kept_counts"]["profiles"] == 1
+    assert body["curation"]["source_reliability"] >= 0.8
+    assert body["raw_url"].startswith("https://raw.githubusercontent.com/")
+
+    printers = client.get("/catalog/printers")
+    assert printers.status_code == 200
+    assert any(item["name"] == "GitHub Printer" for item in printers.json())
 
 
 def test_sync_schedule_crud_and_tick(tmp_path, monkeypatch):
@@ -230,6 +326,152 @@ def test_sync_schedule_crud_and_tick(tmp_path, monkeypatch):
     run_now = client.post(f"/sync/schedules/{schedule_id}/run-now")
     assert run_now.status_code == 200
     assert run_now.json()["job"]["type"] == "sync_schedule"
+
+
+def test_sync_schedule_github_payload_run_now(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+
+    def fake_fetch(*, owner: str, repo: str, path: str, ref: str = "main", timeout_s: float = 20.0):
+        assert owner == "sync-org"
+        assert repo == "sync-repo"
+        assert path == "data/profiles.json"
+        assert ref == "main"
+        return (
+            {
+                "printers": [{"name": "Scheduled GitHub Printer"}],
+                "resins": [{"name": "Scheduled GitHub Resin"}],
+                "profiles": [
+                    {
+                        "printer_name": "Scheduled GitHub Printer",
+                        "resin_name": "Scheduled GitHub Resin",
+                        "profile_name": "Scheduled GitHub Profile",
+                        "layer_height_mm": 0.05,
+                        "exposure_s": 2.3,
+                        "bottom_exposure_s": 30.0,
+                        "is_default": True,
+                        "is_active": True,
+                    }
+                ],
+            },
+            "https://raw.githubusercontent.com/sync-org/sync-repo/main/data/profiles.json",
+        )
+
+    monkeypatch.setattr(main, "fetch_technical_sync_from_github", fake_fetch)
+
+    created = client.post(
+        "/sync/schedules",
+        json={
+            "name": "github_schedule",
+            "source": "github_schedule_source",
+            "interval_seconds": 3600,
+            "enabled": True,
+            "replace_existing": False,
+            "payload": {
+                "github": {
+                    "owner": "sync-org",
+                    "repo": "sync-repo",
+                    "path": "data/profiles.json",
+                    "ref": "main",
+                }
+            },
+        },
+    )
+    assert created.status_code == 200
+    schedule_id = created.json()["id"]
+
+    run_now = client.post(f"/sync/schedules/{schedule_id}/run-now")
+    assert run_now.status_code == 200
+    job_id = run_now.json()["job"]["id"]
+
+    final = {}
+    for _ in range(80):
+        poll = client.get(f"/jobs/{job_id}")
+        assert poll.status_code == 200
+        final = poll.json()
+        if final["status"] in {"succeeded", "failed"}:
+            break
+        time.sleep(0.02)
+
+    assert final["status"] == "succeeded"
+    assert final["result"]["profiles_upserted"] == 1
+    assert final["result"]["github_attempts_used"] == 1
+    assert final["result"]["github_raw_url"].startswith("https://raw.githubusercontent.com/")
+
+    printers = client.get("/catalog/printers")
+    assert printers.status_code == 200
+    assert any(item["name"] == "Scheduled GitHub Printer" for item in printers.json())
+
+
+def test_sync_schedule_github_retry_then_success(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+    calls = {"count": 0}
+
+    def flaky_fetch(*, owner: str, repo: str, path: str, ref: str = "main", timeout_s: float = 20.0):
+        calls["count"] += 1
+        if calls["count"] < 3:
+            raise RuntimeError("temporary network issue")
+        return (
+            {
+                "printers": [{"name": "Retry Printer"}],
+                "resins": [{"name": "Retry Resin"}],
+                "profiles": [
+                    {
+                        "printer_name": "Retry Printer",
+                        "resin_name": "Retry Resin",
+                        "profile_name": "Retry Profile",
+                        "layer_height_mm": 0.05,
+                        "exposure_s": 2.4,
+                        "bottom_exposure_s": 31.0,
+                        "is_default": True,
+                        "is_active": True,
+                    }
+                ],
+            },
+            "https://raw.githubusercontent.com/sync-org/sync-repo/main/data/retry.json",
+        )
+
+    monkeypatch.setattr(main, "fetch_technical_sync_from_github", flaky_fetch)
+
+    created = client.post(
+        "/sync/schedules",
+        json={
+            "name": "github_retry_schedule",
+            "source": "github_retry_source",
+            "interval_seconds": 3600,
+            "enabled": True,
+            "replace_existing": False,
+            "payload": {
+                "github": {
+                    "owner": "sync-org",
+                    "repo": "sync-repo",
+                    "path": "data/retry.json",
+                    "ref": "main",
+                    "retry_attempts": 3,
+                    "retry_backoff_seconds": 0,
+                }
+            },
+        },
+    )
+    assert created.status_code == 200
+    schedule_id = created.json()["id"]
+
+    run_now = client.post(f"/sync/schedules/{schedule_id}/run-now")
+    assert run_now.status_code == 200
+    job_id = run_now.json()["job"]["id"]
+
+    final = {}
+    for _ in range(80):
+        poll = client.get(f"/jobs/{job_id}")
+        assert poll.status_code == 200
+        final = poll.json()
+        if final["status"] in {"succeeded", "failed"}:
+            break
+        time.sleep(0.02)
+
+    assert final["status"] == "succeeded"
+    assert calls["count"] == 3
+    assert final["result"]["github_attempts_used"] == 3
+    assert final["result"]["profiles_upserted"] == 1
 
 
 def test_job_cancel_and_cleanup_endpoints(tmp_path, monkeypatch):

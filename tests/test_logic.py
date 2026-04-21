@@ -123,3 +123,70 @@ def test_printer_specific_profile_lookup_from_catalog(tmp_path):
     assert settings.printer == "Printer B"
     assert settings.exposure_s == 2.7
     assert settings.source_profile == "B Profile"
+
+
+def test_settings_provenance_verified_sources(tmp_path):
+    db_path = tmp_path / "catalog.db"
+    printer = create_or_upsert_printer(
+        {
+            "name": "Printer Provenance",
+            "metadata": {
+                "source_urls": ["https://manufacturer.example/printer-provenance"],
+                "source_type": "manufacturer_product_page",
+            },
+        },
+        db_path=db_path,
+    )
+    resin = create_or_upsert_resin(
+        {
+            "name": "Resin Provenance",
+            "metadata": {
+                "source_urls": ["https://manufacturer.example/resin-provenance"],
+                "source_type": "manufacturer_material_page",
+            },
+        },
+        db_path=db_path,
+    )
+    create_or_upsert_profile(
+        {
+            "printer_id": printer["id"],
+            "resin_id": resin["id"],
+            "profile_name": "Profile Provenance",
+            "layer_height_mm": 0.05,
+            "exposure_s": 2.1,
+            "bottom_exposure_s": 28.0,
+            "is_default": True,
+            "metadata": {
+                "source_urls": ["https://manufacturer.example/settings/provenance"],
+                "source_type": "manufacturer_settings_guide",
+                "sync_confidence_score": 0.82,
+            },
+        },
+        db_path=db_path,
+    )
+
+    settings = get_optimal_settings(
+        analysis_data=_analysis_stub(max_ratio=0.1),
+        resin_type="Resin Provenance",
+        use_case="collectible",
+        printer="Printer Provenance",
+        catalog_db_path=db_path,
+    )
+
+    assert settings.provenance.data_quality == "verified_sources"
+    assert settings.provenance.real_data_backed is True
+    assert settings.provenance.source_count >= 1
+    assert settings.provenance.confidence_score == 0.82
+    assert settings.provenance.references
+
+
+def test_settings_provenance_fallback_defaults():
+    settings = get_optimal_settings(
+        analysis_data=_analysis_stub(max_ratio=0.1),
+        resin_type="Unknown Resin",
+        use_case="collectible",
+        printer="Unknown Printer",
+    )
+
+    assert settings.provenance.data_quality == "fallback_defaults"
+    assert settings.provenance.real_data_backed is False

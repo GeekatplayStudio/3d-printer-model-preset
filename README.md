@@ -8,7 +8,7 @@ The system combines:
 - rule-based and profile-based parameter optimization,
 - technical catalog management for printers/resins/profiles,
 - feedback ingestion and history-aware tuning,
-- operational tooling (auth, jobs, audit, metrics, schedules).
+- operational tooling (local storage, jobs, audit, metrics, schedules).
 
 ## Project Idea
 
@@ -25,21 +25,36 @@ Beyond Mars 5 Ultra, the catalog architecture supports all printers and all resi
 Implemented:
 
 - FastAPI backend with modular phase pipeline.
+- STL geometry integrity report with optional auto-repair (duplicate/degenerate face cleanup, hole-fill attempt, topology notes).
+- Analysis depth profiles (`minimum`, `balanced`, `deep`) with per-step runtime telemetry and large-model fast-path behavior.
 - Catalog CRUD for printers, resins, and profiles.
 - CSV and JSON import/export for technical database maintenance.
 - Catalog versioning and rollback snapshots.
 - Audit logging for operational mutations.
 - Async job queue with persistence, cancellation, and retention cleanup.
 - Sync engine with schedule store and optional background scheduler.
+- GitHub technical sync endpoint and schedule support for pulling a repo-hosted data file.
 - Feedback ingestion (files, URLs, YouTube transcripts) and history storage.
 - History-aware optimization endpoint.
 - Camera log analyzer endpoint for failure-driven adjustments.
-- Role-based API access (`viewer`, `operator`, `admin`) with API keys.
+- Standalone local mode by default (per-user SQLite directory, no central server required).
+- Optional role-based API access when standalone mode is disabled.
 - Metrics endpoint and Prometheus export.
 - Two browser UIs:
-  - `/app` for full operations console.
+  - `/wizard` for the guided step-by-step end-user workflow.
+  - `/app` for full operations console (dark mode).
   - `/catalog/admin` for catalog maintenance with search and row-level edit/delete.
-- Automated test suite (`45` tests currently passing).
+- Wizard STL UX improvements:
+  - STL-only upload enforcement,
+  - printer -> compatible resin dropdown flow,
+  - progress/status updates during analyze/fix,
+  - adaptive timeout windows for large models.
+- Settings provenance and trust surface:
+  - `settings.provenance.data_quality` (`verified_sources`, `catalog_unverified`, `fallback_defaults`),
+  - `settings.provenance.real_data_backed`,
+  - `settings.provenance.confidence_score`,
+  - source references with links from catalog metadata.
+- Automated test suite (`71` tests currently passing).
 
 Planned next:
 
@@ -55,6 +70,7 @@ Planned next:
 - Agentic task roadmap: `docs/TASK.md`
 - Project status and next milestones: `docs/PROJECT_STATUS.md`
 - Gemini prompt-to-implementation mapping: `docs/REFERENCE_MAPPING.md`
+- Official seed provenance and source list: `docs/OFFICIAL_DATASET.md`
 
 ## Quick Start
 
@@ -67,6 +83,7 @@ uvicorn app.main:app --reload
 
 Open:
 
+- `http://127.0.0.1:8000/wizard`
 - `http://127.0.0.1:8000/app`
 - `http://127.0.0.1:8000/catalog/admin`
 
@@ -76,24 +93,90 @@ Open:
 python -m pytest -q
 ```
 
+## Official Catalog Seed
+
+Source-attributed baseline data is shipped in:
+
+- `data/official_catalog_sync.json`
+
+It includes official printer specs, resin entries, and profile defaults with `metadata.source_urls` on every record.
+
+Import into your local standalone database:
+
+```bash
+python3 scripts/import_official_catalog.py --replace-existing
+```
+
+See `docs/OFFICIAL_DATASET.md` for provenance details and source list.
+
+## GitHub Smart Update (Phase 1)
+
+Manual one-shot pull from repo file:
+
+```bash
+curl -X POST http://127.0.0.1:8000/sync/technical/github \
+  -H "Content-Type: application/json" \
+  -d '{
+    "owner": "your-org",
+    "repo": "your-repo",
+    "path": "data/resin_sync.json",
+    "ref": "main",
+    "replace_existing": false
+  }'
+```
+
+Scheduled pull (stored in `sync_schedules.db`) via `payload.github`:
+
+```json
+{
+  "name": "github-hourly-sync",
+  "source": "github_repo",
+  "interval_seconds": 3600,
+  "enabled": true,
+  "replace_existing": false,
+  "payload": {
+    "github": {
+      "owner": "your-org",
+      "repo": "your-repo",
+      "path": "data/resin_sync.json",
+      "ref": "main",
+      "retry_attempts": 3,
+      "retry_backoff_seconds": 1.0
+    }
+  }
+}
+```
+
+Sync responses now include a `curation` summary (`source_reliability`, `average_profile_quality`, `average_profile_confidence`, `confidence_distribution`, `input_counts`, `kept_counts`, `dropped_counts`, `notes`) so you can see what was clamped, deduped, dropped, and how confident the imported profile set is.
+
+Wizard settings responses now include provenance metadata so each recommendation can be traced to source URLs and confidence scoring.
+
 ## Core Storage
 
-- `data/tech_catalog.db`: printers, resins, compatibility profiles
-- `data/feedback_history.db`: ingested feedback history
-- `data/audit_log.db`: audit events + catalog snapshots
-- `data/jobs.db`: async job records
-- `data/sync_schedules.db`: scheduled sync definitions
+- `~/.resinlogic/tech_catalog.db`: printers, resins, compatibility profiles
+- `~/.resinlogic/feedback_history.db`: ingested feedback history
+- `~/.resinlogic/audit_log.db`: audit events + catalog snapshots
+- `~/.resinlogic/jobs.db`: async job records
+- `~/.resinlogic/sync_schedules.db`: scheduled sync definitions
 - `data/resin_profiles.json`: embedded baseline profile dataset
+- `data/official_catalog_sync.json`: source-attributed official catalog seed payload
 
 ## Key Environment Variables
 
-- `RESINLOGIC_ENFORCE_AUTH`: enable API key auth when set to `1`
+- `RESINLOGIC_STANDALONE_MODE`: local standalone mode, defaults to `1`
+- `RESINLOGIC_DATA_DIR`: override storage directory (defaults to `~/.resinlogic`)
+- `RESINLOGIC_ENFORCE_AUTH`: enable token auth only when standalone mode is `0`
 - `RESINLOGIC_ENABLE_DEFAULT_KEYS`: enable built-in dev keys
 - `RESINLOGIC_ADMIN_API_KEY`: admin role key
 - `RESINLOGIC_OPERATOR_API_KEY`: operator role key
 - `RESINLOGIC_VIEWER_API_KEY`: viewer role key
 - `RESINLOGIC_ENABLE_SCHEDULER`: start background schedule runner when `1`
 - `RESINLOGIC_SCHEDULER_POLL_SECONDS`: scheduler polling interval
+
+Auth headers (only needed when standalone mode is disabled):
+
+- `Authorization: Bearer <token>` (or `Authorization: token <token>`)
+- `Actor: <username-or-service-name>` (optional audit identity)
 
 ## Deployment
 
@@ -102,6 +185,7 @@ docker compose up --build
 ```
 
 Prometheus scrapes `/ops/metrics/prometheus` via `ops/prometheus.yml`.
+Default compose runs in standalone mode and persists to `./local-data`.
 
 ## License
 

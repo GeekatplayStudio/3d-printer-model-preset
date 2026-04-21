@@ -10,6 +10,7 @@ from app.feedback_sources import ingest_community_sheet_text, ingest_youtube_tra
 from app.geometry import analyze_geometry
 from app.logic import PRINTER_NAME, get_optimal_settings
 from app.models import (
+    AnalysisLevel,
     FeedbackIngestionResult,
     FeedbackRecord,
     FeedbackSummary,
@@ -26,8 +27,15 @@ class ModularAgenticPipeline:
         self,
         file_path: str,
         slice_height_mm: float = 0.01,
+        auto_repair: bool = True,
+        analysis_level: AnalysisLevel = "balanced",
     ) -> GeometryAnalysis:
-        return analyze_geometry(file_path=file_path, slice_height_mm=slice_height_mm)
+        return analyze_geometry(
+            file_path=file_path,
+            slice_height_mm=slice_height_mm,
+            auto_repair=auto_repair,
+            analysis_level=analysis_level,
+        )
 
     def run_phase_2_parameters(
         self,
@@ -139,9 +147,16 @@ class ModularAgenticPipeline:
         ambient_temp_c: float | None = None,
         film_releases: int = 0,
         slice_height_mm: float = 0.01,
+        auto_repair: bool = True,
+        analysis_level: AnalysisLevel = "balanced",
         catalog_db_path: str | Path | None = None,
     ) -> PipelineResponse:
-        analysis = self.run_phase_1_geometry(file_path=file_path, slice_height_mm=slice_height_mm)
+        analysis = self.run_phase_1_geometry(
+            file_path=file_path,
+            slice_height_mm=slice_height_mm,
+            auto_repair=auto_repair,
+            analysis_level=analysis_level,
+        )
         settings = self.run_phase_2_parameters(
             analysis=analysis,
             resin_type=resin_type,

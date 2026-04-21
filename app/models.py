@@ -6,6 +6,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 UseCase = Literal["miniature", "collectible", "heavy_use"]
+AnalysisLevel = Literal["minimum", "balanced", "deep"]
 
 
 class SliceArea(BaseModel):
@@ -25,6 +26,20 @@ class Island(BaseModel):
     voxel_count: int
 
 
+class MeshHealthReport(BaseModel):
+    watertight: bool
+    winding_consistent: bool
+    volume_consistent: bool
+    connected_components: int = Field(ge=0)
+    boundary_edge_count: int = Field(ge=0)
+    non_manifold_edge_count: int = Field(ge=0)
+    degenerate_face_count: int = Field(ge=0)
+    duplicate_face_count: int = Field(ge=0)
+    repaired: bool = False
+    issues: list[str] = Field(default_factory=list)
+    repair_actions: list[str] = Field(default_factory=list)
+
+
 class GeometryAnalysis(BaseModel):
     file_name: str
     mesh_volume_mm3: float
@@ -40,16 +55,41 @@ class GeometryAnalysis(BaseModel):
     slice_areas: list[SliceArea]
     suction_cups: list[Cavity]
     islands: list[Island]
+    mesh_health: MeshHealthReport | None = None
     estimated_intent: UseCase | None = None
     intent_reasons: list[str] = Field(default_factory=list)
     structural_risk_score: float = Field(ge=0.0, le=100.0)
     notes: list[str] = Field(default_factory=list)
+    analysis_level: AnalysisLevel = "balanced"
+    performance_ms: dict[str, float] = Field(default_factory=dict)
 
 
 class MultiParameterSettings(BaseModel):
     model_exposure_s: float
     support_exposure_s: float
     delicate_feature_exposure_s: float
+
+
+SettingsDataQuality = Literal["verified_sources", "catalog_unverified", "fallback_defaults"]
+
+
+class SettingReference(BaseModel):
+    title: str
+    source_type: str | None = None
+    source_name: str | None = None
+    source_url: str | None = None
+    retrieved_at: str | None = None
+    confidence_score: float | None = Field(default=None, ge=0.0, le=1.0)
+    applies_to: list[str] = Field(default_factory=list)
+
+
+class SettingsProvenance(BaseModel):
+    data_quality: SettingsDataQuality = "fallback_defaults"
+    real_data_backed: bool = False
+    confidence_score: float | None = Field(default=None, ge=0.0, le=1.0)
+    source_count: int = Field(default=0, ge=0)
+    references: list[SettingReference] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
 
 
 class OptimalSettings(BaseModel):
@@ -76,6 +116,7 @@ class OptimalSettings(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     recommendations: list[str] = Field(default_factory=list)
     source_profile: str | None = None
+    provenance: SettingsProvenance = Field(default_factory=SettingsProvenance)
 
 
 class OptimizeRequest(BaseModel):
@@ -427,6 +468,25 @@ class TechnicalSyncResponse(BaseModel):
     printers_upserted: int
     resins_upserted: int
     profiles_upserted: int
+    curation: dict[str, Any] = Field(default_factory=dict)
+    notes: list[str] = Field(default_factory=list)
+
+
+class GitHubTechnicalSyncRequest(BaseModel):
+    owner: str
+    repo: str
+    path: str
+    ref: str = "main"
+    source: str = "github_repo"
+    replace_existing: bool = False
+
+
+class GitHubTechnicalSyncResponse(TechnicalSyncResponse):
+    owner: str
+    repo: str
+    path: str
+    ref: str
+    raw_url: str
 
 
 class MetricsResponse(BaseModel):
@@ -481,3 +541,130 @@ class SyncSchedulerHealth(BaseModel):
     poll_seconds: float
     schedules_total: int
     schedules_enabled: int
+
+
+class WizardDatabaseSetupRequest(BaseModel):
+    mode: Literal["official_local", "github"] = "official_local"
+    replace_existing: bool = False
+    owner: str | None = None
+    repo: str | None = None
+    path: str | None = None
+    ref: str = "main"
+    auto_update: bool = False
+    auto_update_interval_seconds: int = Field(default=86400, ge=300, le=604800)
+    source: str = "wizard_setup"
+
+
+class WizardDatabaseSetupResponse(BaseModel):
+    mode: Literal["official_local", "github"]
+    source: str
+    raw_url: str | None = None
+    printers_upserted: int
+    resins_upserted: int
+    profiles_upserted: int
+    curation: dict[str, Any] = Field(default_factory=dict)
+    auto_update_schedule_id: int | None = None
+    notes: list[str] = Field(default_factory=list)
+
+
+class WizardDatabaseStatus(BaseModel):
+    mode: str
+    data_dir: str
+    storage_path: str
+    official_dataset_file: str
+    official_dataset_updated_at: str | None = None
+    printers_total: int
+    printers_with_sources: int
+    resins_total: int
+    resins_with_sources: int
+    profiles_total: int
+    profiles_with_sources: int
+    profiles_with_confidence: int
+    manufacturers: list[str] = Field(default_factory=list)
+    completeness_percent: float = Field(ge=0.0, le=100.0)
+    ready_for_model_analysis: bool
+    ready_for_settings: bool
+    schedules_total: int
+    schedules_enabled: int
+
+
+class WizardDatabaseGapSummary(BaseModel):
+    missing_printer_sources_count: int
+    missing_resin_sources_count: int
+    missing_profile_sources_count: int
+    printers_without_profiles_count: int
+    resins_without_profiles_count: int
+    missing_printer_sources: list[str] = Field(default_factory=list)
+    missing_resin_sources: list[str] = Field(default_factory=list)
+    missing_profile_sources: list[str] = Field(default_factory=list)
+    printers_without_profiles: list[str] = Field(default_factory=list)
+    resins_without_profiles: list[str] = Field(default_factory=list)
+    recommendations: list[str] = Field(default_factory=list)
+
+
+class WizardUpdateScheduleStatus(BaseModel):
+    id: int
+    name: str
+    source: str
+    interval_seconds: int
+    enabled: bool
+    replace_existing: bool
+    last_run_at: str | None = None
+    last_status: str | None = None
+    last_error: str | None = None
+    github_owner: str | None = None
+    github_repo: str | None = None
+    github_path: str | None = None
+    github_ref: str | None = None
+
+
+class WizardUpdateStatusResponse(BaseModel):
+    scheduler_running: bool
+    scheduler_poll_seconds: float
+    schedules_total: int
+    schedules_enabled: int
+    wizard_auto_update_present: bool
+    schedules: list[WizardUpdateScheduleStatus] = Field(default_factory=list)
+
+
+class WizardRunUpdateNowRequest(BaseModel):
+    schedule_id: int | None = None
+
+
+class WizardCatalogOptionsResponse(BaseModel):
+    printers: list[str] = Field(default_factory=list)
+    resins: list[str] = Field(default_factory=list)
+    compatibility: dict[str, list[str]] = Field(default_factory=dict)
+
+
+class WizardModelCheckResponse(BaseModel):
+    analysis: GeometryAnalysis
+    has_issues: bool
+    requires_fix: bool
+
+
+class WizardModelFixResponse(BaseModel):
+    analysis: GeometryAnalysis
+    repaired: bool
+    repair_actions: list[str] = Field(default_factory=list)
+    download_id: str
+    download_url: str
+    output_file_name: str
+
+
+class WizardSettingsRequest(BaseModel):
+    analysis: GeometryAnalysis
+    resin_type: str
+    printer: str
+    use_case: UseCase = "miniature"
+    ambient_temp_c: float | None = None
+    film_releases: int = 0
+
+
+class WizardSettingsResponse(BaseModel):
+    settings: OptimalSettings
+    chitubox_cfg: str
+    settings_download_id: str
+    settings_download_url: str
+    cfg_download_id: str
+    cfg_download_url: str

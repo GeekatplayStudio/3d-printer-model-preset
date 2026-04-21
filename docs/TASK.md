@@ -12,6 +12,8 @@
 - `[x]` cross-section area scan pipeline
 - `[x]` detail density and SAR metrics
 - `[x]` intent estimation heuristic (`miniature`, `collectible`, `heavy_use`)
+- `[x]` analysis depth modes with performance telemetry (`minimum`, `balanced`, `deep`)
+- `[x]` large-model minimum-mode optimization (memory-safe fast path)
 - `[~]` suction-cup/island heuristics hardening
 - `[ ]` advanced stress confidence scoring and benchmark suite
 
@@ -26,6 +28,7 @@ Primary module: `app/geometry.py`
 - `[x]` multi-parameter slicing output structure
 - `[x]` Chitubox cfg text export and SDCP payload structure
 - `[x]` history-aware optimization endpoint
+- `[x]` settings provenance classification and source-reference output
 - `[ ]` direct SDCP bidirectional runtime integration
 
 Primary modules: `app/logic.py`, `app/chitubox.py`
@@ -49,6 +52,7 @@ Primary modules: `app/feedback_sources.py`, `app/feedback_store.py`, `app/camera
 - `[x]` catalog snapshot and restore
 - `[x]` audit trail for catalog mutations
 - `[x]` admin UI with search and row-level edit/delete
+- `[x]` compatibility mapping for wizard printer->resin constrained selection
 - `[ ]` migration/version policy for schema changes
 - `[ ]` stricter data validation and dedupe rules for bulk ingestion
 
@@ -69,7 +73,7 @@ Primary modules: `app/auth.py`, `app/job_queue.py`, `app/scheduler.py`, `app/mon
 
 ## Immediate Next Sprint
 
-1. Harden geometry heuristics with test corpus and confidence outputs.
-2. Add catalog data quality constraints for imported records.
+1. Harden geometry heuristics with benchmark corpus and confidence calibration.
+2. Add stricter trust gating policies (optional block on non-verified settings in wizard).
 3. Start frontend redesign plan (React migration, stress-map UX).
 4. Define schema migration strategy and release policy.

@@ -1,0 +1,1148 @@
+{
+  "schema_version": "sync-1.2-official",
+  "updated_at": "2026-04-21",
+  "replace_existing": false,
+  "printers": [
+    {
+      "name": "Anycubic Photon Mono M7 Pro",
+      "brand": "Anycubic",
+      "model": "Photon Mono M7 Pro",
+      "technology": "MSLA",
+      "xy_resolution_um": 25,
+      "build_volume_x_mm": 223.0,
+      "build_volume_y_mm": 126.0,
+      "build_volume_z_mm": 230.0,
+      "tilt_release_supported": false,
+      "wifi_supported": true,
+      "notes": "Official specs list 16.8 x 24.8 um XY and max high-speed profile support.",
+      "metadata": {
+        "manufacturer": "Anycubic",
+        "xy_resolution_um_exact": {
+          "x": 16.8,
+          "y": 24.8
+        },
+        "source_urls": [
+          "https://store.anycubic.com/products/photon-mono-m7-pro"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-21"
+      }
+    },
+    {
+      "name": "Anycubic Photon Mono M7 Max",
+      "brand": "Anycubic",
+      "model": "Photon Mono M7 Max",
+      "technology": "MSLA",
+      "xy_resolution_um": 46,
+      "build_volume_x_mm": 298.0,
+      "build_volume_y_mm": 164.0,
+      "build_volume_z_mm": 300.0,
+      "tilt_release_supported": false,
+      "wifi_supported": true,
+      "notes": "Large-format Anycubic resin printer.",
+      "metadata": {
+        "manufacturer": "Anycubic",
+        "xy_resolution_um_exact": {
+          "x": 46.0,
+          "y": 46.0
+        },
+        "source_urls": [
+          "https://store.anycubic.com/products/photon-mono-m7-max"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-21"
+      }
+    },
+    {
+      "name": "Anycubic Photon Mono M7",
+      "brand": "Anycubic",
+      "model": "Photon Mono M7",
+      "technology": "MSLA",
+      "xy_resolution_um": 25,
+      "build_volume_x_mm": 223.0,
+      "build_volume_y_mm": 126.0,
+      "build_volume_z_mm": 230.0,
+      "tilt_release_supported": false,
+      "wifi_supported": true,
+      "notes": "Official specs list 16.8 x 24.8 um XY.",
+      "metadata": {
+        "manufacturer": "Anycubic",
+        "xy_resolution_um_exact": {
+          "x": 16.8,
+          "y": 24.8
+        },
+        "source_urls": [
+          "https://store.anycubic.com/products/photon-mono-m7"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-21"
+      }
+    },
+    {
+      "name": "Anycubic Photon Mono 4 Ultra",
+      "brand": "Anycubic",
+      "model": "Photon Mono 4 Ultra",
+      "technology": "MSLA",
+      "xy_resolution_um": 17,
+      "build_volume_x_mm": 153.4,
+      "build_volume_y_mm": 87.0,
+      "build_volume_z_mm": 165.0,
+      "tilt_release_supported": false,
+      "wifi_supported": true,
+      "notes": "Official specs list 17 x 17 um XY.",
+      "metadata": {
+        "manufacturer": "Anycubic",
+        "xy_resolution_um_exact": {
+          "x": 17.0,
+          "y": 17.0
+        },
+        "source_urls": [
+          "https://store.anycubic.com/products/photon-mono-4-ultra"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-21"
+      }
+    },
+    {
+      "name": "Elegoo Mars 5 Ultra",
+      "brand": "Elegoo",
+      "model": "Mars 5 Ultra",
+      "technology": "MSLA",
+      "xy_resolution_um": 18,
+      "build_volume_x_mm": 153.36,
+      "build_volume_y_mm": 77.76,
+      "build_volume_z_mm": 165.0,
+      "tilt_release_supported": true,
+      "wifi_supported": true,
+      "notes": "Mars 5 Ultra from official Mars 5 series comparison table.",
+      "metadata": {
+        "manufacturer": "ELEGOO",
+        "source_urls": [
+          "https://www.elegoo.com/pages/elegoo-mars-5-series"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-21"
+      }
+    },
+    {
+      "name": "Elegoo Mars 5",
+      "brand": "Elegoo",
+      "model": "Mars 5",
+      "technology": "MSLA",
+      "xy_resolution_um": 35,
+      "build_volume_x_mm": 143.43,
+      "build_volume_y_mm": 89.6,
+      "build_volume_z_mm": 150.0,
+      "tilt_release_supported": false,
+      "wifi_supported": false,
+      "notes": "Mars 5 base model from official Mars 5 series comparison table.",
+      "metadata": {
+        "manufacturer": "ELEGOO",
+        "source_urls": [
+          "https://www.elegoo.com/pages/elegoo-mars-5-series"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-21"
+      }
+    },
+    {
+      "name": "Elegoo Saturn 4 Ultra",
+      "brand": "Elegoo",
+      "model": "Saturn 4 Ultra",
+      "technology": "MSLA",
+      "xy_resolution_um": 24,
+      "build_volume_x_mm": 218.88,
+      "build_volume_y_mm": 122.88,
+      "build_volume_z_mm": 220.0,
+      "tilt_release_supported": true,
+      "wifi_supported": true,
+      "notes": "Official Saturn 4 Ultra specs list 19 x 24 um XY and 218.88 x 122.88 x 220 mm build volume.",
+      "metadata": {
+        "manufacturer": "ELEGOO",
+        "xy_resolution_um_exact": {
+          "x": 19.0,
+          "y": 24.0
+        },
+        "source_urls": [
+          "https://www.elegoo.com/pages/elegoo-saturn-4-ultra"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-21"
+      }
+    },
+    {
+      "name": "Phrozen Sonic Mini 8K S",
+      "brand": "Phrozen",
+      "model": "Sonic Mini 8K S",
+      "technology": "MSLA",
+      "xy_resolution_um": 22,
+      "build_volume_x_mm": 165.0,
+      "build_volume_y_mm": 72.0,
+      "build_volume_z_mm": 170.0,
+      "tilt_release_supported": false,
+      "wifi_supported": false,
+      "notes": "Official Sonic Mini 8K S page specs.",
+      "metadata": {
+        "manufacturer": "Phrozen",
+        "source_urls": [
+          "https://global.phrozen3d.com/products/sonic-mini-8k-s"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-21"
+      }
+    },
+    {
+      "name": "Phrozen Sonic Mighty Revo 16K",
+      "brand": "Phrozen",
+      "model": "Sonic Mighty Revo 16K",
+      "technology": "MSLA",
+      "xy_resolution_um": 25,
+      "build_volume_x_mm": 223.0,
+      "build_volume_y_mm": 126.0,
+      "build_volume_z_mm": 235.0,
+      "tilt_release_supported": false,
+      "wifi_supported": false,
+      "notes": "Specs from Phrozen Help Center getting-started article.",
+      "metadata": {
+        "manufacturer": "Phrozen",
+        "xy_resolution_um_exact": {
+          "x": 16.8,
+          "y": 24.8
+        },
+        "source_urls": [
+          "https://helpcenter.phrozen3d.com/hc/en-us/articles/28051214909209--Sonic-Mighty-Revo-Getting-to-Know-Your-Printer"
+        ],
+        "source_type": "manufacturer_support_doc",
+        "retrieved_at": "2026-04-21"
+      }
+    },
+    {
+      "name": "UniFormation GK3 Ultra",
+      "brand": "UniFormation",
+      "model": "GK3 Ultra",
+      "technology": "MSLA",
+      "xy_resolution_um": 26,
+      "build_volume_x_mm": 300.0,
+      "build_volume_y_mm": 160.0,
+      "build_volume_z_mm": 300.0,
+      "tilt_release_supported": false,
+      "wifi_supported": true,
+      "notes": "Official product page specification table.",
+      "metadata": {
+        "manufacturer": "UniFormation",
+        "xy_resolution_um_exact": {
+          "x": 20.0,
+          "y": 26.0
+        },
+        "source_urls": [
+          "https://uniformation3d.com/products/uniformation-3d-resin-printer-gk3-ultra"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-21"
+      }
+    },
+    {
+      "name": "Formlabs Form 4",
+      "brand": "Formlabs",
+      "model": "Form 4",
+      "technology": "MSLA",
+      "xy_resolution_um": 50,
+      "build_volume_x_mm": 200.0,
+      "build_volume_y_mm": 125.0,
+      "build_volume_z_mm": 210.0,
+      "tilt_release_supported": false,
+      "wifi_supported": true,
+      "notes": "Tech specs from Formlabs SLA comparison page.",
+      "metadata": {
+        "manufacturer": "Formlabs",
+        "source_urls": [
+          "https://formlabs.com/3d-printers/resin/tech-specs/"
+        ],
+        "source_type": "manufacturer_tech_specs",
+        "retrieved_at": "2026-04-21"
+      }
+    },
+    {
+      "name": "Anycubic Photon Mono M5s Pro",
+      "brand": "Anycubic",
+      "model": "Photon Mono M5s Pro",
+      "technology": "MSLA",
+      "xy_resolution_um": null,
+      "build_volume_x_mm": null,
+      "build_volume_y_mm": null,
+      "build_volume_z_mm": null,
+      "tilt_release_supported": false,
+      "wifi_supported": true,
+      "notes": "Official profile table available; full product specs should be expanded in next dataset refresh.",
+      "metadata": {
+        "manufacturer": "Anycubic",
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "retrieved_at": "2026-04-21",
+        "data_completeness": "profile_table_only"
+      }
+    },
+    {
+      "name": "Anycubic Photon Mono M5s",
+      "brand": "Anycubic",
+      "model": "Photon Mono M5s",
+      "technology": "MSLA",
+      "xy_resolution_um": null,
+      "build_volume_x_mm": null,
+      "build_volume_y_mm": null,
+      "build_volume_z_mm": null,
+      "tilt_release_supported": false,
+      "wifi_supported": true,
+      "notes": "Official profile table available; full product specs should be expanded in next dataset refresh.",
+      "metadata": {
+        "manufacturer": "Anycubic",
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "retrieved_at": "2026-04-21",
+        "data_completeness": "profile_table_only"
+      }
+    },
+    {
+      "name": "Anycubic Photon Mono M5",
+      "brand": "Anycubic",
+      "model": "Photon Mono M5",
+      "technology": "MSLA",
+      "xy_resolution_um": null,
+      "build_volume_x_mm": null,
+      "build_volume_y_mm": null,
+      "build_volume_z_mm": null,
+      "tilt_release_supported": false,
+      "wifi_supported": true,
+      "notes": "Official profile table available; full product specs should be expanded in next dataset refresh.",
+      "metadata": {
+        "manufacturer": "Anycubic",
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "retrieved_at": "2026-04-21",
+        "data_completeness": "profile_table_only"
+      }
+    },
+    {
+      "name": "Anycubic Photon M3 Max",
+      "brand": "Anycubic",
+      "model": "Photon M3 Max",
+      "technology": "MSLA",
+      "xy_resolution_um": null,
+      "build_volume_x_mm": null,
+      "build_volume_y_mm": null,
+      "build_volume_z_mm": null,
+      "tilt_release_supported": false,
+      "wifi_supported": true,
+      "notes": "Official profile table available; full product specs should be expanded in next dataset refresh.",
+      "metadata": {
+        "manufacturer": "Anycubic",
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "retrieved_at": "2026-04-21",
+        "data_completeness": "profile_table_only"
+      }
+    }
+  ],
+  "resins": [
+    {
+      "name": "Anycubic Standard Resin",
+      "brand": "Anycubic",
+      "series": "Standard Resin",
+      "technical_goal": "General-purpose detail",
+      "notes": "Used across official Anycubic printer setting tables.",
+      "metadata": {
+        "manufacturer": "Anycubic",
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "retrieved_at": "2026-04-21"
+      }
+    },
+    {
+      "name": "Anycubic Standard Resin V2",
+      "brand": "Anycubic",
+      "series": "Standard Resin V2",
+      "technical_goal": "General-purpose detail",
+      "notes": "Used across official Anycubic printer setting tables.",
+      "metadata": {
+        "manufacturer": "Anycubic",
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "retrieved_at": "2026-04-21"
+      }
+    },
+    {
+      "name": "Anycubic High Speed Resin 2.0",
+      "brand": "Anycubic",
+      "series": "High Speed Resin 2.0",
+      "technical_goal": "High-throughput prints",
+      "notes": "Referenced by official settings guide and product pages.",
+      "metadata": {
+        "manufacturer": "Anycubic",
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers",
+          "https://store.anycubic.com/products/photon-mono-m7-pro",
+          "https://store.anycubic.com/products/photon-mono-m7-max"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "retrieved_at": "2026-04-21"
+      }
+    },
+    {
+      "name": "Anycubic High Clear Resin",
+      "brand": "Anycubic",
+      "series": "High Clear Resin",
+      "technical_goal": "Transparent optical-style parts",
+      "notes": "Official settings guide includes elevated exposure values for High Clear Resin.",
+      "metadata": {
+        "manufacturer": "Anycubic",
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers",
+          "https://store.anycubic.com/products/photon-mono-m7-pro"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "retrieved_at": "2026-04-21"
+      }
+    },
+    {
+      "name": "Anycubic ABS-Like Resin V2",
+      "brand": "Anycubic",
+      "series": "ABS-Like Resin V2",
+      "technical_goal": "Durable engineering-style parts",
+      "shore_hardness": "83-86HD",
+      "notes": "ABS-like line from Anycubic official product listing.",
+      "metadata": {
+        "manufacturer": "Anycubic",
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers",
+          "https://store.anycubic.com/products/abs-like-resin-2-0"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-21",
+        "material_properties": {
+          "tensile_strength_mpa": "38-45",
+          "elongation_at_break_percent": "25-30",
+          "izod_impact_j_m": "130"
+        }
+      }
+    },
+    {
+      "name": "Anycubic Plant-Based Resin",
+      "brand": "Anycubic",
+      "series": "Plant-Based Resin",
+      "technical_goal": "General-purpose low-odor option",
+      "notes": "Used in official Anycubic printer settings tables.",
+      "metadata": {
+        "manufacturer": "Anycubic",
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "retrieved_at": "2026-04-21"
+      }
+    },
+    {
+      "name": "Anycubic Water-Wash Resin+",
+      "brand": "Anycubic",
+      "series": "Water-Wash Resin+",
+      "technical_goal": "Water-cleanable workflow",
+      "notes": "Used in official Anycubic printer settings tables.",
+      "metadata": {
+        "manufacturer": "Anycubic",
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "retrieved_at": "2026-04-21"
+      }
+    },
+    {
+      "name": "ELEGOO 8K Standard Resin",
+      "brand": "ELEGOO",
+      "series": "8K Standard",
+      "technical_goal": "High-detail display prints",
+      "notes": "Official ELEGOO 8K Standard resin listing.",
+      "metadata": {
+        "manufacturer": "ELEGOO",
+        "source_urls": [
+          "https://us.elegoo.com/products/elegoo-8k-standard-resin"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-21"
+      }
+    },
+    {
+      "name": "Phrozen Aqua 8K Resin",
+      "brand": "Phrozen",
+      "series": "Aqua 8K",
+      "technical_goal": "High-detail 8K surfaces",
+      "viscosity_cp": 325,
+      "shore_hardness": "75-82 Shore D",
+      "notes": "Midpoint viscosity from official Phrozen Aqua 8K spec range.",
+      "metadata": {
+        "manufacturer": "Phrozen",
+        "source_urls": [
+          "https://global.phrozen3d.com/products/aqua-8k-resin"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-21",
+        "density_g_cm3": "1.12-1.18",
+        "tensile_stress_break_mpa": "21-35",
+        "elongation_at_break_percent": "12-20"
+      }
+    },
+    {
+      "name": "UniFormation Standard Resin",
+      "brand": "UniFormation",
+      "series": "Standard Resin",
+      "technical_goal": "General-purpose resin for GK3 Ultra",
+      "notes": "Compatibility listed in official GK3 Ultra specification table.",
+      "metadata": {
+        "manufacturer": "UniFormation",
+        "source_urls": [
+          "https://uniformation3d.com/products/uniformation-3d-resin-printer-gk3-ultra"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-21"
+      }
+    },
+    {
+      "name": "Formlabs Standard Resin",
+      "brand": "Formlabs",
+      "series": "Standard",
+      "technical_goal": "General-purpose Form 4 workflow",
+      "notes": "Form 4 technical specs and materials references.",
+      "metadata": {
+        "manufacturer": "Formlabs",
+        "source_urls": [
+          "https://formlabs.com/3d-printers/resin/tech-specs/"
+        ],
+        "source_type": "manufacturer_tech_specs",
+        "retrieved_at": "2026-04-21"
+      }
+    }
+  ],
+  "profiles": [
+    {
+      "printer_name": "Anycubic Photon Mono M7 Pro",
+      "resin_name": "Anycubic Standard Resin",
+      "profile_name": "Official Standard (0.05mm)",
+      "layer_height_mm": 0.05,
+      "exposure_s": 2.0,
+      "bottom_exposure_s": 25.0,
+      "transition_layers": null,
+      "tilt_speed_reference_mm_h": null,
+      "rest_time_before_print_s": null,
+      "rest_time_after_retract_s": null,
+      "is_default": true,
+      "is_active": true,
+      "notes": "From Anycubic official resin settings table.",
+      "metadata": {
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_mode": "Photon Mono M7 Pro",
+        "retrieved_at": "2026-04-21",
+        "bottom_layers": 4,
+        "motion": {
+          "z_lift_distance_mm": 8.0,
+          "z_lift_speed_mm_s": 6.0,
+          "z_retract_speed_mm_s": 6.0
+        }
+      }
+    },
+    {
+      "printer_name": "Anycubic Photon Mono M7 Pro",
+      "resin_name": "Anycubic High Speed Resin 2.0",
+      "profile_name": "Official High Speed (0.05mm)",
+      "layer_height_mm": 0.05,
+      "exposure_s": 1.5,
+      "bottom_exposure_s": 15.0,
+      "transition_layers": null,
+      "tilt_speed_reference_mm_h": null,
+      "rest_time_before_print_s": null,
+      "rest_time_after_retract_s": null,
+      "is_default": true,
+      "is_active": true,
+      "notes": "High Speed Resin value from official table.",
+      "metadata": {
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_mode": "Photon Mono M7 Pro",
+        "retrieved_at": "2026-04-21",
+        "bottom_layers": 5,
+        "motion": {
+          "z_lift_distance_mm": 4.0,
+          "z_lift_speed_mm_s": 15.0,
+          "z_retract_speed_mm_s": 15.0
+        }
+      }
+    },
+    {
+      "printer_name": "Anycubic Photon Mono M7 Pro",
+      "resin_name": "Anycubic High Clear Resin",
+      "profile_name": "Official High Clear (0.05mm)",
+      "layer_height_mm": 0.05,
+      "exposure_s": 4.0,
+      "bottom_exposure_s": 25.0,
+      "transition_layers": null,
+      "tilt_speed_reference_mm_h": null,
+      "rest_time_before_print_s": null,
+      "rest_time_after_retract_s": null,
+      "is_default": true,
+      "is_active": true,
+      "notes": "High Clear Resin value from official table.",
+      "metadata": {
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_mode": "Photon Mono M7 Pro",
+        "retrieved_at": "2026-04-21",
+        "bottom_layers": 4,
+        "motion": {
+          "z_lift_distance_mm": 8.0,
+          "z_lift_speed_mm_s": 6.0,
+          "z_retract_speed_mm_s": 6.0
+        }
+      }
+    },
+    {
+      "printer_name": "Anycubic Photon Mono M7 Max",
+      "resin_name": "Anycubic Standard Resin",
+      "profile_name": "Official Standard Speed (0.10mm)",
+      "layer_height_mm": 0.1,
+      "exposure_s": 2.0,
+      "bottom_exposure_s": 30.0,
+      "transition_layers": null,
+      "tilt_speed_reference_mm_h": null,
+      "rest_time_before_print_s": null,
+      "rest_time_after_retract_s": null,
+      "is_default": true,
+      "is_active": true,
+      "notes": "From Anycubic official M7 Max standard-speed table.",
+      "metadata": {
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_mode": "Photon Mono M7 Max standard speed",
+        "retrieved_at": "2026-04-21",
+        "bottom_layers": 5,
+        "motion": {
+          "z_lift_distance_mm": 8.0,
+          "z_lift_speed_mm_s": 6.0,
+          "z_retract_speed_mm_s": 6.0
+        }
+      }
+    },
+    {
+      "printer_name": "Anycubic Photon Mono M7 Max",
+      "resin_name": "Anycubic High Speed Resin 2.0",
+      "profile_name": "Official High Speed Mode (0.10mm)",
+      "layer_height_mm": 0.1,
+      "exposure_s": 1.6,
+      "bottom_exposure_s": 20.0,
+      "transition_layers": null,
+      "tilt_speed_reference_mm_h": null,
+      "rest_time_before_print_s": null,
+      "rest_time_after_retract_s": null,
+      "is_default": true,
+      "is_active": true,
+      "notes": "From Anycubic official M7 Max high-speed table.",
+      "metadata": {
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_mode": "Photon Mono M7 Max high speed",
+        "retrieved_at": "2026-04-21",
+        "bottom_layers": 3,
+        "motion": {
+          "z_lift_distance_mm": 5.0,
+          "z_lift_speed_mm_s": 15.0,
+          "z_retract_speed_mm_s": 15.0
+        }
+      }
+    },
+    {
+      "printer_name": "Anycubic Photon Mono M7 Max",
+      "resin_name": "Anycubic High Clear Resin",
+      "profile_name": "Official High Clear (0.10mm)",
+      "layer_height_mm": 0.1,
+      "exposure_s": 4.2,
+      "bottom_exposure_s": 50.0,
+      "transition_layers": null,
+      "tilt_speed_reference_mm_h": null,
+      "rest_time_before_print_s": null,
+      "rest_time_after_retract_s": null,
+      "is_default": true,
+      "is_active": true,
+      "notes": "From Anycubic official M7 Max standard-speed table.",
+      "metadata": {
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_mode": "Photon Mono M7 Max standard speed",
+        "retrieved_at": "2026-04-21",
+        "bottom_layers": 5,
+        "motion": {
+          "z_lift_distance_mm": 8.0,
+          "z_lift_speed_mm_s": 6.0,
+          "z_retract_speed_mm_s": 6.0
+        }
+      }
+    },
+    {
+      "printer_name": "Anycubic Photon Mono M7",
+      "resin_name": "Anycubic Standard Resin",
+      "profile_name": "Official Standard Speed (0.05mm)",
+      "layer_height_mm": 0.05,
+      "exposure_s": 1.8,
+      "bottom_exposure_s": 25.0,
+      "transition_layers": null,
+      "tilt_speed_reference_mm_h": null,
+      "rest_time_before_print_s": null,
+      "rest_time_after_retract_s": null,
+      "is_default": true,
+      "is_active": true,
+      "notes": "From Anycubic official M7 standard-speed table.",
+      "metadata": {
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_mode": "Photon Mono M7 standard speed",
+        "retrieved_at": "2026-04-21",
+        "bottom_layers": 3,
+        "motion": {
+          "z_lift_distance_mm": 8.0,
+          "z_lift_speed_mm_s": 6.0,
+          "z_retract_speed_mm_s": 6.0
+        }
+      }
+    },
+    {
+      "printer_name": "Anycubic Photon Mono M7",
+      "resin_name": "Anycubic High Speed Resin 2.0",
+      "profile_name": "Official Fast Mode (0.10mm)",
+      "layer_height_mm": 0.1,
+      "exposure_s": 1.4,
+      "bottom_exposure_s": 15.0,
+      "transition_layers": null,
+      "tilt_speed_reference_mm_h": null,
+      "rest_time_before_print_s": null,
+      "rest_time_after_retract_s": null,
+      "is_default": true,
+      "is_active": true,
+      "notes": "From Anycubic official M7 fast-mode table.",
+      "metadata": {
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_mode": "Photon Mono M7 fast mode",
+        "retrieved_at": "2026-04-21",
+        "bottom_layers": 3,
+        "motion": {
+          "z_lift_distance_mm": 4.0,
+          "z_lift_speed_mm_s": 15.0,
+          "z_retract_speed_mm_s": 15.0
+        }
+      }
+    },
+    {
+      "printer_name": "Anycubic Photon Mono 4 Ultra",
+      "resin_name": "Anycubic Standard Resin",
+      "profile_name": "Official Standard (0.05mm)",
+      "layer_height_mm": 0.05,
+      "exposure_s": 2.6,
+      "bottom_exposure_s": 30.0,
+      "transition_layers": null,
+      "tilt_speed_reference_mm_h": null,
+      "rest_time_before_print_s": null,
+      "rest_time_after_retract_s": null,
+      "is_default": true,
+      "is_active": true,
+      "notes": "From Anycubic official Mono 4 Ultra table.",
+      "metadata": {
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_mode": "Photon Mono 4 Ultra",
+        "retrieved_at": "2026-04-21",
+        "bottom_layers": 5,
+        "motion": {
+          "z_lift_distance_mm": 6.0,
+          "z_lift_speed_mm_s": 8.0,
+          "z_retract_speed_mm_s": 8.0
+        }
+      }
+    },
+    {
+      "printer_name": "Anycubic Photon Mono 4 Ultra",
+      "resin_name": "Anycubic High Speed Resin 2.0",
+      "profile_name": "Official High Speed (0.10mm)",
+      "layer_height_mm": 0.1,
+      "exposure_s": 1.8,
+      "bottom_exposure_s": 15.0,
+      "transition_layers": null,
+      "tilt_speed_reference_mm_h": null,
+      "rest_time_before_print_s": null,
+      "rest_time_after_retract_s": null,
+      "is_default": true,
+      "is_active": true,
+      "notes": "From Anycubic official Mono 4 Ultra table.",
+      "metadata": {
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_mode": "Photon Mono 4 Ultra",
+        "retrieved_at": "2026-04-21",
+        "bottom_layers": 5,
+        "motion": {
+          "z_lift_distance_mm": 6.0,
+          "z_lift_speed_mm_s": 20.0,
+          "z_retract_speed_mm_s": 20.0
+        }
+      }
+    },
+    {
+      "printer_name": "Anycubic Photon Mono 4 Ultra",
+      "resin_name": "Anycubic High Clear Resin",
+      "profile_name": "Official High Clear (0.05mm)",
+      "layer_height_mm": 0.05,
+      "exposure_s": 2.4,
+      "bottom_exposure_s": 45.0,
+      "transition_layers": null,
+      "tilt_speed_reference_mm_h": null,
+      "rest_time_before_print_s": null,
+      "rest_time_after_retract_s": null,
+      "is_default": true,
+      "is_active": true,
+      "notes": "From Anycubic official Mono 4 Ultra table.",
+      "metadata": {
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_mode": "Photon Mono 4 Ultra",
+        "retrieved_at": "2026-04-21",
+        "bottom_layers": 5,
+        "motion": {
+          "z_lift_distance_mm": 6.0,
+          "z_lift_speed_mm_s": 8.0,
+          "z_retract_speed_mm_s": 8.0
+        }
+      }
+    },
+    {
+      "printer_name": "Anycubic Photon Mono M5s Pro",
+      "resin_name": "Anycubic Standard Resin",
+      "profile_name": "Official Standard (0.05mm)",
+      "layer_height_mm": 0.05,
+      "exposure_s": 3.6,
+      "bottom_exposure_s": 30.0,
+      "transition_layers": null,
+      "tilt_speed_reference_mm_h": null,
+      "rest_time_before_print_s": null,
+      "rest_time_after_retract_s": null,
+      "is_default": true,
+      "is_active": true,
+      "notes": "From Anycubic official M5s Pro table.",
+      "metadata": {
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_mode": "Photon Mono M5s Pro",
+        "retrieved_at": "2026-04-21",
+        "bottom_layers": 5,
+        "motion": {
+          "z_lift_distance_mm": 8.0,
+          "z_lift_speed_mm_s": 6.0,
+          "z_retract_speed_mm_s": 6.0
+        }
+      }
+    },
+    {
+      "printer_name": "Anycubic Photon Mono M5s Pro",
+      "resin_name": "Anycubic High Speed Resin 2.0",
+      "profile_name": "Official High Speed (0.05mm)",
+      "layer_height_mm": 0.05,
+      "exposure_s": 1.9,
+      "bottom_exposure_s": 10.0,
+      "transition_layers": null,
+      "tilt_speed_reference_mm_h": null,
+      "rest_time_before_print_s": null,
+      "rest_time_after_retract_s": null,
+      "is_default": true,
+      "is_active": true,
+      "notes": "From Anycubic official M5s Pro table.",
+      "metadata": {
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_mode": "Photon Mono M5s Pro",
+        "retrieved_at": "2026-04-21",
+        "bottom_layers": 5,
+        "motion": {
+          "z_lift_distance_mm": 3.0,
+          "z_lift_speed_mm_s": 20.0,
+          "z_retract_speed_mm_s": 20.0
+        }
+      }
+    },
+    {
+      "printer_name": "Anycubic Photon Mono M5s",
+      "resin_name": "Anycubic Standard Resin",
+      "profile_name": "Official Standard (0.05mm)",
+      "layer_height_mm": 0.05,
+      "exposure_s": 2.8,
+      "bottom_exposure_s": 25.0,
+      "transition_layers": null,
+      "tilt_speed_reference_mm_h": null,
+      "rest_time_before_print_s": null,
+      "rest_time_after_retract_s": null,
+      "is_default": true,
+      "is_active": true,
+      "notes": "From Anycubic official M5s table.",
+      "metadata": {
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_mode": "Photon Mono M5s",
+        "retrieved_at": "2026-04-21",
+        "bottom_layers": 5,
+        "motion": {
+          "z_lift_distance_mm": 8.0,
+          "z_lift_speed_mm_s": 6.0,
+          "z_retract_speed_mm_s": 6.0
+        }
+      }
+    },
+    {
+      "printer_name": "Anycubic Photon Mono M5s",
+      "resin_name": "Anycubic High Speed Resin 2.0",
+      "profile_name": "Official High Speed (0.05mm)",
+      "layer_height_mm": 0.05,
+      "exposure_s": 1.7,
+      "bottom_exposure_s": 10.0,
+      "transition_layers": null,
+      "tilt_speed_reference_mm_h": null,
+      "rest_time_before_print_s": null,
+      "rest_time_after_retract_s": null,
+      "is_default": true,
+      "is_active": true,
+      "notes": "From Anycubic official M5s table.",
+      "metadata": {
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_mode": "Photon Mono M5s",
+        "retrieved_at": "2026-04-21",
+        "bottom_layers": 3,
+        "motion": {
+          "z_lift_distance_mm": 3.0,
+          "z_lift_speed_mm_s": 20.0,
+          "z_retract_speed_mm_s": 20.0
+        }
+      }
+    },
+    {
+      "printer_name": "Anycubic Photon Mono M5",
+      "resin_name": "Anycubic Standard Resin",
+      "profile_name": "Official Standard (0.05mm)",
+      "layer_height_mm": 0.05,
+      "exposure_s": 2.8,
+      "bottom_exposure_s": 25.0,
+      "transition_layers": null,
+      "tilt_speed_reference_mm_h": null,
+      "rest_time_before_print_s": null,
+      "rest_time_after_retract_s": null,
+      "is_default": true,
+      "is_active": true,
+      "notes": "From Anycubic official M5 table.",
+      "metadata": {
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_mode": "Photon Mono M5",
+        "retrieved_at": "2026-04-21",
+        "bottom_layers": 5,
+        "motion": {
+          "z_lift_distance_mm": 8.0,
+          "z_lift_speed_mm_s": 6.0,
+          "z_retract_speed_mm_s": 6.0
+        }
+      }
+    },
+    {
+      "printer_name": "Anycubic Photon M3 Max",
+      "resin_name": "Anycubic Standard Resin",
+      "profile_name": "Official Standard (0.05mm)",
+      "layer_height_mm": 0.05,
+      "exposure_s": 3.0,
+      "bottom_exposure_s": 50.0,
+      "transition_layers": null,
+      "tilt_speed_reference_mm_h": null,
+      "rest_time_before_print_s": null,
+      "rest_time_after_retract_s": null,
+      "is_default": true,
+      "is_active": true,
+      "notes": "From Anycubic official M3 Max table.",
+      "metadata": {
+        "source_urls": [
+          "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_mode": "Photon M3 Max",
+        "retrieved_at": "2026-04-21",
+        "bottom_layers": 6,
+        "motion": {
+          "z_lift_distance_mm": 10.0,
+          "z_lift_speed_mm_s": 2.0,
+          "z_retract_speed_mm_s": 3.0
+        }
+      }
+    },
+    {
+      "printer_name": "Phrozen Sonic Mini 8K S",
+      "resin_name": "Phrozen Aqua 8K Resin",
+      "profile_name": "Phrozen Baseline Range Midpoint (0.05mm)",
+      "layer_height_mm": 0.05,
+      "exposure_s": 2.25,
+      "bottom_exposure_s": 30.0,
+      "transition_layers": 6,
+      "tilt_speed_reference_mm_h": null,
+      "rest_time_before_print_s": null,
+      "rest_time_after_retract_s": 3.0,
+      "is_default": true,
+      "is_active": true,
+      "notes": "Calculated midpoint from official range (normal 2.0-2.5s, bottom 25-35s).",
+      "metadata": {
+        "source_urls": [
+          "https://info.phrozen3d.com/pages/resin-sonic-mini-8k-s"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_mode": "Phrozen resin profile page",
+        "retrieved_at": "2026-04-21",
+        "bottom_layers": 6,
+        "motion": {
+          "z_lift_distance_mm": 6.0,
+          "z_lift_speed_mm_s": 1.0,
+          "z_retract_speed_mm_s": 2.5
+        },
+        "range_source": {
+          "normal_exposure_s": [
+            2.0,
+            2.5
+          ],
+          "bottom_exposure_s": [
+            25.0,
+            35.0
+          ]
+        }
+      }
+    },
+    {
+      "printer_name": "Phrozen Sonic Mighty Revo 16K",
+      "resin_name": "Phrozen Aqua 8K Resin",
+      "profile_name": "Phrozen Baseline Range Midpoint (0.05mm)",
+      "layer_height_mm": 0.05,
+      "exposure_s": 2.25,
+      "bottom_exposure_s": 30.0,
+      "transition_layers": 6,
+      "tilt_speed_reference_mm_h": null,
+      "rest_time_before_print_s": null,
+      "rest_time_after_retract_s": 3.0,
+      "is_default": true,
+      "is_active": true,
+      "notes": "Calculated midpoint from official range (normal 2.0-2.5s, bottom 25-35s).",
+      "metadata": {
+        "source_urls": [
+          "https://info.phrozen3d.com/pages/resin-sonic-mighty-16k"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_mode": "Phrozen resin profile page",
+        "retrieved_at": "2026-04-21",
+        "bottom_layers": 6,
+        "motion": {
+          "z_lift_distance_mm": 6.0,
+          "z_lift_speed_mm_s": 1.0,
+          "z_retract_speed_mm_s": 2.5
+        },
+        "range_source": {
+          "normal_exposure_s": [
+            2.0,
+            2.5
+          ],
+          "bottom_exposure_s": [
+            25.0,
+            35.0
+          ]
+        }
+      }
+    },
+    {
+      "printer_name": "Elegoo Saturn 4 Ultra",
+      "resin_name": "Phrozen Aqua 8K Resin",
+      "profile_name": "Phrozen Baseline Range Midpoint (0.05mm)",
+      "layer_height_mm": 0.05,
+      "exposure_s": 2.25,
+      "bottom_exposure_s": 30.0,
+      "transition_layers": 6,
+      "tilt_speed_reference_mm_h": null,
+      "rest_time_before_print_s": null,
+      "rest_time_after_retract_s": 3.0,
+      "is_default": true,
+      "is_active": true,
+      "notes": "Calculated midpoint from official range (normal 2.0-2.5s, bottom 25-35s).",
+      "metadata": {
+        "source_urls": [
+          "https://info.phrozen3d.com/pages/resin-elegoo-saturn-4-ultra-16k"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_mode": "Phrozen profile tuned for Elegoo Saturn 4 Ultra 16K",
+        "retrieved_at": "2026-04-21",
+        "bottom_layers": 6,
+        "motion": {
+          "z_lift_distance_mm": 6.0,
+          "z_lift_speed_mm_s": 1.0,
+          "z_retract_speed_mm_s": 2.5
+        },
+        "range_source": {
+          "normal_exposure_s": [
+            2.0,
+            2.5
+          ],
+          "bottom_exposure_s": [
+            25.0,
+            35.0
+          ]
+        }
+      }
+    }
+  ]
+}

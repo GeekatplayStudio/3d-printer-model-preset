@@ -26,7 +26,13 @@ def _as_bool(value: str | None, default: bool = False) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
+def standalone_mode() -> bool:
+    return _as_bool(os.getenv("RESINLOGIC_STANDALONE_MODE"), default=True)
+
+
 def auth_enforced() -> bool:
+    if standalone_mode():
+        return False
     return _as_bool(os.getenv("RESINLOGIC_ENFORCE_AUTH"), default=False)
 
 
@@ -53,29 +59,42 @@ def _configured_api_keys() -> dict[str, str]:
     return {}
 
 
-def authenticate_request(
-    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
-    x_actor: str | None = Header(default=None, alias="X-Actor"),
-) -> AuthContext:
-    actor = (x_actor or "anonymous").strip() or "anonymous"
-    key_map = _configured_api_keys()
-    key = (x_api_key or "").strip()
+def _extract_token(authorization: str | None) -> str:
+    value = (authorization or "").strip()
+    if not value:
+        return ""
+    lowered = value.lower()
+    if lowered.startswith("bearer "):
+        return value[7:].strip()
+    if lowered.startswith("token "):
+        return value[6:].strip()
+    return value
 
-    if not auth_enforced() and not key:
-        # Dev/default mode: no header required, treat as admin for local workflows.
-        return AuthContext(actor=actor, role="admin", api_key_present=False)
+
+def authenticate_request(
+    authorization: str | None = Header(default=None, alias="Authorization"),
+    actor_header: str | None = Header(default=None, alias="Actor"),
+) -> AuthContext:
+    default_actor = os.getenv("USER") or os.getenv("USERNAME") or "local-user"
+    actor = (actor_header or default_actor).strip() or default_actor
+    key_map = _configured_api_keys()
+    key = _extract_token(authorization)
+
+    if not auth_enforced():
+        # Standalone/local mode: no auth required, always treat as admin.
+        return AuthContext(actor=actor, role="admin", api_key_present=bool(key))
 
     if not key:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing X-API-Key.",
+            detail="Missing Authorization header. Use 'Authorization: Bearer <token>'.",
         )
 
     role = key_map.get(key)
     if role is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid API key.",
+            detail="Invalid authorization token.",
         )
     return AuthContext(actor=actor, role=role, api_key_present=True)
 
@@ -86,10 +105,10 @@ def require_role(required_role: str) -> Callable[..., AuthContext]:
         raise ValueError(f"Unknown role '{required_role}'.")
 
     def _dependency(
-        x_api_key: str | None = Header(default=None, alias="X-API-Key"),
-        x_actor: str | None = Header(default=None, alias="X-Actor"),
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        actor_header: str | None = Header(default=None, alias="Actor"),
     ) -> AuthContext:
-        auth = authenticate_request(x_api_key=x_api_key, x_actor=x_actor)
+        auth = authenticate_request(authorization=authorization, actor_header=actor_header)
         level = _ROLE_LEVEL.get(auth.role, 0)
         if level < required_level:
             raise HTTPException(

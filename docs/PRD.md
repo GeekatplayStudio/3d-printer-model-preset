@@ -29,6 +29,8 @@ ResinLogic AI solves this by combining geometry analysis, catalog intelligence, 
 - Get high-quality first-pass settings for a model, printer, and resin.
 - Reduce print failures from peel-force stress, blooming, delamination, and environment mismatch.
 - Maintain a shared technical database with safe rollback and clear audit trails.
+- Complete the full flow through an extremely simple step-by-step wizard with minimal user input.
+- See exactly where recommended settings came from (source links + confidence) before printing.
 
 ## Product Scope (Current)
 
@@ -38,6 +40,12 @@ ResinLogic AI solves this by combining geometry analysis, catalog intelligence, 
 - Analyze geometry only (`/phase1/analyze`).
 - Generate optimized settings (`/phase2/optimize` and history-aware variant).
 - Import and summarize feedback from files, URLs, YouTube, and camera logs.
+- Guided end-user wizard (`/wizard`) with ordered steps:
+  1. Setup/update printer-resin database from official local data or GitHub data file.
+  2. Show data status/completeness and readiness.
+  3. Upload STL and run integrity + geometry report.
+  4. Auto-fix mesh where possible and provide repaired STL download.
+  5. Select printer + resin and generate settings with on-screen results, source references, trust level, and download files.
 
 ### Data Maintenance
 
@@ -45,10 +53,12 @@ ResinLogic AI solves this by combining geometry analysis, catalog intelligence, 
 - CSV/JSON import/export.
 - Catalog snapshots and restore.
 - Search and row-level editing from admin UI.
+- Source-attributed catalog records (manufacturer docs/support links stored per row in metadata).
 
 ### Operations
 
-- RBAC auth with API keys.
+- Standalone local deployment by default (per-user local database).
+- Optional RBAC auth with `Authorization` tokens when running in shared/server mode.
 - Async jobs with status, cancel, and cleanup.
 - Scheduled sync definitions and manual/background execution.
 - Metrics and Prometheus export.
@@ -77,9 +87,12 @@ ResinLogic AI solves this by combining geometry analysis, catalog intelligence, 
 
 2. Parameter Decision Engine
 - produce explainable settings from geometry + resin + printer + environment.
+- include provenance classification for every settings result (`verified_sources`, `catalog_unverified`, `fallback_defaults`).
 
 3. Catalog Intelligence
 - load profile overrides from maintained printer-resin compatibility catalog.
+- keep per-record provenance (`source_urls`, retrieval date, source type) for auditable settings quality.
+- expose compatibility-aware printer/resin selection so wizard defaults remain data-backed.
 
 4. Feedback Intelligence
 - ingest and persist field feedback and use it to adapt future recommendations.
@@ -90,12 +103,18 @@ ResinLogic AI solves this by combining geometry analysis, catalog intelligence, 
 6. Scalability of Data Maintenance
 - support all printer and resin entries, not only Mars 5 Ultra.
 
+7. Wizard-First UX
+- provide a no-code, no-JSON path for non-technical users.
+- enforce sequential completion of critical steps before continuing.
+- keep each step clear, with one primary action and explicit status output.
+
 ## Non-Functional Requirements
 
 - Deterministic and explainable outputs.
 - Persistent storage for catalog, jobs, audit, schedules, feedback.
 - Secure-by-config auth for production mode.
 - Scriptable and API-first design for automation.
+- Large-model robustness: minimum analysis mode must remain memory-safe and provide progress/status clarity.
 
 ## Success Metrics
 

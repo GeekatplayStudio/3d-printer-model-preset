@@ -33,6 +33,17 @@ Primary libraries:
 - printers: machine technical specs and metadata,
 - resins: material technical specs and metadata,
 - profiles: printer-resin compatibility and recommended settings.
+- each record stores provenance in metadata (`source_urls`, `source_type`, `retrieved_at`).
+
+### Settings Output Provenance
+
+- `OptimalSettings` now includes `provenance` with:
+  - `data_quality`: `verified_sources | catalog_unverified | fallback_defaults`,
+  - `real_data_backed`,
+  - `confidence_score`,
+  - `source_count`,
+  - `references[]` (title/source type/source URL/retrieved timestamp/applies-to),
+  - `notes[]`.
 
 ### Operational Data
 
@@ -43,12 +54,13 @@ Primary libraries:
 
 ## 4. Persistence Requirements
 
-- `data/tech_catalog.db`: catalog entities and relationships.
-- `data/feedback_history.db`: normalized feedback records.
-- `data/audit_log.db`: mutation audit + version snapshots.
-- `data/jobs.db`: persisted job status across restarts.
-- `data/sync_schedules.db`: sync interval definitions and run status.
+- `~/.resinlogic/tech_catalog.db`: catalog entities and relationships.
+- `~/.resinlogic/feedback_history.db`: normalized feedback records.
+- `~/.resinlogic/audit_log.db`: mutation audit + version snapshots.
+- `~/.resinlogic/jobs.db`: persisted job status across restarts.
+- `~/.resinlogic/sync_schedules.db`: sync interval definitions and run status.
 - `data/resin_profiles.json`: embedded baseline profile dataset.
+- `data/official_catalog_sync.json`: source-attributed manufacturer seed payload for sync import.
 
 All stores must initialize automatically at startup if missing.
 
@@ -61,6 +73,8 @@ All stores must initialize automatically at startup if missing.
 - `POST /phase2/optimize/history-aware`: optimization with historical adaptation.
 - `POST /pipeline`: end-to-end workflow.
 - `POST /jobs/pipeline`: async pipeline submission.
+- geometry analysis supports `analysis_level` (`minimum`, `balanced`, `deep`) and returns step-level performance timings.
+- minimum mode is optimized for large meshes and avoids heavy memory paths.
 
 ### Feedback Intelligence
 
@@ -75,6 +89,7 @@ All stores must initialize automatically at startup if missing.
 - import/export in JSON and CSV,
 - version snapshot and restore endpoints,
 - audit read endpoint.
+- `/wizard/catalog/options` returns compatibility mapping (`printer -> supported resin list`) for data-backed dropdown filtering.
 
 ### Sync and Job Ops
 
@@ -84,14 +99,16 @@ All stores must initialize automatically at startup if missing.
 
 ## 6. Security Requirements
 
-- API key authentication with role mapping:
+- Standalone local mode is the default runtime profile.
+- In standalone mode, auth is disabled and the local operator is treated as admin.
+- Optional token authentication with role mapping for shared/server deployments:
   - `viewer`,
   - `operator`,
   - `admin`.
 - Header contract:
-  - `X-API-Key` (credential),
-  - `X-Actor` (audit identity).
-- Production mode must support strict auth via env configuration.
+  - `Authorization: Bearer <token>` (credential, including GitHub token style),
+  - `Actor` (audit identity).
+- Shared/server mode must support strict auth via env configuration.
 
 ## 7. Reliability and Observability
 
@@ -109,10 +126,13 @@ Required automated coverage areas:
 - API security and operational endpoints,
 - schedule store and scheduler behavior,
 - job queue persistence and cancellation behavior.
+- wizard flow validation for provenance + compatibility behavior.
+- large-model minimum-mode regression checks (no voxelized fast-path dependency).
 
 ## 9. Deployment Requirements
 
 - local and containerized startup supported,
+- per-user local data directory supported (`RESINLOGIC_DATA_DIR`, default `~/.resinlogic`),
 - docker-compose based run path with prometheus service,
 - environment-based configuration for auth and scheduler mode.
 

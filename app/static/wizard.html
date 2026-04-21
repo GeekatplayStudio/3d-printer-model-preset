@@ -1,0 +1,895 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ResinLogic Wizard</title>
+    <style>
+      :root {
+        --bg: #060b12;
+        --bg-soft: #0f1824;
+        --card: #131f2d;
+        --line: #26384c;
+        --text: #e8f1ff;
+        --muted: #9eb4c8;
+        --primary: #1bb39a;
+        --primary-strong: #13a289;
+        --warn: #d6a14f;
+        --danger: #e16d6d;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Avenir Next", "Segoe UI", Tahoma, sans-serif;
+        color: var(--text);
+        background: radial-gradient(circle at 15% 0%, #1b3047 0%, #0c1521 36%, var(--bg) 100%);
+      }
+
+      .wrap {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 20px 14px 28px;
+      }
+
+      .hero {
+        background: linear-gradient(120deg, #185f8f 0%, #194477 45%, #0f6a73 100%);
+        border-radius: 16px;
+        padding: 18px;
+        box-shadow: 0 14px 34px rgba(1, 6, 13, 0.45);
+      }
+
+      .hero h1 {
+        margin: 0;
+        font-size: 1.5rem;
+      }
+
+      .hero p {
+        margin: 8px 0 0;
+        color: #d6e9ff;
+      }
+
+      .auth {
+        margin-top: 12px;
+        display: grid;
+        gap: 8px;
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .steps {
+        margin-top: 14px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .card {
+        background: linear-gradient(165deg, var(--card) 0%, #162538 100%);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 14px;
+      }
+
+      .card h2 {
+        margin: 0;
+        font-size: 1.08rem;
+      }
+
+      .sub {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .grid {
+        display: grid;
+        gap: 8px;
+      }
+
+      .grid-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      label {
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+
+      input,
+      select,
+      button {
+        width: 100%;
+        padding: 9px 10px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: #0b131d;
+        color: var(--text);
+        font-family: inherit;
+        font-size: 0.95rem;
+      }
+
+      button {
+        border: 0;
+        cursor: pointer;
+        background: var(--primary);
+        color: white;
+        font-weight: 650;
+      }
+
+      button:hover {
+        background: var(--primary-strong);
+      }
+
+      button.secondary {
+        background: #3d5469;
+      }
+
+      button.warn {
+        background: var(--warn);
+        color: #151515;
+      }
+
+      button[disabled] {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .chip {
+        border: 1px solid #2a4259;
+        background: #0b1521;
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 0.84rem;
+        color: #cbe0f6;
+      }
+
+      .msg {
+        margin-top: 10px;
+        padding: 10px;
+        border-radius: 10px;
+        border: 1px solid #29425a;
+        background: #0a1420;
+        color: #d4e8ff;
+        font-size: 0.9rem;
+      }
+
+      .msg.warn {
+        border-color: #6b532d;
+        color: #ffe6bf;
+      }
+
+      .msg.error {
+        border-color: #6b2d2d;
+        color: #ffd1d1;
+      }
+
+      .summary {
+        margin-top: 10px;
+        border: 1px solid #273c52;
+        border-radius: 10px;
+        overflow: hidden;
+      }
+
+      .summary-row {
+        display: grid;
+        grid-template-columns: 1.3fr 1fr;
+      }
+
+      .summary-row div {
+        padding: 8px 10px;
+        border-bottom: 1px solid #233547;
+      }
+
+      .summary-row div:first-child {
+        color: var(--muted);
+        background: #0d1622;
+      }
+
+      .summary-row:last-child div {
+        border-bottom: 0;
+      }
+
+      .downloads {
+        margin-top: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .downloads a {
+        color: #7fe5d5;
+        text-decoration: none;
+      }
+
+      .catalog-panel {
+        margin-top: 10px;
+        border: 1px solid #29425a;
+        border-radius: 10px;
+        padding: 10px;
+        background: #0a1420;
+      }
+
+      .catalog-box {
+        border: 1px solid #24394d;
+        border-radius: 10px;
+        background: #0b1521;
+        padding: 8px;
+      }
+
+      .catalog-list {
+        margin-top: 6px;
+        max-height: 220px;
+        overflow: auto;
+        font-size: 0.9rem;
+        line-height: 1.35;
+      }
+
+      .catalog-list ol {
+        margin: 0;
+        padding-left: 18px;
+      }
+
+      .catalog-list li {
+        margin: 2px 0;
+      }
+
+      .tiny {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 0.83rem;
+      }
+
+      @media (max-width: 900px) {
+        .auth,
+        .grid-2,
+        .grid-3,
+        .summary-row {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <section class="hero">
+        <h1>ResinLogic Wizard</h1>
+        <p>Clean flow: 1) setup database, 2) upload STL + check/fix, 3) choose printer + resin and get settings.</p>
+        <div class="auth">
+          <input id="authToken" placeholder="Authorization token (optional in standalone mode)" />
+          <input id="actor" placeholder="Actor" value="wizard-user" />
+        </div>
+      </section>
+
+      <section class="steps">
+        <article class="card">
+          <h2>Step 1: Setup / Update Database</h2>
+          <p class="sub">Single click import/update from your official local dataset.</p>
+          <div class="grid grid-2" style="margin-top: 10px">
+            <button id="setupBtn" onclick="setupDatabase()">Setup / Update Database</button>
+            <button class="secondary" onclick="refreshStatus()">Refresh Status</button>
+          </div>
+
+          <div class="chips">
+            <span class="chip" id="chipPrinters">Printers: -</span>
+            <span class="chip" id="chipResins">Resins: -</span>
+            <span class="chip" id="chipProfiles">Profiles: -</span>
+            <span class="chip" id="chipCompleteness">Completeness: -</span>
+          </div>
+          <div id="dbMsg" class="msg">Database not checked yet.</div>
+        </article>
+
+        <article class="card">
+          <h2>Step 2: Upload STL and Analyze / Fix</h2>
+          <p class="sub">STL only. We check for mesh issues and can auto-fix when needed.</p>
+          <div class="grid grid-2" style="margin-top: 10px">
+            <div>
+              <label>Model file (.stl)</label>
+              <input id="modelFile" type="file" accept=".stl" />
+            </div>
+            <div>
+              <label>Slice height (mm)</label>
+              <input id="sliceHeight" type="number" step="0.001" value="0.01" />
+            </div>
+          </div>
+          <div class="grid" style="margin-top: 8px">
+            <div>
+              <label>Analysis depth</label>
+              <select id="analysisLevel">
+                <option value="minimum" selected>minimum (fastest)</option>
+                <option value="balanced">balanced</option>
+                <option value="deep">deep (slowest, most detail)</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-2" style="margin-top: 10px">
+            <button id="analyzeBtn" onclick="analyzeModel()" disabled>Analyze STL</button>
+            <button id="fixBtn" class="warn" onclick="fixModel()" disabled>Auto-Fix and Download STL</button>
+          </div>
+          <div id="modelMsg" class="msg">Run Step 1 first.</div>
+          <div id="modelDownload" class="downloads"></div>
+        </article>
+
+        <article class="card">
+          <h2>Step 3: Select Printer + Resin, Generate Settings</h2>
+          <p class="sub">Dropdowns only. No manual typing needed.</p>
+          <div class="grid grid-3" style="margin-top: 10px">
+            <div>
+              <label>Printer</label>
+              <select id="printerSel"></select>
+            </div>
+            <div>
+              <label>Resin</label>
+              <select id="resinSel"></select>
+            </div>
+            <div>
+              <label>Use case</label>
+              <select id="useCaseSel">
+                <option value="miniature">miniature</option>
+                <option value="collectible">collectible</option>
+                <option value="heavy_use">heavy_use</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-2" style="margin-top: 8px">
+            <div>
+              <label>Ambient temp C (optional)</label>
+              <input id="ambientTemp" type="number" step="0.1" placeholder="optional" />
+            </div>
+            <div>
+              <label>Film releases (optional)</label>
+              <input id="filmReleases" type="number" value="0" />
+            </div>
+          </div>
+
+          <div class="grid" style="margin-top: 10px">
+            <button id="settingsBtn" onclick="generateSettings()" disabled>Generate Settings</button>
+          </div>
+          <div class="grid grid-2" style="margin-top: 8px">
+            <button id="catalogToggleBtn" class="secondary" onclick="toggleCatalogList()">Show Catalog List</button>
+            <button class="secondary" onclick="loadCatalogList()">Refresh Catalog List</button>
+          </div>
+
+          <div id="settingsMsg" class="msg">Analyze model first.</div>
+
+          <div id="catalogPanel" class="catalog-panel" style="display:none">
+            <div class="grid grid-2">
+              <div class="catalog-box">
+                <div class="tiny" id="catalogPrintersCount">Printers: 0</div>
+                <div class="catalog-list" id="catalogPrintersList"></div>
+              </div>
+              <div class="catalog-box">
+                <div class="tiny" id="catalogResinsCount">Resins: 0</div>
+                <div class="catalog-list" id="catalogResinsList"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="summary" id="settingsSummary" style="display:none">
+            <div class="summary-row"><div>Layer Height</div><div id="sLayer">-</div></div>
+            <div class="summary-row"><div>Exposure</div><div id="sExposure">-</div></div>
+            <div class="summary-row"><div>Bottom Exposure</div><div id="sBottomExposure">-</div></div>
+            <div class="summary-row"><div>Tilt Speed</div><div id="sTilt">-</div></div>
+            <div class="summary-row"><div>Tilt Angle</div><div id="sAngle">-</div></div>
+            <div class="summary-row"><div>Profile Used</div><div id="sProfile">-</div></div>
+            <div class="summary-row"><div>Data Quality</div><div id="sDataQuality">-</div></div>
+            <div class="summary-row"><div>Confidence</div><div id="sConfidence">-</div></div>
+          </div>
+
+          <div id="settingsDownloads" class="downloads"></div>
+          <div id="settingsNotes" class="tiny"></div>
+          <div id="settingsRefs" class="tiny"></div>
+        </article>
+      </section>
+    </main>
+
+    <script>
+      const state = {
+        status: null,
+        catalogPrinters: [],
+        catalogResins: [],
+        compatibilityMap: {},
+        analysis: null,
+        fixedAnalysis: null,
+      };
+
+      const ANALYZE_STEPS = [
+        "Validating STL file",
+        "Uploading STL to analyzer",
+        "Loading mesh geometry",
+        "Checking topology health",
+        "Computing geometry metrics",
+        "Finalizing analysis report",
+      ];
+
+      const FIX_STEPS = [
+        "Validating STL file",
+        "Uploading STL to repair engine",
+        "Cleaning duplicate / degenerate triangles",
+        "Attempting hole and normal repairs",
+        "Re-running geometry checks",
+        "Preparing repaired STL download",
+      ];
+
+      const SETTINGS_STEPS = [
+        "Loading selected printer + resin profiles",
+        "Applying geometry-aware optimization logic",
+        "Applying temperature and film adjustments",
+        "Generating final settings package",
+      ];
+
+      function headers(json = true) {
+        const out = {};
+        const token = document.getElementById("authToken").value.trim();
+        const actor = document.getElementById("actor").value.trim();
+        if (token) {
+          const lower = token.toLowerCase();
+          out["Authorization"] = lower.startsWith("bearer ") || lower.startsWith("token ") ? token : `Bearer ${token}`;
+        }
+        if (actor) out["Actor"] = actor;
+        if (json) out["Content-Type"] = "application/json";
+        return out;
+      }
+
+      async function callApi(path, opts = {}) {
+        let res;
+        try {
+          res = await fetch(path, opts);
+        } catch (err) {
+          const raw = String(err && err.message ? err.message : err);
+          if (raw.toLowerCase().includes("failed to fetch")) {
+            throw new Error(
+              "Could not reach API server. If this happened on a large STL, retry with minimum depth and larger slice height (e.g. 0.05mm)."
+            );
+          }
+          throw err;
+        }
+        const text = await res.text();
+        let body = text;
+        try {
+          body = text ? JSON.parse(text) : {};
+        } catch (_) {}
+        if (!res.ok) {
+          const msg = typeof body === "string" ? body : JSON.stringify(body);
+          throw new Error(msg || `Request failed (${res.status})`);
+        }
+        return body;
+      }
+
+      async function callApiTimed(path, opts = {}, timeoutMs = 300000) {
+        const controller = new AbortController();
+        let timer = null;
+        if (Number.isFinite(timeoutMs) && timeoutMs > 0) {
+          timer = window.setTimeout(() => controller.abort(), timeoutMs);
+        }
+        try {
+          return await callApi(path, { ...opts, signal: controller.signal });
+        } catch (err) {
+          if (err && err.name === "AbortError") {
+            throw new Error(`Operation timed out after ${Math.round(timeoutMs / 1000)} seconds.`);
+          }
+          throw err;
+        } finally {
+          if (timer !== null) window.clearTimeout(timer);
+        }
+      }
+
+      function analysisTimeoutMs(level, fileSizeBytes) {
+        const sizeMb = (Number(fileSizeBytes) || 0) / (1024 * 1024);
+        let minutes = 10;
+        if (level === "balanced") minutes = 20;
+        if (level === "deep") minutes = 35;
+        if (sizeMb >= 60) minutes += 5;
+        if (sizeMb >= 120) minutes += 10;
+        if (sizeMb >= 250) minutes += 20;
+        return minutes * 60 * 1000;
+      }
+
+      function setMsg(id, text, type = "") {
+        const el = document.getElementById(id);
+        el.textContent = text;
+        el.className = `msg${type ? ` ${type}` : ""}`;
+      }
+
+      function startStepProgress(messageId, steps) {
+        let index = 0;
+        const startedAt = Date.now();
+        const tick = () => {
+          const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+          const safeIndex = Math.min(index, steps.length - 1);
+          const prefix = `${safeIndex + 1}/${steps.length}`;
+          const stage = steps[safeIndex];
+          const slowHint = elapsed >= 20 ? " Large model detected, still processing..." : "";
+          setMsg(messageId, `${prefix} ${stage} (${elapsed}s).${slowHint}`);
+          if (index < steps.length - 1) index += 1;
+        };
+        tick();
+        const timer = window.setInterval(tick, 1400);
+        return () => window.clearInterval(timer);
+      }
+
+      function setOptions(id, values) {
+        const select = document.getElementById(id);
+        select.innerHTML = "";
+        for (const v of values) {
+          const option = document.createElement("option");
+          option.value = v;
+          option.textContent = v;
+          select.appendChild(option);
+        }
+      }
+
+      function updateResinOptionsForPrinter() {
+        const printer = document.getElementById("printerSel").value;
+        const compatibility = state.compatibilityMap || {};
+        const allowed = Array.isArray(compatibility[printer]) ? compatibility[printer] : [];
+        if (allowed.length > 0) {
+          setOptions("resinSel", allowed);
+          return;
+        }
+        setOptions("resinSel", state.catalogResins || []);
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll("\"", "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function renderCatalogList() {
+        const printers = state.catalogPrinters || [];
+        const resins = state.catalogResins || [];
+        document.getElementById("catalogPrintersCount").textContent = `Printers: ${printers.length}`;
+        document.getElementById("catalogResinsCount").textContent = `Resins: ${resins.length}`;
+
+        const printersHtml = printers.length
+          ? `<ol>${printers.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol>`
+          : "<div class='tiny'>No printers in catalog yet.</div>";
+        const resinsHtml = resins.length
+          ? `<ol>${resins.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol>`
+          : "<div class='tiny'>No resins in catalog yet.</div>";
+
+        document.getElementById("catalogPrintersList").innerHTML = printersHtml;
+        document.getElementById("catalogResinsList").innerHTML = resinsHtml;
+      }
+
+      function toggleCatalogList() {
+        const panel = document.getElementById("catalogPanel");
+        const btn = document.getElementById("catalogToggleBtn");
+        const currentlyVisible = panel.style.display !== "none";
+        if (currentlyVisible) {
+          panel.style.display = "none";
+          btn.textContent = "Show Catalog List";
+          return;
+        }
+        panel.style.display = "block";
+        btn.textContent = "Hide Catalog List";
+        renderCatalogList();
+      }
+
+      async function loadCatalogList() {
+        await refreshOptions();
+        const panel = document.getElementById("catalogPanel");
+        const btn = document.getElementById("catalogToggleBtn");
+        panel.style.display = "block";
+        btn.textContent = "Hide Catalog List";
+      }
+
+      function updateLocks() {
+        const readyForAnalyze = !!(state.status && state.status.ready_for_model_analysis);
+        const hasAnalysis = !!(state.analysis || state.fixedAnalysis);
+        document.getElementById("analyzeBtn").disabled = !readyForAnalyze;
+        document.getElementById("fixBtn").disabled = !state.analysis;
+        document.getElementById("settingsBtn").disabled = !hasAnalysis;
+      }
+
+      function updateStatusChips(status) {
+        document.getElementById("chipPrinters").textContent = `Printers: ${status.printers_total}`;
+        document.getElementById("chipResins").textContent = `Resins: ${status.resins_total}`;
+        document.getElementById("chipProfiles").textContent = `Profiles: ${status.profiles_total}`;
+        document.getElementById("chipCompleteness").textContent = `Completeness: ${status.completeness_percent}%`;
+      }
+
+      async function refreshOptions() {
+        const data = await callApi("/wizard/catalog/options", { headers: headers(false) });
+        state.catalogPrinters = data.printers || [];
+        state.catalogResins = data.resins || [];
+        state.compatibilityMap = data.compatibility || {};
+        setOptions("printerSel", state.catalogPrinters);
+        updateResinOptionsForPrinter();
+        renderCatalogList();
+      }
+
+      async function refreshStatus() {
+        try {
+          const status = await callApi("/wizard/database/status", { headers: headers(false) });
+          state.status = status;
+          updateStatusChips(status);
+          if (status.ready_for_model_analysis) {
+            setMsg("dbMsg", "Database is ready. You can upload STL now.");
+          } else {
+            setMsg("dbMsg", "Database is not ready. Click Setup / Update Database first.", "warn");
+          }
+          updateLocks();
+        } catch (err) {
+          setMsg("dbMsg", `Status error: ${err.message}`, "error");
+        }
+      }
+
+      async function setupDatabase() {
+        const btn = document.getElementById("setupBtn");
+        btn.disabled = true;
+        setMsg("dbMsg", "Setting up / updating database...");
+        try {
+          await callApi("/wizard/database/setup", {
+            method: "POST",
+            headers: headers(true),
+            body: JSON.stringify({
+              mode: "official_local",
+              replace_existing: false,
+              auto_update: false,
+              source: "wizard_setup",
+            }),
+          });
+          await Promise.all([refreshStatus(), refreshOptions()]);
+          setMsg("dbMsg", "Database setup/update completed.");
+        } catch (err) {
+          setMsg("dbMsg", `Setup error: ${err.message}`, "error");
+        } finally {
+          btn.disabled = false;
+        }
+      }
+
+      function ensureStlSelected() {
+        const file = document.getElementById("modelFile").files[0];
+        if (!file) {
+          setMsg("modelMsg", "Select an STL file first.", "warn");
+          return null;
+        }
+        if (!String(file.name || "").toLowerCase().endsWith(".stl")) {
+          setMsg("modelMsg", "Only STL files are allowed.", "error");
+          return null;
+        }
+        return file;
+      }
+
+      async function analyzeModel() {
+        const file = ensureStlSelected();
+        if (!file) return;
+
+        const analyzeBtn = document.getElementById("analyzeBtn");
+        analyzeBtn.disabled = true;
+        const analysisLevel = document.getElementById("analysisLevel").value || "minimum";
+        const timeoutMs = analysisTimeoutMs(analysisLevel, file.size || 0);
+        const stopProgress = startStepProgress("modelMsg", ANALYZE_STEPS);
+        document.getElementById("modelDownload").innerHTML = "";
+        try {
+          const fd = new FormData();
+          fd.append("file", file);
+          fd.append("slice_height_mm", document.getElementById("sliceHeight").value || "0.01");
+          fd.append("analysis_level", analysisLevel);
+          const body = await callApiTimed("/wizard/model/check", {
+            method: "POST",
+            headers: headers(false),
+            body: fd,
+          }, timeoutMs);
+          state.analysis = body.analysis;
+          state.fixedAnalysis = null;
+          updateLocks();
+
+          const health = body.analysis.mesh_health || {};
+          const msg = [
+            `Analysis complete.`,
+            `Watertight: ${health.watertight ? "Yes" : "No"}`,
+            `Non-manifold edges: ${health.non_manifold_edge_count || 0}`,
+            `Boundary edges: ${health.boundary_edge_count || 0}`,
+            body.requires_fix ? "Auto-fix is recommended." : "No critical fix required.",
+            performanceSummary(body.analysis),
+          ].join(" ");
+          setMsg("modelMsg", msg, body.requires_fix ? "warn" : "");
+        } catch (err) {
+          const message = String(err && err.message ? err.message : err);
+          if (message.toLowerCase().includes("timed out")) {
+            setMsg(
+              "modelMsg",
+              `Analyze error: ${message} Try minimum depth and a larger slice height (for example 0.05mm) for very large models.`,
+              "error"
+            );
+          } else {
+            setMsg("modelMsg", `Analyze error: ${message}`, "error");
+          }
+        } finally {
+          stopProgress();
+          updateLocks();
+        }
+      }
+
+      async function fixModel() {
+        const file = ensureStlSelected();
+        if (!file) return;
+
+        const fixBtn = document.getElementById("fixBtn");
+        fixBtn.disabled = true;
+        const analysisLevel = document.getElementById("analysisLevel").value || "minimum";
+        const timeoutMs = analysisTimeoutMs(analysisLevel, file.size || 0);
+        const stopProgress = startStepProgress("modelMsg", FIX_STEPS);
+        document.getElementById("modelDownload").innerHTML = "";
+        try {
+          const fd = new FormData();
+          fd.append("file", file);
+          fd.append("slice_height_mm", document.getElementById("sliceHeight").value || "0.01");
+          fd.append("analysis_level", analysisLevel);
+          const body = await callApiTimed("/wizard/model/fix", {
+            method: "POST",
+            headers: headers(false),
+            body: fd,
+          }, timeoutMs);
+          state.fixedAnalysis = body.analysis;
+          updateLocks();
+
+          const repaired = body.repaired ? "Yes" : "No";
+          const perfText = performanceSummary(body.analysis);
+          setMsg("modelMsg", `Auto-fix finished. Repaired: ${repaired}. ${perfText}`.trim());
+          document.getElementById("modelDownload").innerHTML = `<a href="${body.download_url}">Download repaired STL</a>`;
+        } catch (err) {
+          const message = String(err && err.message ? err.message : err);
+          if (message.toLowerCase().includes("timed out")) {
+            setMsg(
+              "modelMsg",
+              `Fix error: ${message} Try minimum depth first, then run fix only if the report shows blocking mesh issues.`,
+              "error"
+            );
+          } else {
+            setMsg("modelMsg", `Fix error: ${message}`, "error");
+          }
+        } finally {
+          stopProgress();
+          updateLocks();
+        }
+      }
+
+      function renderSettingsSummary(settings) {
+        document.getElementById("settingsSummary").style.display = "block";
+        document.getElementById("sLayer").textContent = `${settings.layer_height_mm} mm`;
+        document.getElementById("sExposure").textContent = `${settings.exposure_s} s`;
+        document.getElementById("sBottomExposure").textContent = `${settings.bottom_exposure_s} s`;
+        document.getElementById("sTilt").textContent = `${settings.tilt_speed_mm_min} mm/min`;
+        document.getElementById("sAngle").textContent = `${settings.tilt_angle_deg} deg`;
+        document.getElementById("sProfile").textContent = settings.source_profile || "-";
+        const provenance = settings.provenance || {};
+        const qualityMap = {
+          verified_sources: "Verified Sources",
+          catalog_unverified: "Catalog (Unverified)",
+          fallback_defaults: "Fallback Defaults",
+        };
+        const qualityKey = String(provenance.data_quality || "fallback_defaults");
+        document.getElementById("sDataQuality").textContent = qualityMap[qualityKey] || qualityKey;
+        document.getElementById("sConfidence").textContent =
+          provenance.confidence_score == null ? "-" : `${Math.round(Number(provenance.confidence_score) * 100)}%`;
+      }
+
+      function renderSettingsReferences(provenance) {
+        const container = document.getElementById("settingsRefs");
+        if (!provenance || !Array.isArray(provenance.references) || provenance.references.length === 0) {
+          const notes = Array.isArray(provenance && provenance.notes) ? provenance.notes : [];
+          container.textContent = notes.length
+            ? `References: ${notes.join(" | ")}`
+            : "References: No source links available for this profile yet.";
+          return;
+        }
+
+        const items = provenance.references.slice(0, 8).map((ref) => {
+          const title = escapeHtml(ref.title || "Source");
+          const sourceType = ref.source_type ? ` [${escapeHtml(ref.source_type)}]` : "";
+          const url = String(ref.source_url || "").trim();
+          if (url) {
+            const safeUrl = escapeHtml(url);
+            return `<li>${title}${sourceType} <a href="${safeUrl}" target="_blank" rel="noopener">open source</a></li>`;
+          }
+          return `<li>${title}${sourceType}</li>`;
+        });
+        container.innerHTML = `<div>References (${provenance.references.length}):</div><ol>${items.join("")}</ol>`;
+      }
+
+      function performanceSummary(analysis) {
+        const perf = (analysis && analysis.performance_ms) || {};
+        const keys = Object.keys(perf).filter((key) => key !== "total");
+        if (!keys.length) return "";
+        let slowest = keys[0];
+        for (const key of keys) {
+          if ((perf[key] || 0) > (perf[slowest] || 0)) slowest = key;
+        }
+        const total = perf.total ? `${Number(perf.total).toFixed(0)}ms total` : "";
+        const slow = `${slowest}: ${Number(perf[slowest] || 0).toFixed(0)}ms`;
+        const level = analysis.analysis_level ? `level=${analysis.analysis_level}` : "";
+        return [level, total, slow].filter(Boolean).join(" | ");
+      }
+
+      async function generateSettings() {
+        const analysis = state.fixedAnalysis || state.analysis;
+        if (!analysis) {
+          setMsg("settingsMsg", "Analyze STL first.", "warn");
+          return;
+        }
+
+        const printer = document.getElementById("printerSel").value;
+        const resin = document.getElementById("resinSel").value;
+        if (!printer || !resin) {
+          setMsg("settingsMsg", "Printer and resin must be selected from dropdowns.", "warn");
+          return;
+        }
+
+        setMsg("settingsMsg", "Generating settings...");
+        const settingsBtn = document.getElementById("settingsBtn");
+        settingsBtn.disabled = true;
+        const stopProgress = startStepProgress("settingsMsg", SETTINGS_STEPS);
+        document.getElementById("settingsDownloads").innerHTML = "";
+        document.getElementById("settingsNotes").textContent = "";
+        document.getElementById("settingsRefs").innerHTML = "";
+
+        try {
+          const payload = {
+            analysis,
+            printer,
+            resin_type: resin,
+            use_case: document.getElementById("useCaseSel").value,
+            ambient_temp_c: document.getElementById("ambientTemp").value
+              ? Number(document.getElementById("ambientTemp").value)
+              : null,
+            film_releases: Number(document.getElementById("filmReleases").value || "0"),
+          };
+          const body = await callApiTimed("/wizard/settings/recommend", {
+            method: "POST",
+            headers: headers(true),
+            body: JSON.stringify(payload),
+          });
+
+          renderSettingsSummary(body.settings);
+          renderSettingsReferences(body.settings.provenance || {});
+          setMsg("settingsMsg", "Settings generated successfully.");
+
+          document.getElementById("settingsDownloads").innerHTML = [
+            `<a href="${body.cfg_download_url}">Download Chitubox CFG</a>`,
+            `<a href="${body.settings_download_url}">Download Settings JSON</a>`,
+          ].join(" | ");
+
+          const notes = [
+            ...(body.settings.warnings || []).slice(0, 2),
+            ...(body.settings.recommendations || []).slice(0, 2),
+          ];
+          document.getElementById("settingsNotes").textContent = notes.length
+            ? `Notes: ${notes.join(" | ")}`
+            : "";
+        } catch (err) {
+          setMsg("settingsMsg", `Generate error: ${err.message}`, "error");
+        } finally {
+          stopProgress();
+          updateLocks();
+        }
+      }
+
+      async function init() {
+        document.getElementById("printerSel").addEventListener("change", updateResinOptionsForPrinter);
+        await Promise.allSettled([refreshStatus(), refreshOptions()]);
+      }
+
+      init();
+    </script>
+  </body>
+</html>

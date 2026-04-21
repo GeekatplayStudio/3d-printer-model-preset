@@ -578,6 +578,8 @@ def find_profile_by_names(
     with _connect(db_path) as conn:
         sql = """
             SELECT p.*, pr.name AS printer_name, r.name AS resin_name,
+                   pr.metadata_json AS printer_metadata_json,
+                   r.metadata_json AS resin_metadata_json,
                    r.brand AS resin_brand, r.series AS resin_series,
                    r.technical_goal, r.viscosity_cp, r.shore_hardness, r.shrinkage_percent,
                    r.notes AS resin_notes, pr.notes AS printer_notes
@@ -608,6 +610,8 @@ def find_profile_by_names(
             "shore_hardness": row["shore_hardness"],
             "shrinkage_percent": row["shrinkage_percent"],
             "notes": out["notes"] or row["resin_notes"] or row["printer_notes"],
+            "printer_metadata": _json_loads(row["printer_metadata_json"]),
+            "resin_metadata": _json_loads(row["resin_metadata_json"]),
         }
     )
     return out

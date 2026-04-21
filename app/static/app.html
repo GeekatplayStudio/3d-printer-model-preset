@@ -6,14 +6,15 @@
     <title>ResinLogic Ops Console</title>
     <style>
       :root {
-        --bg: #f5f2ea;
-        --panel: #fffdf8;
-        --ink: #1d2a33;
-        --muted: #5b6770;
-        --accent: #0a7f6f;
-        --accent-soft: #d2efe9;
-        --warn: #a35a00;
-        --border: #d7d1c3;
+        --bg: #070d13;
+        --bg-soft: #0f1923;
+        --panel: #111c28;
+        --ink: #e6f1ff;
+        --muted: #9fb2c7;
+        --accent: #15a38f;
+        --accent-soft: #173b39;
+        --warn: #ca8b2a;
+        --border: #274055;
       }
 
       * {
@@ -24,7 +25,7 @@
         margin: 0;
         font-family: "Avenir Next", "Segoe UI", Tahoma, sans-serif;
         color: var(--ink);
-        background: radial-gradient(circle at 20% 0%, #faf7f1 0%, var(--bg) 40%, #efe9dc 100%);
+        background: radial-gradient(circle at 20% 0%, #162636 0%, var(--bg-soft) 38%, var(--bg) 100%);
       }
 
       .shell {
@@ -34,11 +35,11 @@
       }
 
       .hero {
-        background: linear-gradient(120deg, #0a7f6f 0%, #1c6e9f 100%);
+        background: linear-gradient(120deg, #0d6f8e 0%, #144a9e 55%, #197a86 100%);
         color: white;
         border-radius: 16px;
         padding: 22px;
-        box-shadow: 0 16px 30px rgba(13, 31, 45, 0.14);
+        box-shadow: 0 18px 34px rgba(2, 6, 12, 0.55);
       }
 
       .hero h1 {
@@ -70,7 +71,7 @@
         border: 1px solid var(--border);
         border-radius: 999px;
         padding: 8px 14px;
-        background: #f6f2e8;
+        background: #102130;
         color: var(--ink);
         font-size: 0.9rem;
         cursor: pointer;
@@ -78,8 +79,8 @@
 
       .tab.active {
         background: var(--accent-soft);
-        border-color: #8ac3b8;
-        color: #0d4f44;
+        border-color: #2c897d;
+        color: #bcfff6;
         font-weight: 600;
       }
 
@@ -89,7 +90,7 @@
         border: 1px solid var(--border);
         border-radius: 16px;
         padding: 16px;
-        box-shadow: 0 8px 24px rgba(38, 46, 60, 0.08);
+        box-shadow: 0 10px 24px rgba(2, 8, 14, 0.45);
       }
 
       .hidden {
@@ -124,11 +125,18 @@
         padding: 9px 10px;
         font-size: 0.95rem;
         font-family: inherit;
+        background: #0c1823;
+        color: var(--ink);
       }
 
       textarea {
         min-height: 160px;
         resize: vertical;
+      }
+
+      input::placeholder,
+      textarea::placeholder {
+        color: #7f96ac;
       }
 
       button {
@@ -140,7 +148,7 @@
       }
 
       button.secondary {
-        background: #6d7c89;
+        background: #435a70;
       }
 
       button.warn {
@@ -157,8 +165,8 @@
       }
 
       pre {
-        background: #18242e;
-        color: #d8ebff;
+        background: #0a1420;
+        color: #d6e8ff;
         border-radius: 12px;
         padding: 12px;
         overflow: auto;
@@ -173,7 +181,7 @@
 
       th,
       td {
-        border-bottom: 1px solid #ebe3d2;
+        border-bottom: 1px solid #23394b;
         text-align: left;
         padding: 8px 6px;
         vertical-align: top;
@@ -182,7 +190,7 @@
       .status {
         margin-top: 10px;
         font-size: 0.84rem;
-        color: #0d4f44;
+        color: #93d5ca;
       }
 
       @media (max-width: 900px) {
@@ -199,9 +207,11 @@
       <section class="hero">
         <h1>ResinLogic Ops Console</h1>
         <p>Pipeline execution, technical catalog management, sync automation, and ops monitoring.</p>
+        <p style="margin-top: 6px; font-size: 0.9rem; color: #c4daef">Standalone mode: your data stays in your local database.</p>
+        <p style="margin-top: 6px; font-size: 0.9rem; color: #c4daef">Need guided flow? Open the wizard at <a href="/wizard" style="color: #b8fff4">/wizard</a>.</p>
         <div class="auth-bar">
-          <input id="apiKey" placeholder="X-API-Key (optional in dev mode)" />
-          <input id="actor" placeholder="X-Actor (example: ops-admin)" value="ops-admin" />
+          <input id="authToken" placeholder="Authorization token (optional, only needed in shared/server mode)" />
+          <input id="actor" placeholder="Actor (example: github-username)" value="ops-admin" />
           <button onclick="checkWhoAmI()">Check Auth</button>
           <button class="secondary" onclick="refreshEverything()">Refresh All</button>
         </div>
@@ -344,10 +354,13 @@
     <script>
       function headers(json = true) {
         const out = {};
-        const key = document.getElementById("apiKey").value.trim();
+        const token = document.getElementById("authToken").value.trim();
         const actor = document.getElementById("actor").value.trim();
-        if (key) out["X-API-Key"] = key;
-        if (actor) out["X-Actor"] = actor;
+        if (token) {
+          const lower = token.toLowerCase();
+          out["Authorization"] = lower.startsWith("bearer ") || lower.startsWith("token ") ? token : `Bearer ${token}`;
+        }
+        if (actor) out["Actor"] = actor;
         if (json) out["Content-Type"] = "application/json";
         return out;
       }

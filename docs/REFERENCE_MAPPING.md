@@ -24,6 +24,9 @@ This file maps the provided Gemini roadmap to the current implementation.
   - `>=60,000` -> service warning + tilt reduction
 - Shrinkage compensation:
   - `Anycubic High Speed 2.0` + `heavy_use` -> `100.5%` scale compensation
+- Settings provenance:
+  - output includes `provenance.data_quality` (`verified_sources`, `catalog_unverified`, `fallback_defaults`)
+  - output includes `provenance.references[]` with source links and optional confidence
 
 ## Agent C: Integration
 
@@ -42,3 +45,9 @@ This file maps the provided Gemini roadmap to the current implementation.
   - delamination
   - blooming
 
+## Wizard Mapping
+
+- STL-only guided upload and analysis flow in `/wizard`
+- analysis depth selector with large-model runtime optimizations
+- printer/resin compatibility dropdown behavior driven by catalog profile coverage
+- settings summary now includes provenance quality, confidence, and source links

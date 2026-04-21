@@ -11,3 +11,5 @@ build/
 *.cfg
 uploads/
 *.db
+.resinlogic/
+local-data/

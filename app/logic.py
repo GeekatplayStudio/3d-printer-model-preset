@@ -2,7 +2,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.models import GeometryAnalysis, MultiParameterSettings, OptimalSettings, UseCase
+from app.models import (
+    GeometryAnalysis,
+    MultiParameterSettings,
+    OptimalSettings,
+    SettingReference,
+    SettingsProvenance,
+    UseCase,
+)
 from app.resin_db import find_resin_profile
 
 PRINTER_NAME = "Elegoo Mars 5 Ultra"
@@ -28,6 +35,143 @@ def _tilt_speed_mm_min(cross_section_ratio: float) -> float:
     alpha = (ratio_pct - 5.0) / 15.0
     speed = 150.0 - alpha * (150.0 - 40.0)
     return round(speed, 2)
+
+
+def _as_dict(value: object) -> dict:
+    return value if isinstance(value, dict) else {}
+
+
+def _source_urls(metadata: object) -> list[str]:
+    if not isinstance(metadata, dict):
+        return []
+    urls = metadata.get("source_urls")
+    if not isinstance(urls, list):
+        return []
+    output: list[str] = []
+    seen: set[str] = set()
+    for item in urls:
+        text = str(item).strip()
+        if not text:
+            continue
+        key = text.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        output.append(text)
+    return output
+
+
+def _as_confidence(value: object) -> float | None:
+    try:
+        parsed = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    if parsed < 0.0:
+        return 0.0
+    if parsed > 1.0:
+        return 1.0
+    return round(parsed, 3)
+
+
+def _build_settings_provenance(
+    *,
+    profile: dict,
+    profile_found: bool,
+    printer: str,
+    resin_type: str,
+) -> SettingsProvenance:
+    if not profile_found:
+        return SettingsProvenance(
+            data_quality="fallback_defaults",
+            real_data_backed=False,
+            confidence_score=None,
+            source_count=0,
+            references=[],
+            notes=[
+                "No matching printer+resin profile was found in the local catalog, so fallback defaults were used."
+            ],
+        )
+
+    profile_name = str(profile.get("name") or profile.get("profile_name") or "Unnamed profile").strip()
+    profile_meta = _as_dict(profile.get("metadata"))
+    printer_meta = _as_dict(profile.get("printer_metadata"))
+    resin_meta = _as_dict(profile.get("resin_metadata"))
+
+    profile_urls = _source_urls(profile_meta)
+    printer_urls = _source_urls(printer_meta)
+    resin_urls = _source_urls(resin_meta)
+
+    confidence = _as_confidence(
+        profile_meta.get("sync_confidence_score", profile_meta.get("confidence_score"))
+    )
+
+    references: list[SettingReference] = []
+    for url in profile_urls[:3]:
+        references.append(
+            SettingReference(
+                title=f"Profile preset: {profile_name}",
+                source_type=str(profile_meta.get("source_type") or "profile_source"),
+                source_name=str(profile_meta.get("source_mode") or profile_name),
+                source_url=url,
+                retrieved_at=str(profile_meta.get("retrieved_at") or "") or None,
+                confidence_score=confidence,
+                applies_to=[
+                    "layer_height_mm",
+                    "exposure_s",
+                    "bottom_exposure_s",
+                    "transition_layers",
+                    "tilt_speed_mm_min",
+                ],
+            )
+        )
+    for url in printer_urls[:2]:
+        references.append(
+            SettingReference(
+                title=f"Printer specs: {printer}",
+                source_type=str(printer_meta.get("source_type") or "printer_source"),
+                source_name=str(printer_meta.get("manufacturer") or printer),
+                source_url=url,
+                retrieved_at=str(printer_meta.get("retrieved_at") or "") or None,
+                confidence_score=None,
+                applies_to=["xy_resolution_um", "tilt_angle_deg"],
+            )
+        )
+    for url in resin_urls[:2]:
+        references.append(
+            SettingReference(
+                title=f"Resin data: {resin_type}",
+                source_type=str(resin_meta.get("source_type") or "resin_source"),
+                source_name=str(resin_meta.get("manufacturer") or resin_type),
+                source_url=url,
+                retrieved_at=str(resin_meta.get("retrieved_at") or "") or None,
+                confidence_score=None,
+                applies_to=["exposure_s", "bottom_exposure_s"],
+            )
+        )
+
+    has_verified_sources = len(references) > 0
+    notes: list[str] = []
+    if has_verified_sources:
+        if confidence is not None and confidence < 0.45:
+            notes.append("Profile confidence is low; verify settings with a short validation print.")
+        return SettingsProvenance(
+            data_quality="verified_sources",
+            real_data_backed=True,
+            confidence_score=confidence,
+            source_count=len(references),
+            references=references,
+            notes=notes,
+        )
+
+    notes.append("Profile exists in local catalog but has no source URLs; treat as unverified.")
+    return SettingsProvenance(
+        data_quality="catalog_unverified",
+        real_data_backed=False,
+        confidence_score=confidence,
+        source_count=0,
+        references=[],
+        notes=notes,
+    )
 
 
 def get_temp_offset(base_exposure: float, current_temp: float) -> tuple[float, bool, list[str]]:
@@ -102,6 +246,7 @@ def get_optimal_settings(
         printer=printer,
         db_path=catalog_db_path,
     )
+    profile_found = bool(profile)
 
     warnings: list[str] = []
     recommendations: list[str] = []
@@ -114,6 +259,7 @@ def get_optimal_settings(
             "exposure_s": 2.0,
             "bottom_exposure_s": 28.0,
             "tilt_speed_reference_mm_h": 90.0,
+            "metadata": {},
         }
         warnings.append("Resin profile not found in local DB; used fallback defaults.")
 
@@ -190,6 +336,21 @@ def get_optimal_settings(
         scale_compensation_percent = 100.5
         recommendations.append("Applied 100.5% scale compensation for high-speed resin shrinkage control.")
 
+    provenance = _build_settings_provenance(
+        profile=profile,
+        profile_found=profile_found,
+        printer=printer,
+        resin_type=resin_type,
+    )
+    if provenance.data_quality == "catalog_unverified":
+        warnings.append("Catalog profile has no source references; verify settings before production prints.")
+    if provenance.confidence_score is not None and provenance.confidence_score < 0.45:
+        warnings.append("Source confidence is low; run a small validation print before full production.")
+    if provenance.source_count > 0:
+        recommendations.append(
+            f"Provenance attached: {provenance.source_count} source reference(s) from catalog metadata."
+        )
+
     anti_aliasing = None
     grayscale_level = None
     xy_resolution_um = None
@@ -231,4 +392,5 @@ def get_optimal_settings(
         warnings=warnings,
         recommendations=recommendations,
         source_profile=str(profile.get("name", "Unnamed profile")),
+        provenance=provenance,
     )
