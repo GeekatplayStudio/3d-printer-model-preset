@@ -72,6 +72,92 @@ Planned next:
 - Gemini prompt-to-implementation mapping: `docs/REFERENCE_MAPPING.md`
 - Official seed provenance and source list: `docs/OFFICIAL_DATASET.md`
 
+## Installation
+
+### Prerequisites
+
+Before you start, install the following tools:
+
+- Python 3.12 or newer
+- `pip`
+- Git
+- Docker Desktop (optional, for the containerized setup)
+
+### Option 1: Local Python setup
+
+1. Clone the repository.
+
+```bash
+git clone https://github.com/GeekatplayStudio/3d-printer-model-preset.git
+cd 3d-printer-model-preset
+```
+
+2. Create a virtual environment.
+
+```bash
+python -m venv .venv
+```
+
+3. Activate the virtual environment.
+
+macOS / Linux:
+
+```bash
+source .venv/bin/activate
+```
+
+Windows PowerShell:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+4. Install the application.
+
+```bash
+pip install .
+```
+
+5. Start the API server.
+
+```bash
+uvicorn app.main:app --reload
+```
+
+6. Open the application in your browser.
+
+- `http://127.0.0.1:8000/wizard`
+- `http://127.0.0.1:8000/app`
+- `http://127.0.0.1:8000/catalog/admin`
+
+### Option 2: Docker Compose setup
+
+1. Clone the repository.
+
+```bash
+git clone https://github.com/GeekatplayStudio/3d-printer-model-preset.git
+cd 3d-printer-model-preset
+```
+
+2. Build and start the containers.
+
+```bash
+docker compose up --build -d
+```
+
+3. Open the running services.
+
+- App UI: `http://127.0.0.1:8000/app`
+- Wizard UI: `http://127.0.0.1:8000/wizard`
+- Catalog admin: `http://127.0.0.1:8000/catalog/admin`
+- Prometheus: `http://127.0.0.1:9090`
+
+4. Stop the stack when you are done.
+
+```bash
+docker compose down
+```
+
 ## Quick Start
 
 ```bash
