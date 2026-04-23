@@ -10,7 +10,7 @@ from time import perf_counter
 import numpy as np
 import trimesh
 
-from app.models import AnalysisLevel, Cavity, GeometryAnalysis, Island, MeshHealthReport, SliceArea, UseCase
+from app.models import AnalysisLevel, Cavity, CavityConfidenceLevel, GeometryAnalysis, Island, MeshHealthReport, SliceArea, UseCase
 
 DEFAULT_BUILD_PLATE_MM = (153.36, 77.76)
 _NEIGHBORS_3D = (
@@ -115,6 +115,16 @@ class _IslandRegionState:
             total_voxel_count=int(self.total_voxel_count),
             xy_centroid_mm=centroid,
         )
+
+
+@dataclass(slots=True)
+class _SuctionCupComponentMetrics:
+    x_span_voxels: int
+    y_span_voxels: int
+    z_span_voxels: int
+    footprint_voxel_count: int
+    widest_xy_span_voxels: int
+    footprint_to_depth_ratio: float
 
 
 def _elapsed_ms(started: float) -> float:
@@ -765,6 +775,16 @@ def _analysis_detail_notes(
     if suction_cups:
         total_cavity_volume = float(sum(cavity.volume_mm3 for cavity in suction_cups))
         largest_cavity = max(suction_cups, key=lambda cavity: cavity.volume_mm3)
+        confidence_counts = {
+            level: sum(1 for cavity in suction_cups if cavity.confidence_level == level)
+            for level in ("high", "medium", "low")
+        }
+        confidence_parts = [
+            f"{count} {level}-confidence"
+            for level, count in confidence_counts.items()
+            if count > 0
+        ]
+        confidence_text = f" ({', '.join(confidence_parts)})" if confidence_parts else ""
         centroid = largest_cavity.centroid_mm or []
         centroid_text = ""
         if len(centroid) == 3:
@@ -772,7 +792,7 @@ def _analysis_detail_notes(
                 f" near [{round(float(centroid[0]), 2)}, {round(float(centroid[1]), 2)}, {round(float(centroid[2]), 2)}]"
             )
         notes.append(
-            f"Detected {len(suction_cups)} trapped-resin cavity candidates totaling {round(total_cavity_volume, 2)} mm^3; "
+            f"Detected {len(suction_cups)} trapped-resin cavity candidates{confidence_text} totaling {round(total_cavity_volume, 2)} mm^3; "
             f"largest cavity was {round(largest_cavity.volume_mm3, 2)} mm^3{centroid_text}."
         )
 
@@ -1288,6 +1308,75 @@ def _voxelize_mesh(
     return voxel, occupied
 
 
+def _suction_cup_component_metrics(component_indices: np.ndarray) -> _SuctionCupComponentMetrics | None:
+    if component_indices.size == 0:
+        return None
+
+    x_span_voxels = int(component_indices[:, 0].max() - component_indices[:, 0].min() + 1)
+    y_span_voxels = int(component_indices[:, 1].max() - component_indices[:, 1].min() + 1)
+    z_span_voxels = int(component_indices[:, 2].max() - component_indices[:, 2].min() + 1)
+    footprint_voxel_count = int(len(np.unique(component_indices[:, :2], axis=0)))
+    widest_xy_span_voxels = max(x_span_voxels, y_span_voxels)
+    footprint_to_depth_ratio = float(footprint_voxel_count / max(z_span_voxels, 1))
+
+    return _SuctionCupComponentMetrics(
+        x_span_voxels=x_span_voxels,
+        y_span_voxels=y_span_voxels,
+        z_span_voxels=z_span_voxels,
+        footprint_voxel_count=footprint_voxel_count,
+        widest_xy_span_voxels=widest_xy_span_voxels,
+        footprint_to_depth_ratio=footprint_to_depth_ratio,
+    )
+
+
+def _classify_suction_cup_confidence(score: float) -> CavityConfidenceLevel:
+    if score >= 0.75:
+        return "high"
+    if score >= 0.45:
+        return "medium"
+    return "low"
+
+
+def _suction_cup_confidence(
+    metrics: _SuctionCupComponentMetrics,
+    *,
+    pitch_mm: float,
+) -> tuple[float, CavityConfidenceLevel, float, float]:
+    footprint_area_mm2 = float(metrics.footprint_voxel_count * (pitch_mm ** 2))
+    z_span_mm = float(metrics.z_span_voxels * pitch_mm)
+    footprint_score = float(np.clip(metrics.footprint_voxel_count / 6.0, 0.0, 1.0))
+    footprint_ratio_score = float(np.clip((metrics.footprint_to_depth_ratio - 1.0) / 2.5, 0.0, 1.0))
+    span_ratio = float(metrics.widest_xy_span_voxels / max(metrics.z_span_voxels, 1))
+    span_score = float(np.clip((span_ratio - 0.75) / 1.5, 0.0, 1.0))
+    confidence_score = round(
+        (0.45 * footprint_score)
+        + (0.35 * footprint_ratio_score)
+        + (0.20 * span_score),
+        3,
+    )
+    return (
+        confidence_score,
+        _classify_suction_cup_confidence(confidence_score),
+        footprint_area_mm2,
+        z_span_mm,
+    )
+
+
+def _is_plausible_suction_cup_component(
+    component_indices: np.ndarray,
+    metrics: _SuctionCupComponentMetrics | None = None,
+) -> bool:
+    metrics = metrics or _suction_cup_component_metrics(component_indices)
+    if metrics is None:
+        return False
+
+    if metrics.footprint_voxel_count <= 2 and metrics.z_span_voxels >= 2:
+        return False
+    if metrics.footprint_to_depth_ratio < 1.5 and metrics.widest_xy_span_voxels <= metrics.z_span_voxels:
+        return False
+    return True
+
+
 def _detect_suction_cups(
     mesh: trimesh.Trimesh,
     pitch_mm: float,
@@ -1373,6 +1462,13 @@ def _detect_suction_cups(
             continue
 
         component_indices = np.asarray(component, dtype=float)
+        metrics = _suction_cup_component_metrics(component_indices)
+        if metrics is None or not _is_plausible_suction_cup_component(component_indices, metrics=metrics):
+            continue
+        confidence_score, confidence_level, xy_footprint_mm2, z_span_mm = _suction_cup_confidence(
+            metrics,
+            pitch_mm=pitch_mm,
+        )
         centroid_index = component_indices.mean(axis=0).reshape(1, 3)
         centroid = _indices_to_points(voxel, centroid_index)[0].tolist()
         cavities.append(
@@ -1380,6 +1476,10 @@ def _detect_suction_cups(
                 id=cavity_id,
                 volume_mm3=float(volume_mm3),
                 centroid_mm=[float(v) for v in centroid],
+                xy_footprint_mm2=xy_footprint_mm2,
+                z_span_mm=z_span_mm,
+                confidence_score=confidence_score,
+                confidence_level=confidence_level,
             )
         )
         cavity_id += 1

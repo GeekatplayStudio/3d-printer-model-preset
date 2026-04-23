@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 UseCase = Literal["miniature", "collectible", "heavy_use"]
 AnalysisLevel = Literal["minimum", "balanced", "deep"]
+CavityConfidenceLevel = Literal["low", "medium", "high"]
 
 
 class SliceArea(BaseModel):
@@ -18,6 +19,10 @@ class Cavity(BaseModel):
     id: int
     volume_mm3: float
     centroid_mm: list[float] | None = None
+    xy_footprint_mm2: float | None = Field(default=None, ge=0.0)
+    z_span_mm: float | None = Field(default=None, ge=0.0)
+    confidence_score: float | None = Field(default=None, ge=0.0, le=1.0)
+    confidence_level: CavityConfidenceLevel | None = None
 
 
 class Island(BaseModel):

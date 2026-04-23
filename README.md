@@ -73,12 +73,25 @@ Planned next:
 
 ## Documentation Map
 
+- Architecture and end-to-end process flow: `docs/ARCHITECTURE.md`
 - Product requirements: `docs/PRD.md`
 - Technical requirements: `docs/TRD.md`
 - Agentic task roadmap: `docs/TASK.md`
 - Project status and next milestones: `docs/PROJECT_STATUS.md`
 - Gemini prompt-to-implementation mapping: `docs/REFERENCE_MAPPING.md`
 - Official seed provenance and source list: `docs/OFFICIAL_DATASET.md`
+
+## How It Works
+
+At runtime the app starts from `app/main.py`, initializes local SQLite-backed stores, and exposes three browser entry points: the guided `/wizard`, the broader `/app` operations console, and `/catalog/admin` for technical data maintenance.
+
+The processing path is phase-oriented:
+
+1. `app/geometry.py` loads and inspects the STL, repairs obvious mesh issues, computes cross-sections, voxelizes when needed, and derives cavity/island/intent/risk output.
+2. `app/logic.py` combines geometry metrics with printer-resin catalog data and rule-based heuristics to produce print settings and provenance.
+3. feedback modules ingest operator history, community sheets, and optional YouTube transcript signals so future recommendations can be adapted.
+
+The main runtime libraries are FastAPI, Pydantic, Uvicorn, NumPy, Pandas, Trimesh, and PyVista. A fuller breakdown of modules, libraries, and request flow is in `docs/ARCHITECTURE.md`.
 
 ## Installation
 

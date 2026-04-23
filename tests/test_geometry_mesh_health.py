@@ -307,8 +307,24 @@ def test_balanced_analysis_reuses_cross_section_voxels_and_emits_detail_notes(mo
         geometry,
         "_detect_suction_cups",
         lambda mesh, pitch_mm, min_volume_mm3=0.5, voxel_data=None, progress_callback=None, cancel_check=None: [
-            geometry.Cavity(id=1, volume_mm3=3.5, centroid_mm=[1.0, 2.0, 3.0]),
-            geometry.Cavity(id=2, volume_mm3=1.25, centroid_mm=[4.0, 5.0, 6.0]),
+            geometry.Cavity(
+                id=1,
+                volume_mm3=3.5,
+                centroid_mm=[1.0, 2.0, 3.0],
+                xy_footprint_mm2=1.8,
+                z_span_mm=0.3,
+                confidence_score=0.91,
+                confidence_level="high",
+            ),
+            geometry.Cavity(
+                id=2,
+                volume_mm3=1.25,
+                centroid_mm=[4.0, 5.0, 6.0],
+                xy_footprint_mm2=0.6,
+                z_span_mm=0.15,
+                confidence_score=0.53,
+                confidence_level="medium",
+            ),
         ] if voxel_data is not None else (_ for _ in ()).throw(AssertionError("expected reused voxel data")),
     )
     monkeypatch.setattr(
@@ -333,6 +349,7 @@ def test_balanced_analysis_reuses_cross_section_voxels_and_emits_detail_notes(mo
     assert any("Reused 0.15mm voxel grid" in note for note in analysis.notes)
     assert any("Peak cross-section measured" in note for note in analysis.notes)
     assert any("trapped-resin cavity candidates" in note for note in analysis.notes)
+    assert any("1 high-confidence" in note for note in analysis.notes)
     assert any("unsupported island regions" in note for note in analysis.notes)
 
 
@@ -365,3 +382,60 @@ def test_detect_islands_clusters_adjacent_layers_into_regions():
     assert island.voxel_count == 8
     assert island.total_voxel_count == 12
     assert island.xy_centroid_mm is not None
+
+
+def test_detect_suction_cups_filters_tall_narrow_sealed_voids():
+    class FakeVoxel:
+        def __init__(self, matrix: np.ndarray):
+            self.matrix = matrix
+
+        def indices_to_points(self, indices: np.ndarray) -> np.ndarray:
+            return np.asarray(indices, dtype=float)
+
+    occupied = np.ones((10, 10, 8), dtype=bool)
+    occupied[2:5, 2:5, 3] = False
+    occupied[7, 7, 1:5] = False
+
+    voxel = FakeVoxel(occupied)
+
+    cavities = geometry._detect_suction_cups(
+        mesh=None,
+        pitch_mm=1.0,
+        min_volume_mm3=0.5,
+        voxel_data=(voxel, occupied),
+    )
+
+    assert len(cavities) == 1
+    assert cavities[0].volume_mm3 == 9.0
+    assert cavities[0].centroid_mm is not None
+    assert cavities[0].xy_footprint_mm2 == 9.0
+    assert cavities[0].z_span_mm == 1.0
+    assert cavities[0].confidence_level == "high"
+    assert cavities[0].confidence_score is not None
+    assert cavities[0].confidence_score >= 0.75
+
+
+def test_suction_cup_shape_filter_keeps_broad_multilayer_cavity():
+    component = np.array(
+        [
+            [x, y, z]
+            for x in range(3)
+            for y in range(3)
+            for z in range(3)
+        ],
+        dtype=float,
+    )
+
+    assert geometry._is_plausible_suction_cup_component(component) is True
+
+
+def test_suction_cup_shape_filter_keeps_shallow_compact_pocket():
+    component = np.array(
+        [
+            [4, 4, 2],
+            [5, 4, 2],
+        ],
+        dtype=float,
+    )
+
+    assert geometry._is_plausible_suction_cup_component(component) is True
