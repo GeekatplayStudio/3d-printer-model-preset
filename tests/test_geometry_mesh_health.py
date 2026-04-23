@@ -154,6 +154,91 @@ def test_requested_open3d_voxel_backend_uses_open3d_pipeline(monkeypatch):
     assert voxel_occupied is occupied
 
 
+def test_open3d_voxel_backend_fills_interior_occupancy(monkeypatch):
+    class FakeTensor:
+        def __init__(self, value):
+            self._value = np.asarray(value)
+
+        def numpy(self):
+            return np.asarray(self._value)
+
+    class FakeVoxel:
+        def __init__(self, grid_index):
+            self.grid_index = np.asarray(grid_index, dtype=np.int32)
+
+    class FakeVoxelGrid:
+        def __init__(self):
+            self.origin = np.zeros(3, dtype=float)
+            self._voxels = [FakeVoxel([0, 0, 0]), FakeVoxel([2, 0, 0])]
+
+        def get_voxels(self):
+            return list(self._voxels)
+
+    class FakeLegacyTriangleMesh:
+        def __init__(self):
+            self.vertices = None
+            self.triangles = None
+
+    class FakeGeometryModule:
+        TriangleMesh = FakeLegacyTriangleMesh
+
+        class VoxelGrid:
+            @staticmethod
+            def create_from_triangle_mesh(mesh, voxel_size):
+                return FakeVoxelGrid()
+
+    class FakeUtilityModule:
+        @staticmethod
+        def Vector3dVector(value):
+            return value
+
+        @staticmethod
+        def Vector3iVector(value):
+            return value
+
+    class FakeTensorTriangleMesh:
+        @staticmethod
+        def from_legacy(mesh):
+            return mesh
+
+    class FakeRaycastingScene:
+        def add_triangles(self, mesh):
+            return 1
+
+        def compute_occupancy(self, query_points, nsamples=1):
+            assert nsamples == 3
+            grid = np.asarray(query_points._value)
+            assert grid.shape == (3, 1, 1, 3)
+            return FakeTensor(np.array([[[0]], [[1]], [[0]]], dtype=np.float32))
+
+    class FakeTensorGeometryModule:
+        TriangleMesh = FakeTensorTriangleMesh
+        RaycastingScene = FakeRaycastingScene
+
+    class FakeTensorModule:
+        geometry = FakeTensorGeometryModule
+
+    class FakeCoreModule:
+        @staticmethod
+        def Tensor(value):
+            return FakeTensor(value)
+
+    class FakeOpen3D:
+        geometry = FakeGeometryModule
+        utility = FakeUtilityModule
+        t = FakeTensorModule
+        core = FakeCoreModule
+
+    monkeypatch.setattr(geometry, "_load_open3d_module", lambda: FakeOpen3D())
+
+    voxel, occupied = geometry._voxelize_mesh_with_open3d(trimesh.creation.box(), pitch_mm=1.0)
+
+    assert occupied.shape == (3, 1, 1)
+    assert occupied[:, 0, 0].tolist() == [True, True, True]
+    points = voxel.indices_to_points(np.asarray([[1, 0, 0]], dtype=float))
+    assert points.tolist() == [[1.5, 0.5, 0.5]]
+
+
 def test_cross_section_voxel_fallback_uses_shared_voxel_backend(monkeypatch):
     class FakeVoxel:
         def indices_to_points(self, indices: np.ndarray) -> np.ndarray:

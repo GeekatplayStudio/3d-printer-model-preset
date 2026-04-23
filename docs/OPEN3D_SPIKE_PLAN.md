@@ -51,6 +51,7 @@ Current prototype status:
 - `app.geometry._voxelize_mesh(...)` now supports `RESINLOGIC_GEOMETRY_VOXEL_BACKEND=open3d` as an opt-in backend.
 - Trimesh remains the default and fallback path.
 - The voxel cross-section fallback now routes through the same selector, so cavity, island, and voxelized cross-section analysis share one backend boundary.
+- The Open3D voxel path now unions surface voxels with `RaycastingScene.compute_occupancy(..., nsamples=3)` so interior occupancy is filled instead of treating the grid as surface-only shell data.
 
 ## Exact Stage Targets
 
@@ -146,6 +147,21 @@ For each case, record:
 - cavity count
 - island count
 - note changes that indicate adaptive-profile behavior
+
+## Current Findings
+
+Initial local validation now covers a small watertight box fixture generated directly in the dev environment.
+
+Observed result on that case with `analysis-level=balanced`:
+
+- Trimesh backend: `total=412.3 ms`, `voxelize=62.0 ms`, but it still raised 1 cavity candidate on a simple closed box.
+- Open3D backend: `total=720.8 ms`, `voxelize=639.3 ms`, and it reported 0 cavity candidates on the same case.
+
+Interpretation:
+
+- Open3D is not yet a runtime win on small clean models in the current implementation.
+- The new solid-occupancy path appears to reduce at least one obvious false-positive cavity case versus the default Trimesh path.
+- The next benchmark pass should focus on large hollow and detail-dense repaired STLs before any default-backend decision is reconsidered.
 
 ## Acceptance Bar
 

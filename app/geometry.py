@@ -135,7 +135,7 @@ class _SuctionCupComponentMetrics:
 
 @dataclass(slots=True)
 class _Open3DVoxelGridAdapter:
-    voxel_grid: object
+    origin_mm: np.ndarray
     index_offset: np.ndarray
     voxel_size_mm: float
 
@@ -143,11 +143,8 @@ class _Open3DVoxelGridAdapter:
         if len(indices) == 0:
             return np.zeros((0, 3), dtype=float)
 
-        open3d_indices = np.asarray(indices, dtype=np.int32) + self.index_offset.reshape(1, 3)
-        return np.asarray(
-            [self.voxel_grid.get_voxel_center_coordinate(index) for index in open3d_indices],
-            dtype=float,
-        )
+        open3d_indices = np.asarray(indices, dtype=float) + self.index_offset.reshape(1, 3)
+        return self.origin_mm.reshape(1, 3) + ((open3d_indices + 0.5) * float(self.voxel_size_mm))
 
 
 def _elapsed_ms(started: float) -> float:
@@ -1494,10 +1491,11 @@ def _voxelize_mesh_with_open3d(
 
     _check_cancel(cancel_check)
     voxels = list(voxel_grid.get_voxels()) if voxel_grid is not None else []
+    origin_mm = np.asarray(getattr(voxel_grid, "origin", np.zeros(3, dtype=float)), dtype=float)
     if not voxels:
         return (
             _Open3DVoxelGridAdapter(
-                voxel_grid=voxel_grid,
+                origin_mm=origin_mm,
                 index_offset=np.zeros(3, dtype=np.int32),
                 voxel_size_mm=float(pitch_mm),
             ),
@@ -1512,9 +1510,29 @@ def _voxelize_mesh_with_open3d(
     local_indices = grid_indices - min_index.reshape(1, 3)
     occupied[local_indices[:, 0], local_indices[:, 1], local_indices[:, 2]] = True
 
+    try:
+        tensor_mesh = o3d.t.geometry.TriangleMesh.from_legacy(triangle_mesh)
+        scene = o3d.t.geometry.RaycastingScene()
+        scene.add_triangles(tensor_mesh)
+
+        x_indices = np.arange(min_index[0], max_index[0] + 1, dtype=np.float32)
+        y_indices = np.arange(min_index[1], max_index[1] + 1, dtype=np.float32)
+        z_indices = np.arange(min_index[2], max_index[2] + 1, dtype=np.float32)
+        query_indices = np.stack(np.meshgrid(x_indices, y_indices, z_indices, indexing="ij"), axis=-1)
+        query_points = origin_mm.astype(np.float32).reshape(1, 1, 1, 3) + ((query_indices + 0.5) * np.float32(pitch_mm))
+        solid_occupied = np.asarray(
+            scene.compute_occupancy(o3d.core.Tensor(query_points), nsamples=3).numpy(),
+            dtype=bool,
+        )
+        occupied |= solid_occupied
+    except Exception:
+        pass
+
+    _check_cancel(cancel_check)
+
     return (
         _Open3DVoxelGridAdapter(
-            voxel_grid=voxel_grid,
+            origin_mm=origin_mm,
             index_offset=min_index.astype(np.int32),
             voxel_size_mm=float(pitch_mm),
         ),

@@ -69,6 +69,7 @@ The immediate production target started around Elegoo Mars 5 Ultra behavior, but
 - Memory-safe minimum analysis path with large-model runtime optimizations and step timing telemetry.
 - Cross-section fallback voxel reuse and post-repair duplicate/degenerate cleanup for more stable geometry output.
 - Optional PyMeshLab prototype repair backend and opt-in Open3D voxel backend spike with benchmark scripts.
+- Open3D solid-occupancy hardening now fills interior voxels via raycast occupancy, reducing false cavity hits on the first closed-box benchmark case.
 - Settings provenance surface:
   - data quality classification (`verified_sources`, `catalog_unverified`, `fallback_defaults`),
   - confidence score passthrough where available,
@@ -104,7 +105,7 @@ The immediate production target started around Elegoo Mars 5 Ultra behavior, but
 
 ## Near-Term Milestones
 
-1. Open3D voxel benchmark and occupancy-fidelity hardening.
+1. Broader Open3D corpus benchmark coverage and tuning.
 2. Data quality and validation hardening.
 3. Frontend redesign with workflow-first UX.
 4. Release candidate stabilization (security defaults, migrations, observability).
