@@ -2,7 +2,7 @@
 
 ## 1. System Architecture
 
-ResinLogic AI is a modular FastAPI service with phase-oriented orchestration.
+Geekatplay Studio's ResinLogic AI is a modular FastAPI service with phase-oriented orchestration.
 
 Core architecture elements:
 
@@ -17,12 +17,15 @@ Core architecture elements:
 - FastAPI + Pydantic
 - SQLite persistence
 - Thread-based async job executor
+- APScheduler-backed sync execution
 - Prometheus-compatible metrics export
 
 Primary libraries:
 
 - `trimesh` for mesh loading and geometric calculations,
 - `pyvista` for additional geometry proxies where available,
+- `pymeshlab` for optional prototype repair experiments,
+- `open3d` for optional voxel backend experiments,
 - `numpy` and `pandas` for numeric/data transforms,
 - optional `youtube-transcript-api` for transcript ingestion.
 

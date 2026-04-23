@@ -9,6 +9,7 @@ description = "Modular agentic backend for Mars 5 Ultra resin print analysis and
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+  "apscheduler>=3.10,<4.0",
   "fastapi>=0.115,<1.0",
   "numpy>=2.0",
   "pandas>=2.2",
@@ -22,6 +23,12 @@ dependencies = [
 dev = [
   "httpx>=0.28",
   "pytest>=8.0",
+]
+mesh-repair = [
+  "pymeshlab>=2023.12",
+]
+open3d-spike = [
+  "open3d>=0.18",
 ]
 sources = [
   "youtube-transcript-api>=0.6",

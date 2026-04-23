@@ -2,7 +2,7 @@
 
 ## Product Name
 
-ResinLogic AI
+Geekatplay Studio | ResinLogic AI
 
 ## Product Vision
 
@@ -16,7 +16,7 @@ Resin printing setup is fragmented, manual, and error-prone:
 - online recommendations are inconsistent,
 - operators need fast updates to technical profiles without breaking production.
 
-ResinLogic AI solves this by combining geometry analysis, catalog intelligence, and feedback-driven adaptation in a modular workflow.
+Geekatplay Studio's ResinLogic AI solves this by combining geometry analysis, catalog intelligence, and feedback-driven adaptation in a modular workflow.
 
 ## Target Users
 

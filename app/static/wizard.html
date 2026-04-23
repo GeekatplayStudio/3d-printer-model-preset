@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ResinLogic Wizard</title>
+    <title>Geekatplay Studio Wizard</title>
     <style>
       :root {
         --bg: #060b12;
@@ -289,7 +289,7 @@
   <body>
     <main class="wrap">
       <section class="hero">
-        <h1>ResinLogic Wizard</h1>
+        <h1>Geekatplay Studio Wizard</h1>
         <p>Clean flow: 1) setup database, 2) upload STL + check/fix, 3) choose printer + resin and get settings.</p>
         <div class="auth">
           <input id="authToken" placeholder="Authorization token (optional in standalone mode)" />
@@ -549,6 +549,77 @@
         } finally {
           if (timer !== null) window.clearTimeout(timer);
         }
+      }
+
+      function downloadFileName(response, fallbackName = "download.bin") {
+        const disposition = String(response.headers.get("Content-Disposition") || "");
+        const utf8Match = disposition.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
+        if (utf8Match && utf8Match[1]) {
+          try {
+            return decodeURIComponent(utf8Match[1]);
+          } catch (_) {
+            return utf8Match[1];
+          }
+        }
+        const quotedMatch = disposition.match(/filename\s*=\s*"([^"]+)"/i);
+        if (quotedMatch && quotedMatch[1]) return quotedMatch[1];
+        const plainMatch = disposition.match(/filename\s*=\s*([^;]+)/i);
+        if (plainMatch && plainMatch[1]) return plainMatch[1].trim();
+        return fallbackName || "download.bin";
+      }
+
+      async function downloadArtifact(url, fallbackName = "download.bin") {
+        const response = await fetch(url, { headers: headers(false) });
+        if (!response.ok) {
+          const text = await response.text();
+          let detail = text;
+          try {
+            const body = text ? JSON.parse(text) : {};
+            detail = body.detail || body.message || JSON.stringify(body);
+          } catch (_) {}
+          throw new Error(detail || `Download failed (${response.status})`);
+        }
+
+        const blob = await response.blob();
+        const fileName = downloadFileName(response, fallbackName);
+        const objectUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = fileName;
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 1000);
+        return fileName;
+      }
+
+      function renderDownloadActions(containerId, actions) {
+        const container = document.getElementById(containerId);
+        container.replaceChildren();
+
+        const validActions = Array.isArray(actions)
+          ? actions.filter((item) => item && item.url && item.label)
+          : [];
+
+        validActions.forEach((item, index) => {
+          if (index > 0) {
+            container.appendChild(document.createTextNode(" | "));
+          }
+          const link = document.createElement("a");
+          link.href = item.url;
+          link.textContent = item.label;
+          link.addEventListener("click", async (event) => {
+            event.preventDefault();
+            try {
+              await downloadArtifact(item.url, item.fileName || "download.bin");
+            } catch (err) {
+              const message = err && err.message ? err.message : String(err);
+              setMsg(item.messageId || "modelMsg", `Download error: ${message}`, "error");
+            }
+          });
+          container.appendChild(link);
+        });
       }
 
       function analysisTimeoutMs(level, fileSizeBytes) {
@@ -1049,8 +1120,16 @@
 
           const repaired = body.repaired ? "Yes" : "No";
           const perfText = performanceSummary(body.analysis);
-          setMsg("modelMsg", `Auto-fix finished. Repaired: ${repaired}. ${perfText}`.trim());
-          document.getElementById("modelDownload").innerHTML = `<a href="${body.download_url}">Download repaired STL</a>`;
+          renderDownloadActions("modelDownload", [
+            {
+              url: body.download_url,
+              label: "Download repaired STL again",
+              fileName: body.output_file_name || "repaired.stl",
+              messageId: "modelMsg",
+            },
+          ]);
+          await downloadArtifact(body.download_url, body.output_file_name || "repaired.stl");
+          setMsg("modelMsg", `Auto-fix finished. Repaired: ${repaired}. ${perfText} Download started.`.trim());
         } catch (err) {
           const message = String(err && err.message ? err.message : err);
           if (message.toLowerCase().includes("timed out")) {
@@ -1168,10 +1247,20 @@
           renderSettingsReferences(body.settings.provenance || {});
           setMsg("settingsMsg", "Settings generated successfully.");
 
-          document.getElementById("settingsDownloads").innerHTML = [
-            `<a href="${body.cfg_download_url}">Download Chitubox CFG</a>`,
-            `<a href="${body.settings_download_url}">Download Settings JSON</a>`,
-          ].join(" | ");
+          renderDownloadActions("settingsDownloads", [
+            {
+              url: body.cfg_download_url,
+              label: "Download Chitubox CFG",
+              fileName: "settings.cfg",
+              messageId: "settingsMsg",
+            },
+            {
+              url: body.settings_download_url,
+              label: "Download Settings JSON",
+              fileName: "settings.json",
+              messageId: "settingsMsg",
+            },
+          ]);
 
           const notes = [
             ...(body.settings.warnings || []).slice(0, 2),

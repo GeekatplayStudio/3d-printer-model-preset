@@ -2,7 +2,7 @@
 
 ## What This Project Is
 
-ResinLogic AI is an agentic resin-print optimization platform.
+Geekatplay Studio's ResinLogic AI is an agentic resin-print optimization platform.
 
 It combines:
 
@@ -55,7 +55,7 @@ The immediate production target started around Elegoo Mars 5 Ultra behavior, but
 - Optional RBAC authentication via `Authorization` tokens (`viewer`, `operator`, `admin`).
 - Async jobs with persistent history.
 - Job cancellation and retention cleanup.
-- Scheduled sync definitions and manual/background schedule execution.
+- Scheduled sync definitions and manual/background schedule execution via APScheduler.
 - Request metrics and Prometheus output.
 - Dockerized run path and Prometheus config.
 - Source-attributed official seed dataset (`data/official_catalog_sync.json`) plus local import script.
@@ -65,8 +65,10 @@ The immediate production target started around Elegoo Mars 5 Ultra behavior, but
   - live stage-by-stage analyze status polling,
   - per-stage timing visibility and user-triggered cancellation,
   - adaptive timeout windows by analysis depth + model size.
+- Auth-aware artifact downloads for repaired STL, CFG, and JSON outputs in shared/server mode.
 - Memory-safe minimum analysis path with large-model runtime optimizations and step timing telemetry.
 - Cross-section fallback voxel reuse and post-repair duplicate/degenerate cleanup for more stable geometry output.
+- Optional PyMeshLab prototype repair backend and opt-in Open3D voxel backend spike with benchmark scripts.
 - Settings provenance surface:
   - data quality classification (`verified_sources`, `catalog_unverified`, `fallback_defaults`),
   - confidence score passthrough where available,
@@ -102,7 +104,7 @@ The immediate production target started around Elegoo Mars 5 Ultra behavior, but
 
 ## Near-Term Milestones
 
-1. Suction-cup confidence and geometry benchmark hardening.
+1. Open3D voxel benchmark and occupancy-fidelity hardening.
 2. Data quality and validation hardening.
 3. Frontend redesign with workflow-first UX.
 4. Release candidate stabilization (security defaults, migrations, observability).

@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
+import os
 from collections.abc import Callable
 from collections import deque
 from pathlib import Path
 from time import perf_counter
+from tempfile import TemporaryDirectory
 
 import numpy as np
 import trimesh
@@ -13,6 +15,10 @@ import trimesh
 from app.models import AnalysisLevel, Cavity, CavityConfidenceLevel, GeometryAnalysis, Island, MeshHealthReport, SliceArea, UseCase
 
 DEFAULT_BUILD_PLATE_MM = (153.36, 77.76)
+_DEFAULT_MESH_REPAIR_BACKEND = "trimesh"
+_SUPPORTED_MESH_REPAIR_BACKENDS = {"trimesh", "pymeshlab"}
+_DEFAULT_VOXEL_BACKEND = "trimesh"
+_SUPPORTED_VOXEL_BACKENDS = {"trimesh", "open3d"}
 _NEIGHBORS_3D = (
     (-1, 0, 0),
     (1, 0, 0),
@@ -36,7 +42,7 @@ class _CrossSectionResult:
     max_area_mm2: float
     effective_slice_height_mm: float
     notes: list[str]
-    voxel_data: tuple[trimesh.voxel.VoxelGrid, np.ndarray] | None = None
+    voxel_data: tuple[object, np.ndarray] | None = None
     voxel_pitch_mm: float | None = None
 
 
@@ -125,6 +131,23 @@ class _SuctionCupComponentMetrics:
     footprint_voxel_count: int
     widest_xy_span_voxels: int
     footprint_to_depth_ratio: float
+
+
+@dataclass(slots=True)
+class _Open3DVoxelGridAdapter:
+    voxel_grid: object
+    index_offset: np.ndarray
+    voxel_size_mm: float
+
+    def indices_to_points(self, indices: np.ndarray) -> np.ndarray:
+        if len(indices) == 0:
+            return np.zeros((0, 3), dtype=float)
+
+        open3d_indices = np.asarray(indices, dtype=np.int32) + self.index_offset.reshape(1, 3)
+        return np.asarray(
+            [self.voxel_grid.get_voxel_center_coordinate(index) for index in open3d_indices],
+            dtype=float,
+        )
 
 
 def _elapsed_ms(started: float) -> float:
@@ -515,6 +538,37 @@ def _load_and_prepare_mesh(
     return mesh, health
 
 
+def _requested_mesh_repair_backend(backend: str | None = None) -> str:
+    candidate = str(backend or os.getenv("RESINLOGIC_MESH_REPAIR_BACKEND", _DEFAULT_MESH_REPAIR_BACKEND)).strip().lower()
+    if candidate in _SUPPORTED_MESH_REPAIR_BACKENDS:
+        return candidate
+    return _DEFAULT_MESH_REPAIR_BACKEND
+
+
+def _load_pymeshlab_module():
+    import pymeshlab
+
+    return pymeshlab
+
+
+def _load_open3d_module():
+    import open3d as o3d
+
+    return o3d
+
+
+def _replace_mesh_geometry(target: trimesh.Trimesh, source: trimesh.Trimesh) -> None:
+    target.vertices = np.asarray(source.vertices, dtype=float).copy()
+    target.faces = np.asarray(source.faces, dtype=np.int64).copy()
+
+
+def _requested_voxel_backend(backend: str | None = None) -> str:
+    candidate = str(backend or os.getenv("RESINLOGIC_GEOMETRY_VOXEL_BACKEND", _DEFAULT_VOXEL_BACKEND)).strip().lower()
+    if candidate in _SUPPORTED_VOXEL_BACKENDS:
+        return candidate
+    return _DEFAULT_VOXEL_BACKEND
+
+
 def _mesh_health_report(
     mesh: trimesh.Trimesh,
     *,
@@ -610,7 +664,108 @@ def _mesh_health_report_fast(
     )
 
 
-def _repair_mesh(mesh: trimesh.Trimesh) -> tuple[bool, list[str]]:
+def _repair_mesh(mesh: trimesh.Trimesh, backend: str | None = None) -> tuple[bool, list[str]]:
+    selected_backend = _requested_mesh_repair_backend(backend)
+    if selected_backend == "pymeshlab":
+        try:
+            return _repair_mesh_with_pymeshlab(mesh)
+        except ModuleNotFoundError:
+            repaired, actions = _repair_mesh_with_trimesh(mesh)
+            actions.append("PyMeshLab repair backend was requested but is not installed; fell back to Trimesh repair.")
+            return repaired, actions
+        except Exception as exc:  # noqa: BLE001
+            repaired, actions = _repair_mesh_with_trimesh(mesh)
+            actions.append(f"PyMeshLab repair backend failed and fell back to Trimesh repair: {exc}")
+            return repaired, actions
+    return _repair_mesh_with_trimesh(mesh)
+
+
+def _repair_mesh_with_pymeshlab(mesh: trimesh.Trimesh) -> tuple[bool, list[str]]:
+    pymeshlab = _load_pymeshlab_module()
+    actions: list[str] = []
+    before_faces = int(len(mesh.faces))
+    before_vertices = int(len(mesh.vertices))
+    before_watertight = bool(mesh.is_watertight)
+
+    with TemporaryDirectory(prefix="resinlogic-mesh-repair-") as temp_dir:
+        input_path = Path(temp_dir) / "repair_input.stl"
+        output_path = Path(temp_dir) / "repair_output.stl"
+        mesh.export(input_path, file_type="stl")
+
+        meshset = pymeshlab.MeshSet()
+        meshset.load_new_mesh(str(input_path))
+        filter_pipeline = (
+            ("meshing_remove_duplicate_vertices", {}),
+            ("meshing_remove_duplicate_faces", {}),
+            ("meshing_remove_null_faces", {}),
+            ("meshing_repair_non_manifold_edges", {}),
+            ("meshing_repair_non_manifold_vertices", {}),
+            ("meshing_close_holes", {"maxholesize": 400, "selfintersection": True}),
+            ("meshing_remove_unreferenced_vertices", {}),
+            ("meshing_re_orient_faces_coherently", {}),
+            ("compute_normal_per_vertex", {}),
+        )
+        applied_filters: list[str] = []
+        for filter_name, kwargs in filter_pipeline:
+            try:
+                meshset.apply_filter(filter_name, **kwargs)
+                applied_filters.append(filter_name)
+            except Exception:
+                continue
+
+        meshset.save_current_mesh(str(output_path))
+        repaired_mesh = _load_mesh(str(output_path))
+
+    _replace_mesh_geometry(mesh, repaired_mesh)
+
+    duplicate_removed = _remove_duplicate_faces(mesh)
+    if duplicate_removed:
+        actions.append(f"Removed {duplicate_removed} duplicate triangles after PyMeshLab repair.")
+
+    degenerate_removed = _remove_degenerate_faces(mesh)
+    if degenerate_removed:
+        actions.append(f"Removed {degenerate_removed} degenerate triangles after PyMeshLab repair.")
+
+    try:
+        mesh.remove_unreferenced_vertices()
+    except Exception:
+        pass
+    try:
+        mesh.merge_vertices()
+    except Exception:
+        pass
+    try:
+        trimesh.repair.fix_normals(mesh, multibody=True)
+    except Exception:
+        pass
+    try:
+        trimesh.repair.fix_inversion(mesh, multibody=True)
+    except TypeError:
+        try:
+            trimesh.repair.fix_inversion(mesh)
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+    after_faces = int(len(mesh.faces))
+    after_vertices = int(len(mesh.vertices))
+    after_watertight = bool(mesh.is_watertight)
+    repaired = (
+        duplicate_removed > 0
+        or degenerate_removed > 0
+        or after_faces != before_faces
+        or after_vertices != before_vertices
+        or after_watertight != before_watertight
+    )
+    if repaired:
+        actions.insert(0, "Applied PyMeshLab prototype repair pipeline.")
+        if applied_filters:
+            actions.append(f"PyMeshLab filters: {', '.join(applied_filters)}.")
+    return repaired, actions
+
+
+def _repair_mesh_with_trimesh(mesh: trimesh.Trimesh) -> tuple[bool, list[str]]:
     actions: list[str] = []
     before_faces = int(len(mesh.faces))
     before_vertices = int(len(mesh.vertices))
@@ -1244,9 +1399,11 @@ def _cross_section_areas_voxel(
         "cross_section",
         f"Cross-section fallback is voxelizing at {round(voxel_pitch, 4)}mm pitch for {len(heights)} slice planes.",
     )
-    voxel = mesh.voxelized(pitch=voxel_pitch)
-    _check_cancel(cancel_check)
-    occupied = np.asarray(voxel.matrix, dtype=bool)
+    voxel, occupied = _voxelize_mesh(
+        mesh,
+        pitch_mm=voxel_pitch,
+        cancel_check=cancel_check,
+    )
     if occupied.size == 0:
         empty_slices = [
             SliceArea(z_mm=float(round(float(z_min + h), 5)), area_mm2=0.0) for h in heights
@@ -1286,7 +1443,7 @@ def _cross_section_areas_voxel(
     )
 
 
-def _indices_to_points(voxel_grid: trimesh.voxel.VoxelGrid, indices: np.ndarray) -> np.ndarray:
+def _indices_to_points(voxel_grid: object, indices: np.ndarray) -> np.ndarray:
     if hasattr(voxel_grid, "indices_to_points"):
         return voxel_grid.indices_to_points(indices)
 
@@ -1300,12 +1457,69 @@ def _voxelize_mesh(
     mesh: trimesh.Trimesh,
     pitch_mm: float,
     cancel_check: AnalysisCancelCheck | None = None,
+) -> tuple[object, np.ndarray]:
+    selected_backend = _requested_voxel_backend()
+    if selected_backend == "open3d":
+        try:
+            return _voxelize_mesh_with_open3d(mesh, pitch_mm=pitch_mm, cancel_check=cancel_check)
+        except ModuleNotFoundError:
+            return _voxelize_mesh_with_trimesh(mesh, pitch_mm=pitch_mm, cancel_check=cancel_check)
+    return _voxelize_mesh_with_trimesh(mesh, pitch_mm=pitch_mm, cancel_check=cancel_check)
+
+
+def _voxelize_mesh_with_trimesh(
+    mesh: trimesh.Trimesh,
+    pitch_mm: float,
+    cancel_check: AnalysisCancelCheck | None = None,
 ) -> tuple[trimesh.voxel.VoxelGrid, np.ndarray]:
     _check_cancel(cancel_check)
     voxel = mesh.voxelized(pitch=pitch_mm)
     _check_cancel(cancel_check)
     occupied = np.asarray(voxel.matrix, dtype=bool)
     return voxel, occupied
+
+
+def _voxelize_mesh_with_open3d(
+    mesh: trimesh.Trimesh,
+    pitch_mm: float,
+    cancel_check: AnalysisCancelCheck | None = None,
+) -> tuple[_Open3DVoxelGridAdapter, np.ndarray]:
+    _check_cancel(cancel_check)
+    o3d = _load_open3d_module()
+
+    triangle_mesh = o3d.geometry.TriangleMesh()
+    triangle_mesh.vertices = o3d.utility.Vector3dVector(np.asarray(mesh.vertices, dtype=float))
+    triangle_mesh.triangles = o3d.utility.Vector3iVector(np.asarray(mesh.faces, dtype=np.int32))
+    voxel_grid = o3d.geometry.VoxelGrid.create_from_triangle_mesh(triangle_mesh, voxel_size=float(pitch_mm))
+
+    _check_cancel(cancel_check)
+    voxels = list(voxel_grid.get_voxels()) if voxel_grid is not None else []
+    if not voxels:
+        return (
+            _Open3DVoxelGridAdapter(
+                voxel_grid=voxel_grid,
+                index_offset=np.zeros(3, dtype=np.int32),
+                voxel_size_mm=float(pitch_mm),
+            ),
+            np.zeros((0, 0, 0), dtype=bool),
+        )
+
+    grid_indices = np.asarray([np.asarray(voxel.grid_index, dtype=np.int32) for voxel in voxels], dtype=np.int32)
+    min_index = grid_indices.min(axis=0)
+    max_index = grid_indices.max(axis=0)
+    occupied_shape = tuple((max_index - min_index + 1).tolist())
+    occupied = np.zeros(occupied_shape, dtype=bool)
+    local_indices = grid_indices - min_index.reshape(1, 3)
+    occupied[local_indices[:, 0], local_indices[:, 1], local_indices[:, 2]] = True
+
+    return (
+        _Open3DVoxelGridAdapter(
+            voxel_grid=voxel_grid,
+            index_offset=min_index.astype(np.int32),
+            voxel_size_mm=float(pitch_mm),
+        ),
+        occupied,
+    )
 
 
 def _suction_cup_component_metrics(component_indices: np.ndarray) -> _SuctionCupComponentMetrics | None:
@@ -1381,7 +1595,7 @@ def _detect_suction_cups(
     mesh: trimesh.Trimesh,
     pitch_mm: float,
     min_volume_mm3: float = 0.5,
-    voxel_data: tuple[trimesh.voxel.VoxelGrid, np.ndarray] | None = None,
+    voxel_data: tuple[object, np.ndarray] | None = None,
     progress_callback: AnalysisProgressCallback | None = None,
     cancel_check: AnalysisCancelCheck | None = None,
 ) -> list[Cavity]:
@@ -1572,7 +1786,7 @@ def _detect_islands(
     mesh: trimesh.Trimesh,
     pitch_mm: float,
     min_voxels: int = 6,
-    voxel_data: tuple[trimesh.voxel.VoxelGrid, np.ndarray] | None = None,
+    voxel_data: tuple[object, np.ndarray] | None = None,
     progress_callback: AnalysisProgressCallback | None = None,
     cancel_check: AnalysisCancelCheck | None = None,
 ) -> list[Island]:

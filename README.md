@@ -1,6 +1,6 @@
-# ResinLogic AI
+# Geekatplay Studio | ResinLogic AI
 
-Agentic backend and operations console for resin 3D printing optimization across printers and resins.
+Geekatplay Studio's agentic backend and operations console for resin 3D printing optimization across printers and resins.
 
 The system combines:
 
@@ -12,7 +12,7 @@ The system combines:
 
 ## Project Idea
 
-ResinLogic AI is designed to let an agentic workflow take a high-level print goal and execute it through modular phases:
+Geekatplay Studio's ResinLogic AI is designed to let an agentic workflow take a high-level print goal and execute it through modular phases:
 
 1. analyze geometry risk and print intent,
 2. derive printer-resin settings with Mars 5 Ultra specific logic and catalog overrides,
@@ -50,13 +50,19 @@ Implemented:
   - live progress/status polling during analyze,
   - per-stage timing visibility and in-place cancel support,
   - adaptive timeout windows for large models,
-  - chunked upload staging to avoid large-file OOM failures.
+  - chunked upload staging to avoid large-file OOM failures,
+  - auth-aware repaired STL and settings downloads in shared/server mode.
 - Geometry analysis detail improvements:
   - exact minimum-mode multiplane slicing for small meshes,
   - surface-span weighted minimum-mode fallback for larger meshes,
   - voxel reuse between cross-section fallback and cavity/island detection,
+  - opt-in Open3D voxel backend routed through the shared voxelization boundary,
   - grouped island regions with layer spans and centroids,
   - richer analysis notes for peak cross-section, cavity totals, island severity, and curvature summary.
+- Geometry backend expansion:
+  - APScheduler-backed sync scheduler replacing the custom polling loop,
+  - optional PyMeshLab prototype repair backend with Trimesh fallback,
+  - benchmark scripts for repair backends and geometry stage timings.
 - Settings provenance and trust surface:
   - `settings.provenance.data_quality` (`verified_sources`, `catalog_unverified`, `fallback_defaults`),
   - `settings.provenance.real_data_backed`,
@@ -91,7 +97,7 @@ The processing path is phase-oriented:
 2. `app/logic.py` combines geometry metrics with printer-resin catalog data and rule-based heuristics to produce print settings and provenance.
 3. feedback modules ingest operator history, community sheets, and optional YouTube transcript signals so future recommendations can be adapted.
 
-The main runtime libraries are FastAPI, Pydantic, Uvicorn, NumPy, Pandas, Trimesh, and PyVista. A fuller breakdown of modules, libraries, and request flow is in `docs/ARCHITECTURE.md`.
+The main runtime libraries are FastAPI, Pydantic, Uvicorn, NumPy, Pandas, Trimesh, PyVista, and APScheduler. Optional extras add PyMeshLab for prototype repair experiments and Open3D for voxel backend benchmarking. A fuller breakdown of modules, libraries, and request flow is in `docs/ARCHITECTURE.md`.
 
 ## Installation
 
@@ -136,7 +142,15 @@ Windows PowerShell:
 4. Install the application.
 
 ```bash
-pip install .
+pip install -e .
+```
+
+Optional extras:
+
+```bash
+pip install -e .[dev]
+pip install -e .[dev,mesh-repair]
+pip install -e .[dev,open3d-spike]
 ```
 
 5. Start the API server.
@@ -184,7 +198,7 @@ docker compose down
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install .
+pip install -e .
 uvicorn app.main:app --reload
 ```
 
@@ -205,10 +219,16 @@ python -m pytest -q
 Docker environment:
 
 ```bash
-docker compose run --rm api sh -lc "python -m pip install pytest && python -m pytest -q"
+docker compose run --rm -v "${PWD}:/app" api sh -lc "python -m pip install -e .[dev] && python -m pytest -q"
 ```
 
 The runtime image stays slim and does not bundle `pytest`, so Docker test runs install it transiently.
+
+## Wizard Download Behavior
+
+In standalone mode, the wizard downloads repaired STLs and settings artifacts directly.
+
+In shared/server mode with auth enabled, keep the `Authorization token` and `Actor` fields populated in the wizard before clicking repair or download actions. The wizard now fetches repaired STL, CFG, and JSON artifacts through the same authenticated request path as the API calls, so file downloads keep working even when direct browser links would be rejected.
 
 ## Official Catalog Seed
 

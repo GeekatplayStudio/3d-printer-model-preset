@@ -18,6 +18,13 @@ from app.scheduler import TechnicalSyncScheduler
 from app.sync_schedule_store import init_sync_schedule_store
 
 
+def _auth_headers(token: str = "dev-operator-key", actor: str = "wizard-user") -> dict[str, str]:
+    return {
+        "Authorization": f"Bearer {token}",
+        "Actor": actor,
+    }
+
+
 def _client(tmp_path, monkeypatch) -> TestClient:
     catalog_path = tmp_path / "catalog.db"
     audit_path = tmp_path / "audit.db"
@@ -108,7 +115,8 @@ def test_wizard_ui_and_status_route(tmp_path, monkeypatch):
 
     ui = client.get("/wizard")
     assert ui.status_code == 200
-    assert "ResinLogic Wizard" in ui.text
+    assert "Geekatplay Studio Wizard" in ui.text
+    assert "downloadArtifact(" in ui.text
     assert "Show Catalog List" in ui.text
     assert "Analysis depth" in ui.text
     assert "/wizard/model/check/status/" in ui.text
@@ -310,6 +318,41 @@ def test_wizard_model_fix_and_settings_downloads(tmp_path, monkeypatch):
     # Ensure artifacts survive a short delay and remain downloadable.
     time.sleep(0.01)
     assert client.get(settings_body["cfg_download_url"]).status_code == 200
+
+
+def test_wizard_download_requires_auth_headers_when_enforced(tmp_path, monkeypatch):
+    monkeypatch.setenv("RESINLOGIC_STANDALONE_MODE", "0")
+    monkeypatch.setenv("RESINLOGIC_ENFORCE_AUTH", "1")
+    monkeypatch.setenv("RESINLOGIC_ENABLE_DEFAULT_KEYS", "1")
+    client = _client(tmp_path, monkeypatch)
+
+    setup = client.post(
+        "/wizard/database/setup",
+        json={
+            "mode": "official_local",
+            "replace_existing": True,
+            "auto_update": False,
+            "source": "wizard_test",
+        },
+        headers=_auth_headers(),
+    )
+    assert setup.status_code == 200
+
+    fix = client.post(
+        "/wizard/model/fix",
+        files={"file": ("broken.stl", _broken_mesh_bytes(), "model/stl")},
+        data={"slice_height_mm": "0.2"},
+        headers=_auth_headers(),
+    )
+    assert fix.status_code == 200
+    download_url = fix.json()["download_url"]
+
+    unauthenticated = client.get(download_url)
+    assert unauthenticated.status_code == 401
+
+    authenticated = client.get(download_url, headers=_auth_headers(token="dev-viewer-key"))
+    assert authenticated.status_code == 200
+    assert "attachment; filename=" in authenticated.headers.get("content-disposition", "")
 
 
 def test_save_upload_streams_large_file_in_chunks(tmp_path, monkeypatch):

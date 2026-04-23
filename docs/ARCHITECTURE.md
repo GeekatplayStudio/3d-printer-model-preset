@@ -2,7 +2,7 @@
 
 ## What The Application Does
 
-ResinLogic AI is a local-first FastAPI application for resin-print workflow support.
+Geekatplay Studio's ResinLogic AI is a local-first FastAPI application for resin-print workflow support.
 
 It helps an operator move through three connected concerns:
 
@@ -28,7 +28,10 @@ The runtime dependencies come from [pyproject.toml](../pyproject.toml) and are u
 - `python-multipart`: file upload handling for STL and CSV inputs.
 - `trimesh[easy]`: primary mesh loading, repair helpers, voxelization, slicing, and geometry calculations.
 - `pyvista`: optional higher-cost surface-detail proxy calculations for deeper geometry analysis.
+- `apscheduler`: background interval scheduling for technical sync execution.
 - `httpx` and `pytest` in the dev extra: API testing and regression coverage.
+- `pymeshlab` in the optional `mesh-repair` extra: prototype mesh repair backend experiments.
+- `open3d` in the optional `open3d-spike` extra: prototype voxel backend experiments and benchmarking.
 - `youtube-transcript-api` in the optional `sources` extra: transcript ingestion for feedback signals.
 
 Indirectly, `trimesh[easy]` brings in helpers like `scipy`, `rtree`, and mesh-processing extras that support slicing, path handling, and spatial operations.
@@ -91,6 +94,7 @@ The browser code in [app/static/wizard.html](../app/static/wizard.html) talks to
 - geometry analysis is offloaded with `asyncio.to_thread`,
 - in-memory status is tracked by `progress_job_id`,
 - the UI polls status routes for live stage messages and timings,
+- repaired STL and settings downloads are fetched through auth-aware browser requests when server-mode auth is enabled,
 - cancellation is cooperative and checked inside the geometry engine.
 
 That is why the wizard can show stage names like cross-section analysis, voxelization, cavity detection, island detection, and finalization while a large STL is being processed.

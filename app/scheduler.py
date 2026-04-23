@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import threading
-import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
+
+from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.sync_schedule_store import list_due_sync_schedules, mark_sync_schedule_run
 
@@ -20,38 +20,38 @@ class TechnicalSyncScheduler:
         self._schedule_db_path = Path(schedule_db_path)
         self._submit_schedule_fn = submit_schedule_fn
         self._poll_seconds = max(0.5, poll_seconds)
-        self._thread: threading.Thread | None = None
-        self._stop_event = threading.Event()
-        self._lock = threading.Lock()
-        self._running = False
+        self._scheduler: BackgroundScheduler | None = None
 
     @property
     def poll_seconds(self) -> float:
         return self._poll_seconds
 
     def start(self) -> None:
-        with self._lock:
-            if self._running:
-                return
-            self._stop_event.clear()
-            self._thread = threading.Thread(target=self._loop, name="sync-scheduler", daemon=True)
-            self._thread.start()
-            self._running = True
+        if self.is_running():
+            return
+        scheduler = BackgroundScheduler()
+        scheduler.add_job(
+            self.tick_once,
+            trigger="interval",
+            seconds=self._poll_seconds,
+            id="technical-sync-tick",
+            replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+        )
+        scheduler.start()
+        self._scheduler = scheduler
 
     def stop(self) -> None:
-        with self._lock:
-            if not self._running:
-                return
-            self._stop_event.set()
-            thread = self._thread
-            self._thread = None
-            self._running = False
-        if thread is not None:
-            thread.join(timeout=2.0)
+        scheduler = self._scheduler
+        if scheduler is None:
+            return
+        self._scheduler = None
+        scheduler.shutdown(wait=False)
 
     def is_running(self) -> bool:
-        with self._lock:
-            return self._running
+        scheduler = self._scheduler
+        return bool(scheduler is not None and scheduler.running)
 
     def tick_once(self) -> dict[str, int]:
         now = datetime.now(timezone.utc)
@@ -77,8 +77,3 @@ class TechnicalSyncScheduler:
                 )
                 failed += 1
         return {"due": len(due), "submitted": submitted, "failed": failed}
-
-    def _loop(self) -> None:
-        while not self._stop_event.is_set():
-            self.tick_once()
-            self._stop_event.wait(self._poll_seconds)

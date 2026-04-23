@@ -68,6 +68,120 @@ def test_mesh_auto_repair_reduces_topology_noise(tmp_path):
     assert any("Automatic STL repair applied" in note for note in analysis.notes)
 
 
+def test_requested_pymeshlab_backend_falls_back_to_trimesh_when_unavailable(monkeypatch):
+    observed = {"trimesh_called": False}
+
+    def _missing_pymeshlab(mesh):
+        raise ModuleNotFoundError("pymeshlab")
+
+    def _fake_trimesh(mesh):
+        observed["trimesh_called"] = True
+        return True, ["Trimesh repair applied."]
+
+    monkeypatch.setattr(geometry, "_repair_mesh_with_pymeshlab", _missing_pymeshlab)
+    monkeypatch.setattr(geometry, "_repair_mesh_with_trimesh", _fake_trimesh)
+
+    repaired, actions = geometry._repair_mesh(trimesh.creation.box(), backend="pymeshlab")
+
+    assert repaired is True
+    assert observed["trimesh_called"] is True
+    assert any("fell back to Trimesh repair" in action for action in actions)
+
+
+def test_requested_pymeshlab_backend_uses_pymeshlab_pipeline(monkeypatch):
+    def _fake_pymeshlab(mesh):
+        return True, ["Applied PyMeshLab prototype repair pipeline."]
+
+    def _unexpected_trimesh(mesh):
+        raise AssertionError("Trimesh fallback should not be used when PyMeshLab succeeds")
+
+    monkeypatch.setattr(geometry, "_repair_mesh_with_pymeshlab", _fake_pymeshlab)
+    monkeypatch.setattr(geometry, "_repair_mesh_with_trimesh", _unexpected_trimesh)
+
+    repaired, actions = geometry._repair_mesh(trimesh.creation.box(), backend="pymeshlab")
+
+    assert repaired is True
+    assert actions == ["Applied PyMeshLab prototype repair pipeline."]
+
+
+def test_requested_open3d_voxel_backend_falls_back_to_trimesh_when_unavailable(monkeypatch):
+    observed = {"trimesh_called": False}
+
+    class FakeVoxel:
+        def __init__(self):
+            self.matrix = np.ones((1, 1, 1), dtype=bool)
+
+        def indices_to_points(self, indices: np.ndarray) -> np.ndarray:
+            return np.asarray(indices, dtype=float)
+
+    def _missing_open3d(mesh, pitch_mm, cancel_check=None):
+        raise ModuleNotFoundError("open3d")
+
+    def _fake_trimesh(mesh, pitch_mm, cancel_check=None):
+        observed["trimesh_called"] = True
+        voxel = FakeVoxel()
+        return voxel, voxel.matrix
+
+    monkeypatch.setenv("RESINLOGIC_GEOMETRY_VOXEL_BACKEND", "open3d")
+    monkeypatch.setattr(geometry, "_voxelize_mesh_with_open3d", _missing_open3d)
+    monkeypatch.setattr(geometry, "_voxelize_mesh_with_trimesh", _fake_trimesh)
+
+    voxel, occupied = geometry._voxelize_mesh(trimesh.creation.box(), pitch_mm=0.25)
+
+    assert observed["trimesh_called"] is True
+    assert voxel is not None
+    assert occupied.shape == (1, 1, 1)
+
+
+def test_requested_open3d_voxel_backend_uses_open3d_pipeline(monkeypatch):
+    sentinel_voxel = object()
+    occupied = np.zeros((2, 2, 2), dtype=bool)
+    occupied[1, 1, 1] = True
+
+    def _fake_open3d(mesh, pitch_mm, cancel_check=None):
+        return sentinel_voxel, occupied
+
+    def _unexpected_trimesh(mesh, pitch_mm, cancel_check=None):
+        raise AssertionError("Trimesh fallback should not be used when Open3D succeeds")
+
+    monkeypatch.setenv("RESINLOGIC_GEOMETRY_VOXEL_BACKEND", "open3d")
+    monkeypatch.setattr(geometry, "_voxelize_mesh_with_open3d", _fake_open3d)
+    monkeypatch.setattr(geometry, "_voxelize_mesh_with_trimesh", _unexpected_trimesh)
+
+    voxel, voxel_occupied = geometry._voxelize_mesh(trimesh.creation.box(), pitch_mm=0.25)
+
+    assert voxel is sentinel_voxel
+    assert voxel_occupied is occupied
+
+
+def test_cross_section_voxel_fallback_uses_shared_voxel_backend(monkeypatch):
+    class FakeVoxel:
+        def indices_to_points(self, indices: np.ndarray) -> np.ndarray:
+            return np.asarray(indices, dtype=float) * 0.2
+
+    occupied = np.zeros((3, 3, 3), dtype=bool)
+    occupied[1, 1, :] = True
+    observed: dict[str, float] = {}
+
+    def _fake_voxelize(mesh, pitch_mm, cancel_check=None):
+        observed["pitch_mm"] = float(pitch_mm)
+        return FakeVoxel(), occupied
+
+    monkeypatch.setattr(geometry, "_voxelize_mesh", _fake_voxelize)
+
+    result = geometry._cross_section_areas_voxel(
+        trimesh.creation.box(extents=(1.0, 1.0, 1.0)),
+        z_min=0.0,
+        heights=np.array([0.0, 0.2, 0.4], dtype=float),
+        requested_slice_mm=0.2,
+        notes=[],
+    )
+
+    assert observed["pitch_mm"] == 0.2
+    assert result.voxel_data is not None
+    assert result.voxel_data[1] is occupied
+
+
 def test_minimum_analysis_level_emits_performance_metrics(tmp_path):
     path = _broken_mesh_path(tmp_path)
 
