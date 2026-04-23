@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import tempfile
+import threading
 import time
+from collections.abc import Callable
 from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -59,7 +62,7 @@ from app.feedback_store import (
     query_feedback_records,
     save_feedback_records,
 )
-from app.geometry import repair_mesh_file
+from app.geometry import AnalysisCancelledError, repair_mesh_file
 from app.job_queue import InMemoryJobQueue
 from app.job_store import cleanup_jobs, count_jobs, init_job_store
 from app.monitoring import InMemoryMetrics
@@ -96,6 +99,7 @@ from app.models import (
     FeedbackHistorySummaryResult,
     FeedbackIngestionResult,
     FeedbackSummary,
+    GeometryAnalysis,
     GitHubTechnicalSyncRequest,
     GitHubTechnicalSyncResponse,
     HistoryAwareOptimizeRequest,
@@ -114,6 +118,7 @@ from app.models import (
     TechnicalSyncResponse,
     UseCase,
     WizardCatalogOptionsResponse,
+    WizardAnalysisProgressResponse,
     WizardDatabaseGapSummary,
     WizardDatabaseSetupRequest,
     WizardDatabaseSetupResponse,
@@ -188,9 +193,25 @@ WIZARD_ARTIFACTS_DIR = DATA_DIR / "wizard_artifacts"
 WIZARD_ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
 WIZARD_ARTIFACT_TTL_SECONDS = 7 * 86400
 WIZARD_ARTIFACTS: dict[str, dict[str, object]] = {}
+WIZARD_ANALYSIS_PROGRESS_TTL_SECONDS = 3600
+WIZARD_ANALYSIS_PROGRESS: dict[str, dict[str, object]] = {}
+WIZARD_ANALYSIS_PROGRESS_LOCK = threading.Lock()
 JOB_QUEUE = InMemoryJobQueue(max_workers=2, db_path=JOBS_PATH)
 METRICS = InMemoryMetrics()
 SCHEDULER: TechnicalSyncScheduler | None = None
+WIZARD_ANALYSIS_STAGE_LABELS = {
+    "save_upload": "upload staging",
+    "load_prepare_mesh": "mesh loading and topology checks",
+    "adapt_profile": "runtime profile adjustment",
+    "cross_section": "cross-section analysis",
+    "voxelize": "voxelization",
+    "detect_suction_cups": "cavity detection",
+    "detect_islands": "island detection",
+    "curvature_proxy": "surface detail estimation",
+    "derive_metrics": "final metric derivation",
+    "finalize": "report finalization",
+    "completed": "completed analysis",
+}
 
 
 def _cleanup_wizard_artifacts() -> None:
@@ -233,6 +254,216 @@ def _wizard_artifact(artifact_id: str) -> dict[str, object]:
 
 def _wizard_download_url(artifact_id: str) -> str:
     return f"/wizard/download/{artifact_id}"
+
+
+def _normalize_wizard_analysis_job_id(job_id: str | None) -> str | None:
+    if job_id is None:
+        return None
+    trimmed = job_id.strip()
+    if not trimmed:
+        return None
+    return trimmed[:128]
+
+
+def _cleanup_wizard_analysis_progress() -> None:
+    now = time.time()
+    stale_ids: list[str] = []
+    with WIZARD_ANALYSIS_PROGRESS_LOCK:
+        for job_id, meta in WIZARD_ANALYSIS_PROGRESS.items():
+            updated_at = float(meta.get("updated_at_ts", 0.0))
+            if now - updated_at <= WIZARD_ANALYSIS_PROGRESS_TTL_SECONDS:
+                continue
+            stale_ids.append(job_id)
+        for job_id in stale_ids:
+            WIZARD_ANALYSIS_PROGRESS.pop(job_id, None)
+
+
+def _wizard_analysis_status_is_terminal(status: str) -> bool:
+    return status in {"completed", "failed", "cancelled"}
+
+
+def _wizard_analysis_stage_timings(
+    previous: dict[str, object],
+    *,
+    current_stage: str | None,
+    status: str,
+    now: float,
+    performance_ms: dict[str, float] | None,
+) -> dict[str, float]:
+    timings = dict(previous.get("stage_timings_ms") or {})
+    previous_stage = previous.get("stage")
+    previous_stage_started_at = float(previous.get("stage_started_at_ts", now))
+    if previous_stage and (current_stage != previous_stage or _wizard_analysis_status_is_terminal(status)):
+        elapsed_ms = round(max(0.0, now - previous_stage_started_at) * 1000.0, 3)
+        if elapsed_ms > 0.0 or previous_stage not in timings:
+            timings[str(previous_stage)] = elapsed_ms
+    for key, value in (performance_ms or {}).items():
+        if key == "total":
+            continue
+        timings[str(key)] = float(value)
+    return timings
+
+
+def _set_wizard_analysis_progress(
+    job_id: str | None,
+    *,
+    status: str,
+    message: str,
+    stage: str | None = None,
+    cancel_requested: bool | None = None,
+    error: str | None = None,
+    performance_ms: dict[str, float] | None = None,
+) -> None:
+    if job_id is None:
+        return
+    _cleanup_wizard_analysis_progress()
+    now = time.time()
+    with WIZARD_ANALYSIS_PROGRESS_LOCK:
+        previous = WIZARD_ANALYSIS_PROGRESS.get(job_id, {})
+        current_stage = stage if stage is not None else previous.get("stage")
+        stage_started_at = float(previous.get("stage_started_at_ts", now))
+        if current_stage != previous.get("stage"):
+            stage_started_at = now
+        current_cancel_requested = bool(previous.get("cancel_requested", False))
+        if cancel_requested is not None:
+            current_cancel_requested = cancel_requested
+        WIZARD_ANALYSIS_PROGRESS[job_id] = {
+            "status": status,
+            "stage": current_stage,
+            "message": message,
+            "cancel_requested": current_cancel_requested,
+            "error": error,
+            "started_at_ts": float(previous.get("started_at_ts", now)),
+            "stage_started_at_ts": stage_started_at,
+            "updated_at_ts": now,
+            "performance_ms": dict(performance_ms or previous.get("performance_ms") or {}),
+            "stage_timings_ms": _wizard_analysis_stage_timings(
+                previous,
+                current_stage=current_stage,
+                status=status,
+                now=now,
+                performance_ms=performance_ms,
+            ),
+        }
+
+
+def _wizard_analysis_progress_response(job_id: str) -> WizardAnalysisProgressResponse:
+    _cleanup_wizard_analysis_progress()
+    now = time.time()
+    with WIZARD_ANALYSIS_PROGRESS_LOCK:
+        meta = dict(WIZARD_ANALYSIS_PROGRESS.get(job_id, {}))
+    if not meta:
+        return WizardAnalysisProgressResponse(
+            job_id=job_id,
+            status="unknown",
+            stage=None,
+            message="Waiting for analysis worker to start.",
+            elapsed_seconds=0,
+            stage_elapsed_seconds=0,
+            updated_at=_iso_timestamp(),
+            cancel_requested=False,
+            error=None,
+            performance_ms={},
+            stage_timings_ms={},
+        )
+
+    updated_at_ts = float(meta.get("updated_at_ts", now))
+    started_at_ts = float(meta.get("started_at_ts", now))
+    stage_started_at_ts = float(meta.get("stage_started_at_ts", started_at_ts))
+    return WizardAnalysisProgressResponse(
+        job_id=job_id,
+        status=str(meta.get("status", "unknown")),
+        stage=meta.get("stage"),
+        message=str(meta.get("message", "Analysis is running.")),
+        elapsed_seconds=max(0, int(now - started_at_ts)),
+        stage_elapsed_seconds=max(0, int(now - stage_started_at_ts)),
+        updated_at=datetime.fromtimestamp(updated_at_ts, tz=timezone.utc).replace(microsecond=0).isoformat(),
+        cancel_requested=bool(meta.get("cancel_requested", False)),
+        error=meta.get("error"),
+        performance_ms=dict(meta.get("performance_ms") or {}),
+        stage_timings_ms=dict(meta.get("stage_timings_ms") or {}),
+    )
+
+
+def _wizard_analysis_runtime_status(job_id: str | None) -> str:
+    if job_id is None:
+        return "running"
+    with WIZARD_ANALYSIS_PROGRESS_LOCK:
+        meta = dict(WIZARD_ANALYSIS_PROGRESS.get(job_id, {}))
+    if meta and bool(meta.get("cancel_requested", False)) and not _wizard_analysis_status_is_terminal(str(meta.get("status", ""))):
+        return "cancelling"
+    return "running"
+
+
+def _request_wizard_analysis_cancel(job_id: str) -> WizardAnalysisProgressResponse:
+    _cleanup_wizard_analysis_progress()
+    with WIZARD_ANALYSIS_PROGRESS_LOCK:
+        meta = dict(WIZARD_ANALYSIS_PROGRESS.get(job_id, {}))
+    if not meta:
+        raise HTTPException(status_code=404, detail=f"Analysis job '{job_id}' was not found.")
+    status = str(meta.get("status", "unknown"))
+    if _wizard_analysis_status_is_terminal(status):
+        return _wizard_analysis_progress_response(job_id)
+    current_stage = meta.get("stage")
+    _set_wizard_analysis_progress(
+        job_id,
+        status="cancelling",
+        stage=current_stage,
+        message=(
+            f"Cancellation requested during {_analysis_stage_label(current_stage)}. "
+            "Waiting for the current checkpoint to stop."
+        ),
+        cancel_requested=True,
+    )
+    return _wizard_analysis_progress_response(job_id)
+
+
+def _raise_if_wizard_analysis_cancelled(job_id: str | None) -> None:
+    if job_id is None:
+        return
+    _cleanup_wizard_analysis_progress()
+    with WIZARD_ANALYSIS_PROGRESS_LOCK:
+        meta = dict(WIZARD_ANALYSIS_PROGRESS.get(job_id, {}))
+    if not meta or not bool(meta.get("cancel_requested", False)):
+        return
+    raise AnalysisCancelledError(
+        f"Analysis cancelled by user during {_analysis_stage_label(meta.get('stage'))}."
+    )
+
+
+def _analysis_stage_label(stage: str | None) -> str:
+    if not stage:
+        return "analysis"
+    return WIZARD_ANALYSIS_STAGE_LABELS.get(stage, stage.replace("_", " "))
+
+
+def _analysis_completion_message(analysis: GeometryAnalysis) -> str:
+    total_ms = float((analysis.performance_ms or {}).get("total", 0.0))
+    slowest_step: str | None = None
+    slowest_ms = 0.0
+    for key, value in (analysis.performance_ms or {}).items():
+        if key == "total":
+            continue
+        if value > slowest_ms:
+            slowest_step = key
+            slowest_ms = value
+    if slowest_step is not None:
+        return (
+            f"Analysis finished. Slowest stage was {_analysis_stage_label(slowest_step)} "
+            f"({round(slowest_ms, 1)} ms)."
+        )
+    if total_ms > 0.0:
+        return f"Analysis finished in {round(total_ms, 1)} ms."
+    return "Analysis finished."
+
+
+def _analysis_failure_detail(job_id: str | None, exc: Exception) -> str:
+    if job_id is None:
+        return str(exc)
+    progress = _wizard_analysis_progress_response(job_id)
+    if progress.stage:
+        return f"Analysis failed during {_analysis_stage_label(progress.stage)}: {exc}"
+    return str(exc)
 
 
 def _read_official_sync_payload() -> dict:
@@ -1787,21 +2018,77 @@ def reference_resins(resin_type: str | None = None) -> dict:
     }
 
 
+@app.get("/wizard/model/check/status/{job_id}", response_model=WizardAnalysisProgressResponse)
+def wizard_model_check_status(
+    job_id: str,
+    auth: AuthContext = Depends(require_role("operator")),
+) -> WizardAnalysisProgressResponse:
+    _ = auth
+    normalized_job_id = _normalize_wizard_analysis_job_id(job_id)
+    if normalized_job_id is None:
+        raise HTTPException(status_code=400, detail="A non-empty analysis job id is required.")
+    return _wizard_analysis_progress_response(normalized_job_id)
+
+
+@app.post("/wizard/model/check/status/{job_id}/cancel", response_model=WizardAnalysisProgressResponse)
+def wizard_model_check_cancel(
+    job_id: str,
+    auth: AuthContext = Depends(require_role("operator")),
+) -> WizardAnalysisProgressResponse:
+    normalized_job_id = _normalize_wizard_analysis_job_id(job_id)
+    if normalized_job_id is None:
+        raise HTTPException(status_code=400, detail="A non-empty analysis job id is required.")
+    progress = _request_wizard_analysis_cancel(normalized_job_id)
+    _audit(
+        auth=auth,
+        action="wizard.model.check.cancel",
+        resource_type="model",
+        resource_id=normalized_job_id,
+        details={"stage": progress.stage, "status": progress.status},
+    )
+    return progress
+
+
 @app.post("/wizard/model/check", response_model=WizardModelCheckResponse)
 async def wizard_model_check(
     file: UploadFile = File(...),
     slice_height_mm: float = Form(0.01),
     analysis_level: AnalysisLevel = Form("minimum"),
+    progress_job_id: str | None = Form(default=None),
     auth: AuthContext = Depends(require_role("operator")),
 ) -> WizardModelCheckResponse:
     _require_stl_upload(file)
-    temp_file = _save_upload(file)
+    job_id = _normalize_wizard_analysis_job_id(progress_job_id)
+    _set_wizard_analysis_progress(
+        job_id,
+        status="queued",
+        stage="save_upload",
+        message="Saving uploaded STL to local storage.",
+        cancel_requested=False,
+    )
+    temp_file = await asyncio.to_thread(_save_upload, file)
     try:
-        analysis = pipeline.run_phase_1_geometry(
+        progress_callback: Callable[[str, str], None] | None = None
+        cancel_check: Callable[[], None] | None = None
+        if job_id is not None:
+            cancel_check = lambda: _raise_if_wizard_analysis_cancelled(job_id)
+            progress_callback = lambda stage, message: _set_wizard_analysis_progress(
+                job_id,
+                status=_wizard_analysis_runtime_status(job_id),
+                stage=stage,
+                message=message,
+            )
+            cancel_check()
+            progress_callback("load_prepare_mesh", "Upload saved. Loading mesh geometry and checking topology health.")
+
+        analysis = await asyncio.to_thread(
+            pipeline.run_phase_1_geometry,
             file_path=str(temp_file),
             slice_height_mm=slice_height_mm,
             auto_repair=False,
             analysis_level=analysis_level,
+            progress_callback=progress_callback,
+            cancel_check=cancel_check,
         )
         health = analysis.mesh_health
         requires_fix = bool(
@@ -1809,11 +2096,11 @@ async def wizard_model_check(
             and (
                 not health.watertight
                 or not health.winding_consistent
-                or health.boundary_edge_count > 0
-                or health.non_manifold_edge_count > 0
+                or (health.boundary_edge_count or 0) > 0
+                or (health.non_manifold_edge_count or 0) > 0
                 or health.degenerate_face_count > 0
                 or health.duplicate_face_count > 0
-                or health.connected_components > 1
+                or (health.connected_components or 1) > 1
             )
         )
         has_issues = bool(
@@ -1831,16 +2118,47 @@ async def wizard_model_check(
                 "requires_fix": requires_fix,
             },
         )
+        _set_wizard_analysis_progress(
+            job_id,
+            status="completed",
+            stage="completed",
+            message=_analysis_completion_message(analysis),
+            cancel_requested=False,
+            performance_ms=analysis.performance_ms,
+        )
         return WizardModelCheckResponse(analysis=analysis, has_issues=has_issues, requires_fix=requires_fix)
+    except AnalysisCancelledError as exc:
+        detail = str(exc)
+        _set_wizard_analysis_progress(
+            job_id,
+            status="cancelled",
+            message=detail,
+            cancel_requested=True,
+        )
+        _audit(
+            auth=auth,
+            action="wizard.model.check",
+            resource_type="model",
+            status="cancelled",
+            details={"file_name": file.filename, "analysis_level": analysis_level, "error": detail},
+        )
+        raise HTTPException(status_code=409, detail=detail) from exc
     except Exception as exc:
+        detail = _analysis_failure_detail(job_id, exc)
+        _set_wizard_analysis_progress(
+            job_id,
+            status="failed",
+            message=detail,
+            error=str(exc),
+        )
         _audit(
             auth=auth,
             action="wizard.model.check",
             resource_type="model",
             status="failed",
-            details={"file_name": file.filename, "analysis_level": analysis_level, "error": str(exc)},
+            details={"file_name": file.filename, "analysis_level": analysis_level, "error": detail},
         )
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail=detail) from exc
     finally:
         _safe_unlink(temp_file)
 
@@ -2467,7 +2785,11 @@ def run_seed_legacy_job(auth: AuthContext = Depends(require_role("operator"))) -
 def _save_upload(file: UploadFile) -> Path:
     suffix = Path(file.filename or "model.stl").suffix or ".stl"
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        tmp.write(file.file.read())
+        while True:
+            chunk = file.file.read(1024 * 1024)
+            if not chunk:
+                break
+            tmp.write(chunk)
         return Path(tmp.name)
 
 

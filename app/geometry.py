@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 import math
+from collections.abc import Callable
 from collections import deque
 from pathlib import Path
 from time import perf_counter
@@ -20,10 +22,117 @@ _NEIGHBORS_3D = (
     (0, 0, 1),
 )
 _NEIGHBORS_2D = ((-1, 0), (1, 0), (0, -1), (0, 1))
+AnalysisProgressCallback = Callable[[str, str], None]
+AnalysisCancelCheck = Callable[[], None]
+
+
+class AnalysisCancelledError(RuntimeError):
+    pass
+
+
+@dataclass(slots=True)
+class _CrossSectionResult:
+    slice_areas: list[SliceArea]
+    max_area_mm2: float
+    effective_slice_height_mm: float
+    notes: list[str]
+    voxel_data: tuple[trimesh.voxel.VoxelGrid, np.ndarray] | None = None
+    voxel_pitch_mm: float | None = None
+
+
+@dataclass(slots=True)
+class _IslandComponent:
+    layer_index: int
+    z_mm: float
+    voxel_count: int
+    bbox_xy_idx: tuple[int, int, int, int]
+    xy_centroid_mm: list[float]
+
+
+@dataclass(slots=True)
+class _IslandRegionState:
+    start_layer_index: int
+    end_layer_index: int
+    start_z_mm: float
+    end_z_mm: float
+    peak_voxel_count: int
+    total_voxel_count: int
+    weighted_x_mm: float
+    weighted_y_mm: float
+    weight_sum: int
+    last_bbox_xy_idx: tuple[int, int, int, int]
+
+    @classmethod
+    def from_component(cls, component: _IslandComponent) -> "_IslandRegionState":
+        return cls(
+            start_layer_index=component.layer_index,
+            end_layer_index=component.layer_index,
+            start_z_mm=component.z_mm,
+            end_z_mm=component.z_mm,
+            peak_voxel_count=component.voxel_count,
+            total_voxel_count=component.voxel_count,
+            weighted_x_mm=float(component.xy_centroid_mm[0]) * component.voxel_count,
+            weighted_y_mm=float(component.xy_centroid_mm[1]) * component.voxel_count,
+            weight_sum=component.voxel_count,
+            last_bbox_xy_idx=component.bbox_xy_idx,
+        )
+
+    def absorb(self, component: _IslandComponent) -> None:
+        self.end_layer_index = component.layer_index
+        self.end_z_mm = component.z_mm
+        self.peak_voxel_count = max(self.peak_voxel_count, component.voxel_count)
+        self.total_voxel_count += component.voxel_count
+        self.weighted_x_mm += float(component.xy_centroid_mm[0]) * component.voxel_count
+        self.weighted_y_mm += float(component.xy_centroid_mm[1]) * component.voxel_count
+        self.weight_sum += component.voxel_count
+        self.last_bbox_xy_idx = component.bbox_xy_idx
+
+    def absorb_region(self, other: "_IslandRegionState") -> None:
+        self.start_layer_index = min(self.start_layer_index, other.start_layer_index)
+        self.end_layer_index = max(self.end_layer_index, other.end_layer_index)
+        self.start_z_mm = min(self.start_z_mm, other.start_z_mm)
+        self.end_z_mm = max(self.end_z_mm, other.end_z_mm)
+        self.peak_voxel_count = max(self.peak_voxel_count, other.peak_voxel_count)
+        self.total_voxel_count += other.total_voxel_count
+        self.weighted_x_mm += other.weighted_x_mm
+        self.weighted_y_mm += other.weighted_y_mm
+        self.weight_sum += other.weight_sum
+
+    def to_island(self) -> Island:
+        centroid = None
+        if self.weight_sum > 0:
+            centroid = [
+                float(self.weighted_x_mm / self.weight_sum),
+                float(self.weighted_y_mm / self.weight_sum),
+            ]
+        return Island(
+            layer_index=self.start_layer_index,
+            z_mm=float(self.start_z_mm),
+            voxel_count=int(self.peak_voxel_count),
+            end_layer_index=int(self.end_layer_index),
+            z_end_mm=float(self.end_z_mm),
+            layer_span=int(self.end_layer_index - self.start_layer_index + 1),
+            total_voxel_count=int(self.total_voxel_count),
+            xy_centroid_mm=centroid,
+        )
 
 
 def _elapsed_ms(started: float) -> float:
     return round((perf_counter() - started) * 1000.0, 3)
+
+
+def _report_progress(
+    progress_callback: AnalysisProgressCallback | None,
+    stage: str,
+    detail: str,
+) -> None:
+    if progress_callback is not None:
+        progress_callback(stage, detail)
+
+
+def _check_cancel(cancel_check: AnalysisCancelCheck | None) -> None:
+    if cancel_check is not None:
+        cancel_check()
 
 
 def _analysis_profile_config(
@@ -57,6 +166,59 @@ def _analysis_profile_config(
     }
 
 
+def _estimated_voxel_cells(mesh: trimesh.Trimesh, pitch_mm: float) -> float:
+    extents = np.maximum(np.asarray(mesh.extents, dtype=float), 0.0)
+    if pitch_mm <= 0.0:
+        return 0.0
+    grid_shape = np.ceil(extents / pitch_mm) + 3.0
+    return float(np.prod(np.maximum(grid_shape, 1.0)))
+
+
+def _adaptive_profile_overrides(
+    mesh: trimesh.Trimesh,
+    *,
+    analysis_level: AnalysisLevel,
+    slice_height_mm: float,
+    profile: dict[str, object],
+) -> tuple[dict[str, object], list[str]]:
+    adjusted = dict(profile)
+    notes: list[str] = []
+    face_count = int(len(mesh.faces))
+    requested_slices = int(math.floor(max(float(mesh.extents[2]), 0.0) / max(slice_height_mm, 1e-6))) + 1
+
+    if analysis_level == "minimum":
+        return adjusted, notes
+
+    voxel_pitch = float(adjusted["voxel_pitch_mm"])
+    max_voxel_cells = 12_000_000 if analysis_level == "balanced" else 18_000_000
+    estimated_cells = _estimated_voxel_cells(mesh, voxel_pitch)
+    if estimated_cells > max_voxel_cells:
+        extent_volume = float(np.prod(np.maximum(np.asarray(mesh.extents, dtype=float), 1e-6)))
+        adjusted_pitch = max(voxel_pitch, (extent_volume / max_voxel_cells) ** (1.0 / 3.0))
+        adjusted["voxel_pitch_mm"] = round(adjusted_pitch, 4)
+        notes.append(
+            f"Analysis level '{analysis_level}' raised voxel pitch to {adjusted['voxel_pitch_mm']}mm "
+            f"to keep voxel analysis within runtime limits."
+        )
+
+    if face_count >= 350_000 and requested_slices > 4000:
+        capped_slices = 4000 if analysis_level == "balanced" else 7000
+        if int(adjusted["max_slices"]) > capped_slices:
+            adjusted["max_slices"] = capped_slices
+            notes.append(
+                f"Analysis level '{analysis_level}' capped max slices at {capped_slices} for a high-complexity mesh."
+            )
+
+    curvature_face_limit = 400_000 if analysis_level == "balanced" else 750_000
+    if face_count >= curvature_face_limit and bool(adjusted["include_curvature"]):
+        adjusted["include_curvature"] = False
+        notes.append(
+            f"Analysis level '{analysis_level}' skipped curvature proxy on a very large mesh to avoid timeout."
+        )
+
+    return adjusted, notes
+
+
 def analyze_geometry(
     file_path: str,
     slice_height_mm: float = 0.01,
@@ -65,10 +227,14 @@ def analyze_geometry(
     max_slices: int = 20000,
     auto_repair: bool = True,
     analysis_level: AnalysisLevel = "balanced",
+    progress_callback: AnalysisProgressCallback | None = None,
+    cancel_check: AnalysisCancelCheck | None = None,
 ) -> GeometryAnalysis:
     total_started = perf_counter()
     timings_ms: dict[str, float] = {}
 
+    _check_cancel(cancel_check)
+    _report_progress(progress_callback, "load_prepare_mesh", "Loading mesh geometry and checking topology health.")
     started = perf_counter()
     mesh, mesh_health = _load_and_prepare_mesh(
         file_path,
@@ -86,6 +252,15 @@ def analyze_geometry(
         max_slices=max_slices,
         voxel_pitch_mm=voxel_pitch_mm,
     )
+    _check_cancel(cancel_check)
+    _report_progress(progress_callback, "adapt_profile", "Adapting slice and voxel settings to match mesh size.")
+    profile, profile_notes = _adaptive_profile_overrides(
+        mesh,
+        analysis_level=analysis_level,
+        slice_height_mm=slice_height_mm,
+        profile=profile,
+    )
+    notes.extend(profile_notes)
     if profile["max_slices"] != max_slices:
         notes.append(
             f"Analysis level '{analysis_level}' adjusted max slices to {profile['max_slices']} "
@@ -97,62 +272,110 @@ def analyze_geometry(
             f"(requested {voxel_pitch_mm}mm)."
         )
 
+    _check_cancel(cancel_check)
+    _report_progress(progress_callback, "cross_section", "Computing cross-sections through the model.")
     started = perf_counter()
     if analysis_level == "minimum":
-        slice_areas, max_cross_section_mm2, effective_slice_height_mm, slice_notes = _cross_section_areas_fast(
+        cross_section = _cross_section_areas_fast(
             mesh=mesh,
             slice_height_mm=slice_height_mm,
             max_slices=int(profile["max_slices"]),
+            progress_callback=progress_callback,
+            cancel_check=cancel_check,
         )
     else:
-        slice_areas, max_cross_section_mm2, effective_slice_height_mm, slice_notes = _cross_section_areas(
+        cross_section = _cross_section_areas(
             mesh=mesh,
             slice_height_mm=slice_height_mm,
             max_slices=int(profile["max_slices"]),
+            progress_callback=progress_callback,
+            cancel_check=cancel_check,
         )
     timings_ms["cross_section"] = _elapsed_ms(started)
-    notes.extend(slice_notes)
+    slice_areas = cross_section.slice_areas
+    max_cross_section_mm2 = cross_section.max_area_mm2
+    effective_slice_height_mm = cross_section.effective_slice_height_mm
+    notes.extend(cross_section.notes)
 
     suction_cups: list[Cavity] = []
     islands: list[Island] = []
     curvature_proxy: float | None = None
 
-    voxel_data: tuple[trimesh.voxel.VoxelGrid, np.ndarray] | None = None
+    voxel_data = cross_section.voxel_data
+    cross_section_voxel_pitch_mm = cross_section.voxel_pitch_mm
     should_voxelize = bool(profile["include_suction_cups"] or profile["include_islands"])
     if should_voxelize:
-        started = perf_counter()
-        voxel_data = _voxelize_mesh(mesh, pitch_mm=float(profile["voxel_pitch_mm"]))
-        timings_ms["voxelize"] = _elapsed_ms(started)
+        target_voxel_pitch_mm = float(profile["voxel_pitch_mm"])
+        can_reuse_cross_section_voxels = (
+            voxel_data is not None
+            and cross_section_voxel_pitch_mm is not None
+            and cross_section_voxel_pitch_mm <= target_voxel_pitch_mm + 1e-9
+        )
+        if can_reuse_cross_section_voxels:
+            notes.append(
+                f"Reused {round(float(cross_section_voxel_pitch_mm), 4)}mm voxel grid from cross-section fallback "
+                "for cavity and island detection."
+            )
+        else:
+            if voxel_data is not None and cross_section_voxel_pitch_mm is not None:
+                notes.append(
+                    f"Cross-section fallback used {round(float(cross_section_voxel_pitch_mm), 4)}mm voxels, "
+                    f"so cavity and island detection re-voxelized at {round(target_voxel_pitch_mm, 4)}mm for higher detail."
+                )
+            _check_cancel(cancel_check)
+            _report_progress(progress_callback, "voxelize", "Voxelizing the mesh for cavity and island detection.")
+            started = perf_counter()
+            voxel_data = _voxelize_mesh(
+                mesh,
+                pitch_mm=target_voxel_pitch_mm,
+                cancel_check=cancel_check,
+            )
+            timings_ms["voxelize"] = _elapsed_ms(started)
 
     if bool(profile["include_suction_cups"]):
+        _check_cancel(cancel_check)
+        _report_progress(progress_callback, "detect_suction_cups", "Scanning the voxel grid for suction cups and trapped resin cavities.")
         started = perf_counter()
         suction_cups = _detect_suction_cups(
             mesh,
             pitch_mm=float(profile["voxel_pitch_mm"]),
             voxel_data=voxel_data,
+            progress_callback=progress_callback,
+            cancel_check=cancel_check,
         )
         timings_ms["detect_suction_cups"] = _elapsed_ms(started)
     else:
         notes.append("Minimum analysis: suction cup detection skipped for faster processing.")
 
     if bool(profile["include_islands"]):
+        _check_cancel(cancel_check)
+        _report_progress(progress_callback, "detect_islands", "Checking sliced layers for unsupported islands.")
         started = perf_counter()
         islands = _detect_islands(
             mesh,
             pitch_mm=float(profile["voxel_pitch_mm"]),
             voxel_data=voxel_data,
+            progress_callback=progress_callback,
+            cancel_check=cancel_check,
         )
         timings_ms["detect_islands"] = _elapsed_ms(started)
     else:
         notes.append("Minimum analysis: island detection skipped for faster processing.")
 
     if bool(profile["include_curvature"]):
+        _check_cancel(cancel_check)
+        _report_progress(progress_callback, "curvature_proxy", "Estimating surface detail density from mesh curvature.")
         started = perf_counter()
-        curvature_proxy = _curvature_proxy(mesh)
+        curvature_proxy = _curvature_proxy(mesh, cancel_check=cancel_check)
         timings_ms["curvature_proxy"] = _elapsed_ms(started)
     else:
-        notes.append("Minimum analysis: curvature proxy skipped for faster processing.")
+        if analysis_level == "minimum":
+            notes.append("Minimum analysis: curvature proxy skipped for faster processing.")
+        else:
+            notes.append("Curvature proxy skipped to stay within runtime limits for this mesh.")
 
+    _check_cancel(cancel_check)
+    _report_progress(progress_callback, "derive_metrics", "Deriving printability metrics and intent hints.")
     started = perf_counter()
     surface_area = float(mesh.area)
     volume_mm3 = float(abs(mesh.volume))
@@ -175,6 +398,15 @@ def analyze_geometry(
         island_count=len(islands),
         detail_density=detail_density,
     )
+    notes.extend(
+        _analysis_detail_notes(
+            slice_areas=slice_areas,
+            build_plate_area_mm2=build_plate_area_mm2,
+            suction_cups=suction_cups,
+            islands=islands,
+            curvature_proxy=curvature_proxy,
+        )
+    )
     timings_ms["derive_metrics"] = _elapsed_ms(started)
 
     timings_ms["total"] = _elapsed_ms(total_started)
@@ -190,6 +422,9 @@ def analyze_geometry(
         notes.append(
             f"Performance: slowest step was '{slowest_step}' ({round(slowest_ms, 1)} ms)."
         )
+
+    _check_cancel(cancel_check)
+    _report_progress(progress_callback, "finalize", "Finalizing analysis report.")
 
     return GeometryAnalysis(
         file_name=Path(file_path).name,
@@ -354,9 +589,9 @@ def _mesh_health_report_fast(
         watertight=watertight,
         winding_consistent=winding_consistent,
         volume_consistent=volume_consistent,
-        connected_components=1,
-        boundary_edge_count=0,
-        non_manifold_edge_count=0,
+        connected_components=None,
+        boundary_edge_count=None,
+        non_manifold_edge_count=None,
         degenerate_face_count=degenerate_faces,
         duplicate_face_count=duplicate_faces,
         repaired=repaired,
@@ -400,6 +635,15 @@ def _repair_mesh(mesh: trimesh.Trimesh) -> tuple[bool, list[str]]:
     except Exception:
         pass
 
+    # Some repair operations can introduce or expose duplicate or degenerate faces again.
+    duplicate_removed_after_fill = _remove_duplicate_faces(mesh)
+    if duplicate_removed_after_fill:
+        actions.append(f"Removed {duplicate_removed_after_fill} duplicate triangles after hole repair.")
+
+    degenerate_removed_after_fill = _remove_degenerate_faces(mesh)
+    if degenerate_removed_after_fill:
+        actions.append(f"Removed {degenerate_removed_after_fill} degenerate triangles after hole repair.")
+
     try:
         mesh.remove_unreferenced_vertices()
     except Exception:
@@ -415,6 +659,8 @@ def _repair_mesh(mesh: trimesh.Trimesh) -> tuple[bool, list[str]]:
     repaired = (
         duplicate_removed > 0
         or degenerate_removed > 0
+        or duplicate_removed_after_fill > 0
+        or degenerate_removed_after_fill > 0
         or holes_filled
         or after_faces != before_faces
         or after_vertices != before_vertices
@@ -498,6 +744,155 @@ def _remove_degenerate_faces(mesh: trimesh.Trimesh) -> int:
     return removed
 
 
+def _analysis_detail_notes(
+    *,
+    slice_areas: list[SliceArea],
+    build_plate_area_mm2: float,
+    suction_cups: list[Cavity],
+    islands: list[Island],
+    curvature_proxy: float | None,
+) -> list[str]:
+    notes: list[str] = []
+
+    if slice_areas:
+        peak_slice = max(slice_areas, key=lambda area: area.area_mm2)
+        plate_ratio = peak_slice.area_mm2 / build_plate_area_mm2 if build_plate_area_mm2 > 0 else 0.0
+        notes.append(
+            f"Peak cross-section measured {round(peak_slice.area_mm2, 2)} mm^2 at z={round(peak_slice.z_mm, 3)}mm "
+            f"({round(plate_ratio * 100.0, 1)}% of the build plate)."
+        )
+
+    if suction_cups:
+        total_cavity_volume = float(sum(cavity.volume_mm3 for cavity in suction_cups))
+        largest_cavity = max(suction_cups, key=lambda cavity: cavity.volume_mm3)
+        centroid = largest_cavity.centroid_mm or []
+        centroid_text = ""
+        if len(centroid) == 3:
+            centroid_text = (
+                f" near [{round(float(centroid[0]), 2)}, {round(float(centroid[1]), 2)}, {round(float(centroid[2]), 2)}]"
+            )
+        notes.append(
+            f"Detected {len(suction_cups)} trapped-resin cavity candidates totaling {round(total_cavity_volume, 2)} mm^3; "
+            f"largest cavity was {round(largest_cavity.volume_mm3, 2)} mm^3{centroid_text}."
+        )
+
+    if islands:
+        total_unsupported_voxels = int(
+            sum((island.total_voxel_count or island.voxel_count) for island in islands)
+        )
+        layers_with_islands = len(
+            {
+                layer_index
+                for island in islands
+                for layer_index in range(
+                    island.layer_index,
+                    (island.end_layer_index if island.end_layer_index is not None else island.layer_index) + 1,
+                )
+            }
+        )
+        largest_island = max(islands, key=lambda island: island.total_voxel_count or island.voxel_count)
+        span_text = ""
+        if (largest_island.layer_span or 1) > 1 and largest_island.z_end_mm is not None:
+            span_text = (
+                f" spanning {largest_island.layer_span} layers from z={round(largest_island.z_mm, 3)}mm "
+                f"to z={round(largest_island.z_end_mm, 3)}mm"
+            )
+        notes.append(
+            f"Detected {len(islands)} unsupported island regions across {layers_with_islands} layers; "
+            f"largest island region accumulated {largest_island.total_voxel_count or largest_island.voxel_count} voxels{span_text}; "
+            f"({total_unsupported_voxels} unsupported voxels total)."
+        )
+
+    if curvature_proxy is not None:
+        notes.append(
+            f"Surface detail proxy measured {round(float(curvature_proxy), 4)} mean curvature magnitude."
+        )
+
+    return notes
+
+
+def _approximate_surface_span_slice_bins(
+    *,
+    vertices: np.ndarray,
+    faces: np.ndarray,
+    z_min: float,
+    effective_slice_mm: float,
+    bin_count: int,
+    stride: int,
+    cancel_check: AnalysisCancelCheck | None = None,
+) -> np.ndarray:
+    if bin_count <= 0 or faces.size == 0:
+        return np.zeros(max(bin_count, 0), dtype=float)
+
+    sampled_faces = faces[::stride]
+    if sampled_faces.size == 0:
+        return np.zeros(bin_count, dtype=float)
+
+    span_bins = np.zeros(bin_count, dtype=float)
+    centroid_bins = np.zeros(bin_count, dtype=float)
+    batch_size = 200_000
+
+    for start_index in range(0, len(sampled_faces), batch_size):
+        _check_cancel(cancel_check)
+        batch_faces = sampled_faces[start_index : start_index + batch_size]
+        triangle_vertices = vertices[batch_faces]
+        edge_a = triangle_vertices[:, 1] - triangle_vertices[:, 0]
+        edge_b = triangle_vertices[:, 2] - triangle_vertices[:, 0]
+        normals = np.cross(edge_a, edge_b)
+        double_area = np.linalg.norm(normals, axis=1)
+        valid = double_area > 1e-12
+        if not np.any(valid):
+            continue
+
+        triangle_vertices = triangle_vertices[valid]
+        normals = normals[valid]
+        double_area = double_area[valid]
+        face_area = 0.5 * double_area
+        face_verticality = np.sqrt(
+            np.clip(1.0 - np.square(np.abs(normals[:, 2]) / double_area), 0.0, 1.0)
+        )
+        weighted_area = face_area * (0.18 + (0.82 * face_verticality)) * float(stride)
+
+        z_face_min = triangle_vertices[:, :, 2].min(axis=1)
+        z_face_max = triangle_vertices[:, :, 2].max(axis=1)
+        start_bin = np.floor((z_face_min - z_min) / effective_slice_mm).astype(np.int64)
+        end_bin = np.floor((z_face_max - z_min) / effective_slice_mm).astype(np.int64)
+        start_bin = np.clip(start_bin, 0, bin_count - 1)
+        end_bin = np.clip(end_bin, 0, bin_count - 1)
+
+        cover_count = np.maximum(end_bin - start_bin + 1, 1)
+        per_bin_weight = weighted_area / cover_count
+        diff = np.zeros(bin_count + 1, dtype=float)
+        np.add.at(diff, start_bin, per_bin_weight)
+        np.add.at(diff, np.minimum(end_bin + 1, bin_count), -per_bin_weight)
+        span_bins += np.cumsum(diff[:-1])
+
+        z_centers = triangle_vertices[:, :, 2].mean(axis=1)
+        centroid_index = np.floor((z_centers - z_min) / effective_slice_mm).astype(np.int64)
+        centroid_index = np.clip(centroid_index, 0, bin_count - 1)
+        np.add.at(centroid_bins, centroid_index, weighted_area)
+
+    if bin_count >= 3:
+        kernel = np.array([0.15, 0.7, 0.15], dtype=float)
+        span_bins = np.convolve(span_bins, kernel, mode="same")
+        centroid_bins = np.convolve(centroid_bins, kernel, mode="same")
+
+    span_peak = float(np.max(span_bins)) if span_bins.size else 0.0
+    centroid_peak = float(np.max(centroid_bins)) if centroid_bins.size else 0.0
+    if span_peak > 0.0:
+        span_bins = span_bins / span_peak
+    if centroid_peak > 0.0:
+        centroid_bins = centroid_bins / centroid_peak
+
+    if span_peak > 0.0 and centroid_peak > 0.0:
+        return np.clip((0.65 * span_bins) + (0.35 * centroid_bins), 0.0, 1.0)
+    if span_peak > 0.0:
+        return np.clip(span_bins, 0.0, 1.0)
+    if centroid_peak > 0.0:
+        return np.clip(centroid_bins, 0.0, 1.0)
+    return np.zeros(bin_count, dtype=float)
+
+
 def _shoelace_area(points: np.ndarray) -> float:
     if points.shape[0] < 3:
         return 0.0
@@ -547,7 +942,9 @@ def _cross_section_areas(
     mesh: trimesh.Trimesh,
     slice_height_mm: float,
     max_slices: int,
-) -> tuple[list[SliceArea], float, float, list[str]]:
+    progress_callback: AnalysisProgressCallback | None = None,
+    cancel_check: AnalysisCancelCheck | None = None,
+) -> _CrossSectionResult:
     z_min, z_max = mesh.bounds[:, 2]
     height = max(0.0, float(z_max - z_min))
     requested_slices = int(math.floor(height / slice_height_mm)) + 1
@@ -575,27 +972,20 @@ def _cross_section_areas(
             requested_slice_mm=effective_slice,
             notes=notes,
             min_voxel_pitch_mm=max(effective_slice * 1.5, 0.15),
+            progress_callback=progress_callback,
+            cancel_check=cancel_check,
         )
 
     try:
-        sections = mesh.section_multiplane(
-            plane_origin=[0.0, 0.0, float(z_min)],
-            plane_normal=[0.0, 0.0, 1.0],
+        return _cross_section_areas_multiplane(
+            mesh=mesh,
+            z_min=float(z_min),
             heights=heights,
+            effective_slice_mm=effective_slice,
+            notes=notes,
+            progress_callback=progress_callback,
+            cancel_check=cancel_check,
         )
-
-        slice_areas: list[SliceArea] = []
-        max_area = 0.0
-        for offset, section in zip(heights, sections):
-            area = _section_area(section)
-            max_area = max(max_area, area)
-            slice_areas.append(
-                SliceArea(
-                    z_mm=float(round(float(z_min + offset), 5)),
-                    area_mm2=float(area),
-                )
-            )
-        return slice_areas, max_area, effective_slice, notes
     except ModuleNotFoundError as exc:
         missing_hint = f"{exc.name or ''} {exc}".lower()
         if "scipy" not in missing_hint:
@@ -607,22 +997,79 @@ def _cross_section_areas(
             heights=heights,
             requested_slice_mm=effective_slice,
             notes=notes,
+            progress_callback=progress_callback,
+            cancel_check=cancel_check,
         )
+
+
+def _cross_section_areas_multiplane(
+    mesh: trimesh.Trimesh,
+    z_min: float,
+    heights: np.ndarray,
+    effective_slice_mm: float,
+    notes: list[str],
+    progress_callback: AnalysisProgressCallback | None = None,
+    cancel_check: AnalysisCancelCheck | None = None,
+) -> _CrossSectionResult:
+    slice_areas: list[SliceArea] = []
+    max_area = 0.0
+    total_slices = len(heights)
+    batch_size = max(1, min(256, total_slices))
+
+    for start_index in range(0, total_slices, batch_size):
+        _check_cancel(cancel_check)
+        end_index = min(start_index + batch_size, total_slices)
+        batch_heights = heights[start_index:end_index]
+        if total_slices > batch_size:
+            _report_progress(
+                progress_callback,
+                "cross_section",
+                f"Computing cross-sections through the model. Processed {start_index}/{total_slices} slice planes.",
+            )
+        sections = mesh.section_multiplane(
+            plane_origin=[0.0, 0.0, float(z_min)],
+            plane_normal=[0.0, 0.0, 1.0],
+            heights=batch_heights,
+        )
+        for offset, section in zip(batch_heights, sections):
+            area = _section_area(section)
+            max_area = max(max_area, area)
+            slice_areas.append(
+                SliceArea(
+                    z_mm=float(round(float(z_min + offset), 5)),
+                    area_mm2=float(area),
+                )
+            )
+        if total_slices > batch_size:
+            _report_progress(
+                progress_callback,
+                "cross_section",
+                f"Computing cross-sections through the model. Processed {end_index}/{total_slices} slice planes.",
+            )
+
+    return _CrossSectionResult(
+        slice_areas=slice_areas,
+        max_area_mm2=max_area,
+        effective_slice_height_mm=effective_slice_mm,
+        notes=notes,
+    )
 
 
 def _cross_section_areas_fast(
     mesh: trimesh.Trimesh,
     slice_height_mm: float,
     max_slices: int,
-) -> tuple[list[SliceArea], float, float, list[str]]:
+    progress_callback: AnalysisProgressCallback | None = None,
+    cancel_check: AnalysisCancelCheck | None = None,
+) -> _CrossSectionResult:
     z_min, z_max = mesh.bounds[:, 2]
     height = max(0.0, float(z_max - z_min))
     if height <= 0.0:
-        return (
-            [SliceArea(z_mm=float(round(float(z_min), 5)), area_mm2=0.0)],
-            0.0,
-            slice_height_mm,
-            ["Model has zero Z height; cross-section area is zero."],
+        return _CrossSectionResult(
+            slice_areas=[SliceArea(z_mm=float(round(float(z_min), 5)), area_mm2=0.0)],
+            max_area_mm2=0.0,
+            effective_slice_height_mm=slice_height_mm,
+            notes=["Model has zero Z height; cross-section area is zero."],
         )
 
     safe_slice = max(float(slice_height_mm), 1e-6)
@@ -652,18 +1099,46 @@ def _cross_section_areas_fast(
             f"Minimum analysis truncated slice sampling to {len(heights)} slices."
         )
 
-    notes.append("Minimum analysis: using lightweight face-distribution cross-section approximation.")
-
     face_count = int(len(mesh.faces))
+    if face_count <= 80_000 and len(heights) <= 240:
+        notes.append("Minimum analysis used exact multiplane slicing because the mesh is small enough.")
+        try:
+            return _cross_section_areas_multiplane(
+                mesh=mesh,
+                z_min=float(z_min),
+                heights=heights,
+                effective_slice_mm=effective_slice,
+                notes=notes,
+                progress_callback=progress_callback,
+                cancel_check=cancel_check,
+            )
+        except ModuleNotFoundError as exc:
+            missing_hint = f"{exc.name or ''} {exc}".lower()
+            if "scipy" not in missing_hint:
+                raise
+            notes.append("scipy not available; minimum analysis kept the lightweight cross-section approximation.")
+
+    _check_cancel(cancel_check)
+    notes.append("Minimum analysis: using lightweight surface-span weighted cross-section approximation.")
+    _report_progress(
+        progress_callback,
+        "cross_section",
+        f"Approximating cross-sections from surface span coverage across {len(heights)} slice planes.",
+    )
+
     if face_count == 0:
         empty_slices = [
             SliceArea(z_mm=float(round(float(z_min + h), 5)), area_mm2=0.0) for h in heights
         ]
-        return empty_slices, 0.0, effective_slice, notes
+        return _CrossSectionResult(
+            slice_areas=empty_slices,
+            max_area_mm2=0.0,
+            effective_slice_height_mm=effective_slice,
+            notes=notes,
+        )
 
     vertices = np.asarray(mesh.vertices, dtype=float)
     faces = np.asarray(mesh.faces, dtype=np.int64)
-    z_values = vertices[:, 2]
     x_min, y_min, _ = mesh.bounds[0]
     x_max, y_max, _ = mesh.bounds[1]
     xy_area_mm2 = max(0.0, float((x_max - x_min) * (y_max - y_min)))
@@ -671,7 +1146,12 @@ def _cross_section_areas_fast(
         empty_slices = [
             SliceArea(z_mm=float(round(float(z_min + h), 5)), area_mm2=0.0) for h in heights
         ]
-        return empty_slices, 0.0, effective_slice, notes
+        return _CrossSectionResult(
+            slice_areas=empty_slices,
+            max_area_mm2=0.0,
+            effective_slice_height_mm=effective_slice,
+            notes=notes,
+        )
 
     sample_limit = 1_200_000
     stride = 1
@@ -681,22 +1161,16 @@ def _cross_section_areas_fast(
             f"Minimum analysis sampled faces at stride {stride} to limit memory on very large meshes."
         )
 
-    sampled_faces = faces[::stride]
-    z_centers = (
-        z_values[sampled_faces[:, 0]]
-        + z_values[sampled_faces[:, 1]]
-        + z_values[sampled_faces[:, 2]]
-    ) / 3.0
-
     bin_count = len(heights)
-    bins = np.zeros(bin_count, dtype=float)
-    indices = np.floor((z_centers - float(z_min)) / effective_slice).astype(np.int64)
-    indices = np.clip(indices, 0, bin_count - 1)
-    np.add.at(bins, indices, float(stride))
-
-    # Smooth sharp spikes from centroid-only assignment.
-    if bin_count >= 3:
-        bins = np.convolve(bins, np.array([0.2, 0.6, 0.2], dtype=float), mode="same")
+    bins = _approximate_surface_span_slice_bins(
+        vertices=vertices,
+        faces=faces,
+        z_min=float(z_min),
+        effective_slice_mm=effective_slice,
+        bin_count=bin_count,
+        stride=stride,
+        cancel_check=cancel_check,
+    )
 
     max_bin = float(np.max(bins)) if bins.size else 0.0
     if max_bin <= 0.0:
@@ -708,9 +1182,8 @@ def _cross_section_areas_fast(
             float((x_max - x_min) * (y_max - y_min) * (z_max - z_min)),
         )
         fill_ratio = float(np.clip(abs(float(mesh.volume)) / bbox_volume_mm3, 0.03, 0.98))
-        # Blend occupancy with volume fill ratio to produce stable low-memory area estimates.
-        area_factor = 0.35 + (0.65 * fill_ratio)
-        approx_areas = xy_area_mm2 * np.sqrt(occupancy) * area_factor
+        area_factor = 0.25 + (0.75 * fill_ratio)
+        approx_areas = xy_area_mm2 * occupancy * area_factor
 
     requested_z = float(z_min) + heights
     slice_areas = [
@@ -721,7 +1194,12 @@ def _cross_section_areas_fast(
         for z, area in zip(requested_z, approx_areas)
     ]
     max_area = float(np.max(approx_areas)) if len(approx_areas) else 0.0
-    return slice_areas, max_area, effective_slice, notes
+    return _CrossSectionResult(
+        slice_areas=slice_areas,
+        max_area_mm2=max_area,
+        effective_slice_height_mm=effective_slice,
+        notes=notes,
+    )
 
 
 def _cross_section_areas_voxel(
@@ -731,20 +1209,36 @@ def _cross_section_areas_voxel(
     requested_slice_mm: float,
     notes: list[str],
     min_voxel_pitch_mm: float = 0.05,
-) -> tuple[list[SliceArea], float, float, list[str]]:
+    progress_callback: AnalysisProgressCallback | None = None,
+    cancel_check: AnalysisCancelCheck | None = None,
+) -> _CrossSectionResult:
     voxel_pitch = max(requested_slice_mm, min_voxel_pitch_mm)
     if voxel_pitch > requested_slice_mm:
         notes.append(
             f"Voxel fallback used {voxel_pitch}mm pitch for speed; per-slice areas are interpolated."
         )
 
+    _check_cancel(cancel_check)
+    _report_progress(
+        progress_callback,
+        "cross_section",
+        f"Cross-section fallback is voxelizing at {round(voxel_pitch, 4)}mm pitch for {len(heights)} slice planes.",
+    )
     voxel = mesh.voxelized(pitch=voxel_pitch)
+    _check_cancel(cancel_check)
     occupied = np.asarray(voxel.matrix, dtype=bool)
     if occupied.size == 0:
         empty_slices = [
             SliceArea(z_mm=float(round(float(z_min + h), 5)), area_mm2=0.0) for h in heights
         ]
-        return empty_slices, 0.0, requested_slice_mm, notes
+        return _CrossSectionResult(
+            slice_areas=empty_slices,
+            max_area_mm2=0.0,
+            effective_slice_height_mm=requested_slice_mm,
+            notes=notes,
+            voxel_data=(voxel, occupied),
+            voxel_pitch_mm=voxel_pitch,
+        )
 
     layer_area_mm2 = occupied.sum(axis=(0, 1)).astype(float) * (voxel_pitch ** 2)
     z_indices = np.arange(occupied.shape[2], dtype=float)
@@ -762,7 +1256,14 @@ def _cross_section_areas_voxel(
         for z, area in zip(requested_z, interpolated_area)
     ]
     max_area = float(np.max(interpolated_area)) if len(interpolated_area) else 0.0
-    return slice_areas, max_area, requested_slice_mm, notes
+    return _CrossSectionResult(
+        slice_areas=slice_areas,
+        max_area_mm2=max_area,
+        effective_slice_height_mm=requested_slice_mm,
+        notes=notes,
+        voxel_data=(voxel, occupied),
+        voxel_pitch_mm=voxel_pitch,
+    )
 
 
 def _indices_to_points(voxel_grid: trimesh.voxel.VoxelGrid, indices: np.ndarray) -> np.ndarray:
@@ -775,8 +1276,14 @@ def _indices_to_points(voxel_grid: trimesh.voxel.VoxelGrid, indices: np.ndarray)
     return points
 
 
-def _voxelize_mesh(mesh: trimesh.Trimesh, pitch_mm: float) -> tuple[trimesh.voxel.VoxelGrid, np.ndarray]:
+def _voxelize_mesh(
+    mesh: trimesh.Trimesh,
+    pitch_mm: float,
+    cancel_check: AnalysisCancelCheck | None = None,
+) -> tuple[trimesh.voxel.VoxelGrid, np.ndarray]:
+    _check_cancel(cancel_check)
     voxel = mesh.voxelized(pitch=pitch_mm)
+    _check_cancel(cancel_check)
     occupied = np.asarray(voxel.matrix, dtype=bool)
     return voxel, occupied
 
@@ -786,8 +1293,15 @@ def _detect_suction_cups(
     pitch_mm: float,
     min_volume_mm3: float = 0.5,
     voxel_data: tuple[trimesh.voxel.VoxelGrid, np.ndarray] | None = None,
+    progress_callback: AnalysisProgressCallback | None = None,
+    cancel_check: AnalysisCancelCheck | None = None,
 ) -> list[Cavity]:
-    voxel, occupied = voxel_data if voxel_data is not None else _voxelize_mesh(mesh, pitch_mm=pitch_mm)
+    _check_cancel(cancel_check)
+    voxel, occupied = voxel_data if voxel_data is not None else _voxelize_mesh(
+        mesh,
+        pitch_mm=pitch_mm,
+        cancel_check=cancel_check,
+    )
     if occupied.size == 0:
         return []
 
@@ -817,8 +1331,19 @@ def _detect_suction_cups(
     cavities: list[Cavity] = []
     seen = np.zeros_like(enclosed, dtype=bool)
     cavity_id = 1
+    seed_points = np.argwhere(enclosed)
+    progress_stride = max(1, len(seed_points) // 20) if len(seed_points) else 1
+    flood_counter = 0
 
-    for seed in np.argwhere(enclosed):
+    for seed_index, seed in enumerate(seed_points, start=1):
+        if seed_index == 1 or seed_index % progress_stride == 0 or seed_index == len(seed_points):
+            _report_progress(
+                progress_callback,
+                "detect_suction_cups",
+                f"Scanning the voxel grid for suction cups and trapped resin cavities. Checked {seed_index}/{len(seed_points)} enclosed seeds.",
+            )
+        if seed_index % 64 == 0:
+            _check_cancel(cancel_check)
         sx, sy, sz = map(int, seed)
         if seen[sx, sy, sz]:
             continue
@@ -829,6 +1354,9 @@ def _detect_suction_cups(
         while qq:
             x, y, z = qq.popleft()
             component.append((x, y, z))
+            flood_counter += 1
+            if flood_counter % 2048 == 0:
+                _check_cancel(cancel_check)
             for dx, dy, dz in _NEIGHBORS_3D:
                 nx, ny, nz = x + dx, y + dy, z + dz
                 if nx < 0 or ny < 0 or nz < 0:
@@ -869,20 +1397,106 @@ def _dilate_2d(mask: np.ndarray) -> np.ndarray:
     return out
 
 
+def _bboxes_touch_or_overlap(
+    first: tuple[int, int, int, int],
+    second: tuple[int, int, int, int],
+    padding: int = 2,
+) -> bool:
+    first_x_min, first_x_max, first_y_min, first_y_max = first
+    second_x_min, second_x_max, second_y_min, second_y_max = second
+    return not (
+        first_x_max + padding < second_x_min
+        or second_x_max + padding < first_x_min
+        or first_y_max + padding < second_y_min
+        or second_y_max + padding < first_y_min
+    )
+
+
+def _bbox_overlap_area(
+    first: tuple[int, int, int, int],
+    second: tuple[int, int, int, int],
+) -> int:
+    first_x_min, first_x_max, first_y_min, first_y_max = first
+    second_x_min, second_x_max, second_y_min, second_y_max = second
+    overlap_x = max(0, min(first_x_max, second_x_max) - max(first_x_min, second_x_min) + 1)
+    overlap_y = max(0, min(first_y_max, second_y_max) - max(first_y_min, second_y_min) + 1)
+    return int(overlap_x * overlap_y)
+
+
+def _cluster_island_components(components: list[_IslandComponent]) -> list[Island]:
+    if not components:
+        return []
+
+    active_regions: list[_IslandRegionState] = []
+    finished_regions: list[_IslandRegionState] = []
+
+    for component in components:
+        still_active: list[_IslandRegionState] = []
+        for region in active_regions:
+            if region.end_layer_index < component.layer_index - 1:
+                finished_regions.append(region)
+            else:
+                still_active.append(region)
+        active_regions = still_active
+
+        matches = [
+            region
+            for region in active_regions
+            if region.end_layer_index == component.layer_index - 1
+            and _bboxes_touch_or_overlap(region.last_bbox_xy_idx, component.bbox_xy_idx)
+        ]
+        if not matches:
+            active_regions.append(_IslandRegionState.from_component(component))
+            continue
+
+        primary = max(
+            matches,
+            key=lambda region: (
+                _bbox_overlap_area(region.last_bbox_xy_idx, component.bbox_xy_idx),
+                region.total_voxel_count,
+            ),
+        )
+        for region in matches:
+            if region is primary:
+                continue
+            primary.absorb_region(region)
+            active_regions.remove(region)
+        primary.absorb(component)
+
+    finished_regions.extend(active_regions)
+    finished_regions.sort(key=lambda region: (region.start_layer_index, region.start_z_mm))
+    return [region.to_island() for region in finished_regions]
+
+
 def _detect_islands(
     mesh: trimesh.Trimesh,
     pitch_mm: float,
     min_voxels: int = 6,
     voxel_data: tuple[trimesh.voxel.VoxelGrid, np.ndarray] | None = None,
+    progress_callback: AnalysisProgressCallback | None = None,
+    cancel_check: AnalysisCancelCheck | None = None,
 ) -> list[Island]:
-    voxel, occupied = voxel_data if voxel_data is not None else _voxelize_mesh(mesh, pitch_mm=pitch_mm)
+    _check_cancel(cancel_check)
+    voxel, occupied = voxel_data if voxel_data is not None else _voxelize_mesh(
+        mesh,
+        pitch_mm=pitch_mm,
+        cancel_check=cancel_check,
+    )
     if occupied.size == 0:
         return []
 
-    islands: list[Island] = []
+    components: list[_IslandComponent] = []
     depth = occupied.shape[2]
+    progress_stride = max(1, depth // 20) if depth else 1
 
     for z_idx in range(depth):
+        _check_cancel(cancel_check)
+        if z_idx == 0 or (z_idx + 1) % progress_stride == 0 or z_idx == depth - 1:
+            _report_progress(
+                progress_callback,
+                "detect_islands",
+                f"Checking sliced layers for unsupported islands. Processed {z_idx + 1}/{depth} layers.",
+            )
         current = occupied[:, :, z_idx]
         if not current.any():
             continue
@@ -905,9 +1519,23 @@ def _detect_islands(
             count = 0
             q: deque[tuple[int, int]] = deque([(sx, sy)])
             visited[sx, sy] = True
+            min_x = sx
+            max_x = sx
+            min_y = sy
+            max_y = sy
+            sum_x = 0.0
+            sum_y = 0.0
             while q:
                 x, y = q.popleft()
                 count += 1
+                sum_x += x
+                sum_y += y
+                min_x = min(min_x, x)
+                max_x = max(max_x, x)
+                min_y = min(min_y, y)
+                max_y = max(max_y, y)
+                if count % 1024 == 0:
+                    _check_cancel(cancel_check)
                 for dx, dy in _NEIGHBORS_2D:
                     nx, ny = x + dx, y + dy
                     if nx < 0 or ny < 0 or nx >= unsupported.shape[0] or ny >= unsupported.shape[1]:
@@ -919,16 +1547,21 @@ def _detect_islands(
 
             if count < min_voxels:
                 continue
-            z_world = _indices_to_points(voxel, np.array([[0, 0, z_idx]], dtype=float))[0, 2]
-            islands.append(
-                Island(
+            centroid_point = _indices_to_points(
+                voxel,
+                np.array([[sum_x / count, sum_y / count, z_idx]], dtype=float),
+            )[0]
+            components.append(
+                _IslandComponent(
                     layer_index=int(z_idx),
-                    z_mm=float(z_world),
+                    z_mm=float(centroid_point[2]),
                     voxel_count=int(count),
+                    bbox_xy_idx=(int(min_x), int(max_x), int(min_y), int(max_y)),
+                    xy_centroid_mm=[float(centroid_point[0]), float(centroid_point[1])],
                 )
             )
 
-    return islands
+    return _cluster_island_components(components)
 
 
 def _structural_risk(
@@ -951,13 +1584,15 @@ def _structural_risk(
     return float(round(score, 2))
 
 
-def _curvature_proxy(mesh: trimesh.Trimesh) -> float | None:
+def _curvature_proxy(mesh: trimesh.Trimesh, cancel_check: AnalysisCancelCheck | None = None) -> float | None:
+    _check_cancel(cancel_check)
     try:
         import pyvista as pv
     except Exception:
         return None
 
     try:
+        _check_cancel(cancel_check)
         faces = np.hstack(
             [
                 np.full((mesh.faces.shape[0], 1), 3, dtype=np.int64),
@@ -966,6 +1601,7 @@ def _curvature_proxy(mesh: trimesh.Trimesh) -> float | None:
         ).ravel()
         pv_mesh = pv.PolyData(mesh.vertices, faces)
         curvature = pv_mesh.curvature(curv_type="mean")
+        _check_cancel(cancel_check)
         return float(np.nanmean(np.abs(curvature)))
     except Exception:
         return None

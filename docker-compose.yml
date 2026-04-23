@@ -2,6 +2,7 @@ services:
   api:
     build: .
     container_name: resinlogic-api
+    restart: unless-stopped
     ports:
       - "8000:8000"
     environment:

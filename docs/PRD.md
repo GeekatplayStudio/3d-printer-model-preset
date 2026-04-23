@@ -43,7 +43,7 @@ ResinLogic AI solves this by combining geometry analysis, catalog intelligence, 
 - Guided end-user wizard (`/wizard`) with ordered steps:
   1. Setup/update printer-resin database from official local data or GitHub data file.
   2. Show data status/completeness and readiness.
-  3. Upload STL and run integrity + geometry report.
+  3. Upload STL and run integrity + geometry report with live stage progress, timing detail, and cancel support.
   4. Auto-fix mesh where possible and provide repaired STL download.
   5. Select printer + resin and generate settings with on-screen results, source references, trust level, and download files.
 
@@ -60,6 +60,7 @@ ResinLogic AI solves this by combining geometry analysis, catalog intelligence, 
 - Standalone local deployment by default (per-user local database).
 - Optional RBAC auth with `Authorization` tokens when running in shared/server mode.
 - Async jobs with status, cancel, and cleanup.
+- Long-running wizard analysis with live status, stage timings, and operator cancellation.
 - Scheduled sync definitions and manual/background execution.
 - Metrics and Prometheus export.
 
@@ -83,7 +84,7 @@ ResinLogic AI solves this by combining geometry analysis, catalog intelligence, 
 ## Functional Requirements
 
 1. Geometry Intent Detection
-- compute SAR/detail-density features and stress proxies from mesh input.
+- compute SAR/detail-density features, grouped unsupported-region summaries, and peel-risk proxies from mesh input.
 
 2. Parameter Decision Engine
 - produce explainable settings from geometry + resin + printer + environment.
@@ -107,6 +108,7 @@ ResinLogic AI solves this by combining geometry analysis, catalog intelligence, 
 - provide a no-code, no-JSON path for non-technical users.
 - enforce sequential completion of critical steps before continuing.
 - keep each step clear, with one primary action and explicit status output.
+- expose live progress and cancellation controls for long-running STL analysis.
 
 ## Non-Functional Requirements
 
@@ -114,7 +116,7 @@ ResinLogic AI solves this by combining geometry analysis, catalog intelligence, 
 - Persistent storage for catalog, jobs, audit, schedules, feedback.
 - Secure-by-config auth for production mode.
 - Scriptable and API-first design for automation.
-- Large-model robustness: minimum analysis mode must remain memory-safe and provide progress/status clarity.
+- Large-model robustness: upload staging and minimum analysis mode must remain memory-safe and provide progress/cancel clarity.
 
 ## Success Metrics
 

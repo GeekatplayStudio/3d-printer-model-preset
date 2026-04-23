@@ -1,15 +1,19 @@
 from __future__ import annotations
 
+import io
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 import trimesh
 from fastapi.testclient import TestClient
+from starlette.datastructures import UploadFile
 
 import app.main as main
 from app.audit_store import init_audit_store
 from app.catalog_store import init_catalog_store
 from app.job_queue import InMemoryJobQueue
 from app.job_store import init_job_store
+from app.models import GeometryAnalysis
 from app.scheduler import TechnicalSyncScheduler
 from app.sync_schedule_store import init_sync_schedule_store
 
@@ -61,6 +65,44 @@ def _broken_mesh_bytes() -> bytes:
     return mesh.export(file_type="stl")
 
 
+def _analysis_payload() -> dict:
+    return {
+        "file_name": "mock.stl",
+        "mesh_volume_mm3": 125.0,
+        "surface_area_mm2": 75.0,
+        "surface_area_ratio": 0.6,
+        "triangle_count": 256,
+        "detail_density": 3.41,
+        "curvature_proxy": 0.12,
+        "slice_height_mm": 0.2,
+        "build_plate_area_mm2": 12000.0,
+        "max_cross_section_mm2": 250.0,
+        "max_cross_section_ratio": 0.02,
+        "slice_areas": [{"z_mm": 0.0, "area_mm2": 12.0}],
+        "suction_cups": [],
+        "islands": [],
+        "mesh_health": {
+            "watertight": True,
+            "winding_consistent": True,
+            "volume_consistent": True,
+            "connected_components": 1,
+            "boundary_edge_count": 0,
+            "non_manifold_edge_count": 0,
+            "degenerate_face_count": 0,
+            "duplicate_face_count": 0,
+            "repaired": False,
+            "issues": [],
+            "repair_actions": [],
+        },
+        "estimated_intent": "miniature",
+        "intent_reasons": ["Mock intent"],
+        "structural_risk_score": 12.5,
+        "notes": ["Mock analysis"],
+        "analysis_level": "balanced",
+        "performance_ms": {"cross_section": 12.0, "voxelize": 5.0, "total": 25.0},
+    }
+
+
 def test_wizard_ui_and_status_route(tmp_path, monkeypatch):
     client = _client(tmp_path, monkeypatch)
 
@@ -69,6 +111,10 @@ def test_wizard_ui_and_status_route(tmp_path, monkeypatch):
     assert "ResinLogic Wizard" in ui.text
     assert "Show Catalog List" in ui.text
     assert "Analysis depth" in ui.text
+    assert "/wizard/model/check/status/" in ui.text
+    assert "progress_job_id" in ui.text
+    assert "cancelAnalyzeBtn" in ui.text
+    assert "analysisProgressPanel" in ui.text
 
     status = client.get("/wizard/database/status")
     assert status.status_code == 200
@@ -266,6 +312,32 @@ def test_wizard_model_fix_and_settings_downloads(tmp_path, monkeypatch):
     assert client.get(settings_body["cfg_download_url"]).status_code == 200
 
 
+def test_save_upload_streams_large_file_in_chunks(tmp_path, monkeypatch):
+    class ChunkGuard(io.BytesIO):
+        def __init__(self, data: bytes):
+            super().__init__(data)
+            self.read_sizes: list[int] = []
+
+        def read(self, size: int = -1) -> bytes:
+            self.read_sizes.append(size)
+            if size < 0:
+                raise AssertionError("_save_upload should not read the whole upload into memory at once")
+            return super().read(size)
+
+    payload = (b"0123456789abcdef" * 128_000)
+    guarded = ChunkGuard(payload)
+    upload = UploadFile(filename="large.stl", file=guarded)
+
+    saved = main._save_upload(upload)
+    try:
+        assert saved.exists()
+        assert saved.read_bytes() == payload
+        assert guarded.read_sizes
+        assert all(size == 1024 * 1024 for size in guarded.read_sizes[:-1])
+    finally:
+        saved.unlink(missing_ok=True)
+
+
 def test_wizard_rejects_non_stl_upload(tmp_path, monkeypatch):
     client = _client(tmp_path, monkeypatch)
 
@@ -295,3 +367,181 @@ def test_wizard_rejects_non_stl_upload(tmp_path, monkeypatch):
     )
     assert bad_fix.status_code == 400
     assert "Only STL files are supported" in bad_fix.json()["detail"]
+
+
+def test_wizard_model_check_reports_live_progress_status(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+    status_client = TestClient(main.app)
+
+    def fake_run_phase_1_geometry(
+        *,
+        file_path: str,
+        slice_height_mm: float = 0.01,
+        auto_repair: bool = True,
+        analysis_level: str = "balanced",
+        progress_callback=None,
+        cancel_check=None,
+    ) -> GeometryAnalysis:
+        assert file_path.endswith(".stl")
+        assert slice_height_mm == 0.2
+        assert auto_repair is False
+        assert analysis_level == "balanced"
+        if progress_callback is not None:
+            progress_callback("cross_section", "Computing cross-sections through the model.")
+        time.sleep(0.12)
+        if progress_callback is not None:
+            progress_callback("voxelize", "Voxelizing the mesh for cavity and island detection.")
+        time.sleep(0.12)
+        return GeometryAnalysis(**_analysis_payload())
+
+    monkeypatch.setattr(main.pipeline, "run_phase_1_geometry", fake_run_phase_1_geometry)
+
+    job_id = "progress-check-001"
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(
+            lambda: client.post(
+                "/wizard/model/check",
+                files={"file": ("broken.stl", _broken_mesh_bytes(), "model/stl")},
+                data={"slice_height_mm": "0.2", "analysis_level": "balanced", "progress_job_id": job_id},
+            )
+        )
+
+        running_progress = None
+        for _ in range(50):
+            status = status_client.get(f"/wizard/model/check/status/{job_id}")
+            assert status.status_code == 200
+            body = status.json()
+            if body["status"] == "running":
+                running_progress = body
+                break
+            time.sleep(0.02)
+
+        response = future.result()
+
+    assert running_progress is not None
+    assert running_progress["stage"] in {"load_prepare_mesh", "cross_section", "voxelize"}
+    assert running_progress["message"]
+    assert response.status_code == 200
+
+    final_status = status_client.get(f"/wizard/model/check/status/{job_id}")
+    assert final_status.status_code == 200
+    final_body = final_status.json()
+    assert final_body["status"] == "completed"
+    assert final_body["stage"] == "completed"
+    assert final_body["performance_ms"]["total"] == 25.0
+    assert final_body["stage_timings_ms"]["cross_section"] == 12.0
+    assert final_body["stage_timings_ms"]["voxelize"] == 5.0
+
+
+def test_wizard_model_check_failure_reports_stage_detail(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+
+    def fake_run_phase_1_geometry(
+        *,
+        file_path: str,
+        slice_height_mm: float = 0.01,
+        auto_repair: bool = True,
+        analysis_level: str = "balanced",
+        progress_callback=None,
+        cancel_check=None,
+    ):
+        assert file_path.endswith(".stl")
+        assert slice_height_mm == 0.2
+        assert auto_repair is False
+        assert analysis_level == "balanced"
+        if progress_callback is not None:
+            progress_callback("voxelize", "Voxelizing the mesh for cavity and island detection.")
+        raise RuntimeError("grid overflow")
+
+    monkeypatch.setattr(main.pipeline, "run_phase_1_geometry", fake_run_phase_1_geometry)
+
+    job_id = "progress-check-failure"
+    response = client.post(
+        "/wizard/model/check",
+        files={"file": ("broken.stl", _broken_mesh_bytes(), "model/stl")},
+        data={"slice_height_mm": "0.2", "analysis_level": "balanced", "progress_job_id": job_id},
+    )
+
+    assert response.status_code == 400
+    assert "voxelization" in response.json()["detail"]
+    assert "grid overflow" in response.json()["detail"]
+
+    status = client.get(f"/wizard/model/check/status/{job_id}")
+    assert status.status_code == 200
+    body = status.json()
+    assert body["status"] == "failed"
+    assert body["stage"] == "voxelize"
+    assert "grid overflow" in body["message"]
+
+
+def test_wizard_model_check_can_be_cancelled(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+    status_client = TestClient(main.app)
+
+    def fake_run_phase_1_geometry(
+        *,
+        file_path: str,
+        slice_height_mm: float = 0.01,
+        auto_repair: bool = True,
+        analysis_level: str = "balanced",
+        progress_callback=None,
+        cancel_check=None,
+    ) -> GeometryAnalysis:
+        assert file_path.endswith(".stl")
+        assert slice_height_mm == 0.2
+        assert auto_repair is False
+        assert analysis_level == "balanced"
+        assert cancel_check is not None
+        for index in range(40):
+            if progress_callback is not None:
+                progress_callback(
+                    "detect_islands",
+                    f"Checking sliced layers for unsupported islands. Processed {index + 1}/40 layers.",
+                )
+            cancel_check()
+            time.sleep(0.02)
+        return GeometryAnalysis(**_analysis_payload())
+
+    monkeypatch.setattr(main.pipeline, "run_phase_1_geometry", fake_run_phase_1_geometry)
+
+    job_id = "progress-check-cancel"
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(
+            lambda: client.post(
+                "/wizard/model/check",
+                files={"file": ("broken.stl", _broken_mesh_bytes(), "model/stl")},
+                data={"slice_height_mm": "0.2", "analysis_level": "balanced", "progress_job_id": job_id},
+            )
+        )
+
+        running_progress = None
+        for _ in range(80):
+            status = status_client.get(f"/wizard/model/check/status/{job_id}")
+            assert status.status_code == 200
+            body = status.json()
+            if body["status"] == "running" and body["stage"] == "detect_islands":
+                running_progress = body
+                break
+            time.sleep(0.02)
+
+        assert running_progress is not None
+
+        cancel = status_client.post(f"/wizard/model/check/status/{job_id}/cancel")
+        assert cancel.status_code == 200
+        cancel_body = cancel.json()
+        assert cancel_body["status"] == "cancelling"
+        assert cancel_body["cancel_requested"] is True
+
+        response = future.result()
+
+    assert response.status_code == 409
+    assert "cancelled by user" in response.json()["detail"].lower()
+    assert "island detection" in response.json()["detail"].lower()
+
+    final_status = status_client.get(f"/wizard/model/check/status/{job_id}")
+    assert final_status.status_code == 200
+    final_body = final_status.json()
+    assert final_body["status"] == "cancelled"
+    assert final_body["stage"] == "detect_islands"
+    assert final_body["cancel_requested"] is True
+    assert "cancelled by user" in final_body["message"].lower()

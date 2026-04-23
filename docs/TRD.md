@@ -52,6 +52,29 @@ Primary libraries:
 - async job records and lifecycle state,
 - sync schedule records for interval automation.
 
+### Geometry Analysis Output
+
+- `GeometryAnalysis.performance_ms` captures per-stage timings plus total runtime.
+- `GeometryAnalysis.notes` includes runtime adaptation notes plus peak cross-section, cavity, island, and curvature summaries where available.
+- `Island` records can now represent grouped unsupported regions with:
+  - `end_layer_index`,
+  - `z_end_mm`,
+  - `layer_span`,
+  - `total_voxel_count`,
+  - `xy_centroid_mm`.
+
+### Wizard Analysis Progress Output
+
+- `WizardAnalysisProgressResponse` provides:
+  - `status` (`queued | running | cancelling | completed | failed | cancelled | unknown`),
+  - `stage`,
+  - `message`,
+  - `elapsed_seconds`,
+  - `stage_elapsed_seconds`,
+  - `cancel_requested`,
+  - `performance_ms`,
+  - `stage_timings_ms`.
+
 ## 4. Persistence Requirements
 
 - `~/.resinlogic/tech_catalog.db`: catalog entities and relationships.
@@ -74,7 +97,16 @@ All stores must initialize automatically at startup if missing.
 - `POST /pipeline`: end-to-end workflow.
 - `POST /jobs/pipeline`: async pipeline submission.
 - geometry analysis supports `analysis_level` (`minimum`, `balanced`, `deep`) and returns step-level performance timings.
-- minimum mode is optimized for large meshes and avoids heavy memory paths.
+- minimum mode uses exact multiplane slicing for smaller meshes and a memory-safe surface-span weighted fallback for larger meshes.
+- balanced/deep analysis adapt voxel pitch and slice counts for large meshes and reuse voxel fallback data where possible.
+- geometry results return grouped island-region summaries instead of only per-layer unsupported hits.
+
+### Wizard Runtime Analysis
+
+- `POST /wizard/model/check`: guided STL analysis with optional `progress_job_id`.
+- `GET /wizard/model/check/status/{job_id}`: live wizard analysis status and stage timing lookup.
+- `POST /wizard/model/check/status/{job_id}/cancel`: cooperative cancellation for a running wizard analysis job.
+- upload staging for wizard analysis must stream file chunks instead of buffering the full STL in memory.
 
 ### Feedback Intelligence
 
@@ -116,6 +148,7 @@ All stores must initialize automatically at startup if missing.
 - Prometheus text endpoint for scrape integration.
 - Persistent job history to avoid losing operational context on restart.
 - Catalog mutation audit trail and rollback capability.
+- Wizard analysis progress state must expose stage-level timing and cancellation visibility for long-running model checks.
 
 ## 8. Testing Requirements
 
@@ -126,8 +159,9 @@ Required automated coverage areas:
 - API security and operational endpoints,
 - schedule store and scheduler behavior,
 - job queue persistence and cancellation behavior.
-- wizard flow validation for provenance + compatibility behavior.
+- wizard flow validation for provenance, compatibility, live progress, and cancellation behavior.
 - large-model minimum-mode regression checks (no voxelized fast-path dependency).
+- grouped island-region regression coverage for adjacent unsupported layers.
 
 ## 9. Deployment Requirements
 

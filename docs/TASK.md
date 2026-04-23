@@ -14,7 +14,10 @@
 - `[x]` intent estimation heuristic (`miniature`, `collectible`, `heavy_use`)
 - `[x]` analysis depth modes with performance telemetry (`minimum`, `balanced`, `deep`)
 - `[x]` large-model minimum-mode optimization (memory-safe fast path)
-- `[~]` suction-cup/island heuristics hardening
+- `[x]` exact minimum-mode slicing for small meshes and surface-span weighted fallback for larger meshes
+- `[x]` adaptive balanced/deep throttling and voxel reuse between cross-section fallback and island/cavity analysis
+- `[x]` grouped island-region reporting with layer spans and centroids
+- `[~]` suction-cup false-positive filtering and cavity confidence ranking
 - `[ ]` advanced stress confidence scoring and benchmark suite
 
 Primary module: `app/geometry.py`
@@ -67,13 +70,14 @@ Primary modules: `app/catalog_store.py`, `app/audit_store.py`, `app/static/catal
 - `[x]` optional background scheduler
 - `[x]` metrics endpoint and Prometheus export
 - `[x]` unified ops console (`/app`)
+- `[x]` wizard analysis live progress, per-stage timings, and cancel flow
 - `[ ]` workflow-specific dashboards and SLO alerting presets
 
 Primary modules: `app/auth.py`, `app/job_queue.py`, `app/scheduler.py`, `app/monitoring.py`, `app/static/app.html`
 
 ## Immediate Next Sprint
 
-1. Harden geometry heuristics with benchmark corpus and confidence calibration.
+1. Harden suction-cup confidence with benchmark corpus and cavity classification checks.
 2. Add stricter trust gating policies (optional block on non-verified settings in wizard).
 3. Start frontend redesign plan (React migration, stress-map UX).
 4. Define schema migration strategy and release policy.

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 from app.camera_log import analyze_camera_log
@@ -29,12 +30,16 @@ class ModularAgenticPipeline:
         slice_height_mm: float = 0.01,
         auto_repair: bool = True,
         analysis_level: AnalysisLevel = "balanced",
+        progress_callback: Callable[[str, str], None] | None = None,
+        cancel_check: Callable[[], None] | None = None,
     ) -> GeometryAnalysis:
         return analyze_geometry(
             file_path=file_path,
             slice_height_mm=slice_height_mm,
             auto_repair=auto_repair,
             analysis_level=analysis_level,
+            progress_callback=progress_callback,
+            cancel_check=cancel_check,
         )
 
     def run_phase_2_parameters(

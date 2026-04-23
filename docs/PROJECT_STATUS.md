@@ -20,7 +20,11 @@ The immediate production target started around Elegoo Mars 5 Ultra behavior, but
 - Phase 1 geometry analysis endpoint with:
   - cross-section scan support,
   - suction cup and island heuristic detection,
-  - SAR/detail density metrics.
+  - SAR/detail density metrics,
+  - adaptive balanced/deep runtime throttling,
+  - exact minimum-mode multiplane slicing for small meshes,
+  - surface-span weighted minimum fallback for larger meshes,
+  - grouped unsupported-region summaries with layer spans and centroids.
 - Phase 2 optimization endpoint with:
   - use-case templates (`miniature`, `collectible`, `heavy_use`),
   - tilt-speed gates,
@@ -57,15 +61,18 @@ The immediate production target started around Elegoo Mars 5 Ultra behavior, but
 - Source-attributed official seed dataset (`data/official_catalog_sync.json`) plus local import script.
 - Wizard pipeline UX hardening for large models:
   - STL-only upload constraints,
-  - progress messaging while analyze/fix runs,
+  - chunked upload staging for large STL files,
+  - live stage-by-stage analyze status polling,
+  - per-stage timing visibility and user-triggered cancellation,
   - adaptive timeout windows by analysis depth + model size.
 - Memory-safe minimum analysis path with large-model runtime optimizations and step timing telemetry.
+- Cross-section fallback voxel reuse and post-repair duplicate/degenerate cleanup for more stable geometry output.
 - Settings provenance surface:
   - data quality classification (`verified_sources`, `catalog_unverified`, `fallback_defaults`),
   - confidence score passthrough where available,
   - source reference list exposed in wizard output.
 - Compatibility-aware wizard dropdown behavior (printer selection filters resin list to real profile coverage).
-- Test coverage across core modules and API behavior (currently 71 passing tests).
+- Test coverage across core modules and API behavior, including focused regressions for large-model geometry, wizard progress/cancel flow, and grouped island-region reporting.
 
 ## What Still Needs To Be Done
 
@@ -74,6 +81,7 @@ The immediate production target started around Elegoo Mars 5 Ultra behavior, but
 - Implement stronger validation and curation pipelines for external data ingestion to reduce noisy profile inputs.
 - Add production-grade migration/version strategy for SQLite schemas.
 - Introduce configuration profiles per printer family (not only Mars-first defaults).
+- Separate true suction-cup peel-risk pockets from benign sealed voids to reduce cavity false positives.
 
 ### Product and UX
 
@@ -88,13 +96,13 @@ The immediate production target started around Elegoo Mars 5 Ultra behavior, but
 
 ### ML/Agentic Improvements
 
-- Improve suction cup/island heuristics with more robust geometric analysis.
+- Improve suction-cup confidence classification and cavity severity ranking.
 - Add adaptive confidence scoring for recommended settings.
 - Expand history-aware adaptation to include weighted trends over time and environment context.
 
 ## Near-Term Milestones
 
-1. Data Quality and Validation hardening.
-2. Frontend redesign with workflow-first UX.
-3. Advanced integration layer (SDCP and external sync connectors).
+1. Suction-cup confidence and geometry benchmark hardening.
+2. Data quality and validation hardening.
+3. Frontend redesign with workflow-first UX.
 4. Release candidate stabilization (security defaults, migrations, observability).

@@ -24,15 +24,20 @@ class Island(BaseModel):
     layer_index: int
     z_mm: float
     voxel_count: int
+    end_layer_index: int | None = None
+    z_end_mm: float | None = None
+    layer_span: int = Field(default=1, ge=1)
+    total_voxel_count: int | None = Field(default=None, ge=0)
+    xy_centroid_mm: list[float] | None = None
 
 
 class MeshHealthReport(BaseModel):
     watertight: bool
     winding_consistent: bool
     volume_consistent: bool
-    connected_components: int = Field(ge=0)
-    boundary_edge_count: int = Field(ge=0)
-    non_manifold_edge_count: int = Field(ge=0)
+    connected_components: int | None = Field(default=None, ge=0)
+    boundary_edge_count: int | None = Field(default=None, ge=0)
+    non_manifold_edge_count: int | None = Field(default=None, ge=0)
     degenerate_face_count: int = Field(ge=0)
     duplicate_face_count: int = Field(ge=0)
     repaired: bool = False
@@ -71,6 +76,7 @@ class MultiParameterSettings(BaseModel):
 
 
 SettingsDataQuality = Literal["verified_sources", "catalog_unverified", "fallback_defaults"]
+WizardAnalysisProgressStatus = Literal["queued", "running", "cancelling", "completed", "failed", "cancelled", "unknown"]
 
 
 class SettingReference(BaseModel):
@@ -635,6 +641,20 @@ class WizardCatalogOptionsResponse(BaseModel):
     printers: list[str] = Field(default_factory=list)
     resins: list[str] = Field(default_factory=list)
     compatibility: dict[str, list[str]] = Field(default_factory=dict)
+
+
+class WizardAnalysisProgressResponse(BaseModel):
+    job_id: str
+    status: WizardAnalysisProgressStatus
+    stage: str | None = None
+    message: str
+    elapsed_seconds: int = Field(default=0, ge=0)
+    stage_elapsed_seconds: int = Field(default=0, ge=0)
+    updated_at: str
+    cancel_requested: bool = False
+    error: str | None = None
+    performance_ms: dict[str, float] = Field(default_factory=dict)
+    stage_timings_ms: dict[str, float] = Field(default_factory=dict)
 
 
 class WizardModelCheckResponse(BaseModel):

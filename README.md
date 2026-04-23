@@ -25,8 +25,8 @@ Beyond Mars 5 Ultra, the catalog architecture supports all printers and all resi
 Implemented:
 
 - FastAPI backend with modular phase pipeline.
-- STL geometry integrity report with optional auto-repair (duplicate/degenerate face cleanup, hole-fill attempt, topology notes).
-- Analysis depth profiles (`minimum`, `balanced`, `deep`) with per-step runtime telemetry and large-model fast-path behavior.
+- STL geometry integrity report with optional auto-repair (duplicate/degenerate cleanup, hole-fill attempt, post-repair cleanup pass, topology notes).
+- Analysis depth profiles (`minimum`, `balanced`, `deep`) with per-step runtime telemetry, adaptive large-model throttling, and grouped unsupported-region reporting.
 - Catalog CRUD for printers, resins, and profiles.
 - CSV and JSON import/export for technical database maintenance.
 - Catalog versioning and rollback snapshots.
@@ -44,22 +44,30 @@ Implemented:
   - `/wizard` for the guided step-by-step end-user workflow.
   - `/app` for full operations console (dark mode).
   - `/catalog/admin` for catalog maintenance with search and row-level edit/delete.
-- Wizard STL UX improvements:
+- Wizard STL UX and runtime improvements:
   - STL-only upload enforcement,
   - printer -> compatible resin dropdown flow,
-  - progress/status updates during analyze/fix,
-  - adaptive timeout windows for large models.
+  - live progress/status polling during analyze,
+  - per-stage timing visibility and in-place cancel support,
+  - adaptive timeout windows for large models,
+  - chunked upload staging to avoid large-file OOM failures.
+- Geometry analysis detail improvements:
+  - exact minimum-mode multiplane slicing for small meshes,
+  - surface-span weighted minimum-mode fallback for larger meshes,
+  - voxel reuse between cross-section fallback and cavity/island detection,
+  - grouped island regions with layer spans and centroids,
+  - richer analysis notes for peak cross-section, cavity totals, island severity, and curvature summary.
 - Settings provenance and trust surface:
   - `settings.provenance.data_quality` (`verified_sources`, `catalog_unverified`, `fallback_defaults`),
   - `settings.provenance.real_data_backed`,
   - `settings.provenance.confidence_score`,
   - source references with links from catalog metadata.
-- Automated test suite (`71` tests currently passing).
+- Automated test suite with focused Docker regression coverage for geometry, wizard flow, catalog, jobs, scheduler, sync, and security paths.
 
 Planned next:
 
 - direct SDCP bidirectional integration with slicer/printer workflows,
-- richer geometry heuristics for suction cup/island confidence,
+- stronger suction-cup confidence filtering to separate peel-risk pockets from benign sealed voids,
 - dedicated React + Three.js stress-map frontend,
 - stronger data quality workflows for external community dataset sync.
 
@@ -175,9 +183,19 @@ Open:
 
 ## Test
 
+Local environment:
+
 ```bash
 python -m pytest -q
 ```
+
+Docker environment:
+
+```bash
+docker compose run --rm api sh -lc "python -m pip install pytest && python -m pytest -q"
+```
+
+The runtime image stays slim and does not bundle `pytest`, so Docker test runs install it transiently.
 
 ## Official Catalog Seed
 

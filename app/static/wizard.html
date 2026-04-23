@@ -214,6 +214,30 @@
         text-decoration: none;
       }
 
+      .progress-panel {
+        margin-top: 10px;
+        border: 1px solid #29425a;
+        border-radius: 10px;
+        padding: 10px;
+        background: #0a1420;
+      }
+
+      .progress-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .progress-chip {
+        border: 1px solid #2a4259;
+        background: #0b1521;
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 0.82rem;
+        color: #cbe0f6;
+      }
+
       .catalog-panel {
         margin-top: 10px;
         border: 1px solid #29425a;
@@ -318,7 +342,21 @@
             <button id="analyzeBtn" onclick="analyzeModel()" disabled>Analyze STL</button>
             <button id="fixBtn" class="warn" onclick="fixModel()" disabled>Auto-Fix and Download STL</button>
           </div>
+          <div class="grid" style="margin-top: 8px">
+            <button id="cancelAnalyzeBtn" class="warn" onclick="cancelActiveAnalysis()" disabled>Cancel Running Analysis</button>
+          </div>
           <div id="modelMsg" class="msg">Run Step 1 first.</div>
+          <div id="analysisProgressPanel" class="progress-panel" style="display:none">
+            <div class="progress-meta">
+              <span class="progress-chip" id="analysisProgressStatus">Status: unknown</span>
+              <span class="progress-chip" id="analysisProgressStage">Stage: waiting</span>
+              <span class="progress-chip" id="analysisProgressElapsed">Elapsed: 0s</span>
+              <span class="progress-chip" id="analysisProgressUpdated">Updated: --</span>
+            </div>
+            <div class="tiny" id="analysisProgressJob">Job: --</div>
+            <div class="tiny" id="analysisProgressMessage"></div>
+            <div id="analysisProgressTimings" class="summary" style="display:none"></div>
+          </div>
           <div id="modelDownload" class="downloads"></div>
         </article>
 
@@ -404,16 +442,37 @@
         compatibilityMap: {},
         analysis: null,
         fixedAnalysis: null,
+        analysisProgress: null,
+        activeAnalysisJobId: null,
       };
 
-      const ANALYZE_STEPS = [
-        "Validating STL file",
-        "Uploading STL to analyzer",
-        "Loading mesh geometry",
-        "Checking topology health",
-        "Computing geometry metrics",
-        "Finalizing analysis report",
+      const ANALYZE_STAGE_ORDER = [
+        "save_upload",
+        "load_prepare_mesh",
+        "adapt_profile",
+        "cross_section",
+        "voxelize",
+        "detect_suction_cups",
+        "detect_islands",
+        "curvature_proxy",
+        "derive_metrics",
+        "finalize",
+        "completed",
       ];
+
+      const ANALYZE_STAGE_LABELS = {
+        save_upload: "Saving uploaded STL to local storage.",
+        load_prepare_mesh: "Loading mesh geometry and checking topology health.",
+        adapt_profile: "Adapting slice and voxel settings to match mesh size.",
+        cross_section: "Computing cross-sections through the model.",
+        voxelize: "Voxelizing the mesh for cavity and island detection.",
+        detect_suction_cups: "Scanning the voxel grid for suction cups and trapped resin cavities.",
+        detect_islands: "Checking sliced layers for unsupported islands.",
+        curvature_proxy: "Estimating surface detail density from mesh curvature.",
+        derive_metrics: "Deriving printability metrics and intent hints.",
+        finalize: "Finalizing analysis report.",
+        completed: "Analysis finished.",
+      };
 
       const FIX_STEPS = [
         "Validating STL file",
@@ -463,7 +522,12 @@
           body = text ? JSON.parse(text) : {};
         } catch (_) {}
         if (!res.ok) {
-          const msg = typeof body === "string" ? body : JSON.stringify(body);
+          const msg =
+            body && typeof body === "object" && !Array.isArray(body)
+              ? body.detail || body.message || JSON.stringify(body)
+              : typeof body === "string"
+                ? body
+                : JSON.stringify(body);
           throw new Error(msg || `Request failed (${res.status})`);
         }
         return body;
@@ -519,6 +583,210 @@
         tick();
         const timer = window.setInterval(tick, 1400);
         return () => window.clearInterval(timer);
+      }
+
+      function createProgressJobId() {
+        if (window.crypto && typeof window.crypto.randomUUID === "function") {
+          return window.crypto.randomUUID();
+        }
+        return `analysis-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+      }
+
+      function analysisProgressDelayHint(stage, stageElapsedSeconds) {
+        if ((Number(stageElapsedSeconds) || 0) < 15) return "";
+        if (stage === "cross_section") {
+          return "Cross-section work grows with model height and smaller slice heights, so tall models can pause here for a while.";
+        }
+        if (stage === "voxelize") {
+          return "Voxelization is building a 3D grid of the mesh; large bounds or fine detail make this step expensive.";
+        }
+        if (stage === "detect_suction_cups") {
+          return "Cavity detection is scanning the voxel grid for trapped resin pockets, which is slow on dense meshes.";
+        }
+        if (stage === "detect_islands") {
+          return "Island detection is walking many sliced layers to find unsupported regions, so detailed parts can take longer here.";
+        }
+        if (stage === "curvature_proxy") {
+          return "Surface detail estimation is sampling many triangles; very high triangle counts can keep this stage busy.";
+        }
+        return "Large or damaged meshes can keep the current analysis stage running for a while.";
+      }
+
+      function isActiveAnalysisStatus(status) {
+        return ["queued", "running", "cancelling"].includes(String(status || ""));
+      }
+
+      function isTerminalAnalysisStatus(status) {
+        return ["completed", "failed", "cancelled"].includes(String(status || ""));
+      }
+
+      function formatStageLabel(stage) {
+        return ANALYZE_STAGE_LABELS[stage] || String(stage || "waiting").replaceAll("_", " ");
+      }
+
+      function formatDurationSeconds(totalSeconds) {
+        const value = Math.max(0, Number(totalSeconds) || 0);
+        const minutes = Math.floor(value / 60);
+        const seconds = value % 60;
+        return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+      }
+
+      function formatStageTimingMs(ms) {
+        const value = Number(ms) || 0;
+        if (value >= 1000) return `${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}s`;
+        return `${value.toFixed(0)}ms`;
+      }
+
+      function renderAnalysisProgressPanel(progress = null) {
+        const panel = document.getElementById("analysisProgressPanel");
+        const statusEl = document.getElementById("analysisProgressStatus");
+        const stageEl = document.getElementById("analysisProgressStage");
+        const elapsedEl = document.getElementById("analysisProgressElapsed");
+        const updatedEl = document.getElementById("analysisProgressUpdated");
+        const jobEl = document.getElementById("analysisProgressJob");
+        const messageEl = document.getElementById("analysisProgressMessage");
+        const timingsEl = document.getElementById("analysisProgressTimings");
+        const cancelBtn = document.getElementById("cancelAnalyzeBtn");
+
+        if (!progress) {
+          panel.style.display = "none";
+          cancelBtn.disabled = true;
+          cancelBtn.textContent = "Cancel Running Analysis";
+          return;
+        }
+
+        panel.style.display = "block";
+        statusEl.textContent = `Status: ${progress.status}`;
+        stageEl.textContent = `Stage: ${formatStageLabel(progress.stage)}`;
+        elapsedEl.textContent = `Elapsed: ${formatDurationSeconds(progress.elapsed_seconds)}`;
+        updatedEl.textContent = `Updated: ${new Date(progress.updated_at).toLocaleTimeString()}`;
+        jobEl.textContent = `Job: ${progress.job_id}`;
+        messageEl.textContent = progress.message || "Analysis progress unavailable.";
+
+        const timings = progress.stage_timings_ms || {};
+        const rows = ANALYZE_STAGE_ORDER.filter((stage) => timings[stage] != null).map(
+          (stage) =>
+            `<div class="summary-row"><div>${escapeHtml(formatStageLabel(stage))}</div><div>${escapeHtml(
+              formatStageTimingMs(timings[stage])
+            )}</div></div>`
+        );
+        if (progress.performance_ms && progress.performance_ms.total != null) {
+          rows.push(
+            `<div class="summary-row"><div>Total compute</div><div>${escapeHtml(
+              formatStageTimingMs(progress.performance_ms.total)
+            )}</div></div>`
+          );
+        }
+        if (rows.length) {
+          timingsEl.style.display = "block";
+          timingsEl.innerHTML = rows.join("");
+        } else {
+          timingsEl.style.display = "none";
+          timingsEl.innerHTML = "";
+        }
+
+        cancelBtn.disabled = !isActiveAnalysisStatus(progress.status);
+        cancelBtn.textContent = progress.status === "cancelling" ? "Cancelling..." : "Cancel Running Analysis";
+      }
+
+      async function fetchAnalysisProgress(jobId) {
+        if (!jobId) return null;
+        try {
+          const progress = await callApi(`/wizard/model/check/status/${encodeURIComponent(jobId)}`, {
+            headers: headers(false),
+          });
+          state.analysisProgress = progress;
+          if (isTerminalAnalysisStatus(progress.status)) state.activeAnalysisJobId = null;
+          renderAnalysisProgressPanel(progress);
+          return progress;
+        } catch (_) {
+          return null;
+        }
+      }
+
+      function formatAnalysisProgress(progress) {
+        const orderIndex = ANALYZE_STAGE_ORDER.indexOf(progress.stage);
+        const prefix =
+          orderIndex >= 0
+            ? `${orderIndex + 1}/${ANALYZE_STAGE_ORDER.length}`
+            : progress.status === "failed"
+              ? "analysis failed"
+              : "analysis running";
+        const message = progress.message || ANALYZE_STAGE_LABELS[progress.stage] || "Analysis is running.";
+        const elapsedSeconds = Number(progress.elapsed_seconds) || 0;
+        const stageElapsedSeconds = Number(progress.stage_elapsed_seconds) || 0;
+        const parts = [`${prefix} ${message}`];
+        if (progress.status === "completed") {
+          parts.push(`(${elapsedSeconds}s total).`);
+        } else if (progress.status === "failed") {
+          parts.push(`(${elapsedSeconds}s total before failure).`);
+        } else {
+          parts.push(`(${elapsedSeconds}s total, ${stageElapsedSeconds}s in current step).`);
+        }
+        const delayHint = analysisProgressDelayHint(progress.stage, stageElapsedSeconds);
+        if (delayHint) parts.push(delayHint);
+        const totalMs = Number(progress.performance_ms && progress.performance_ms.total);
+        if (progress.status === "completed" && Number.isFinite(totalMs) && totalMs > 0) {
+          parts.push(`Server compute time: ${(totalMs / 1000).toFixed(totalMs >= 10000 ? 0 : 1)}s.`);
+        }
+        if (progress.status === "failed" && progress.error) {
+          parts.push(`Root cause: ${progress.error}`);
+        }
+        return parts.join(" ");
+      }
+
+      async function cancelActiveAnalysis() {
+        const jobId = state.activeAnalysisJobId || (state.analysisProgress && state.analysisProgress.job_id);
+        if (!jobId) return;
+        try {
+          const progress = await callApi(`/wizard/model/check/status/${encodeURIComponent(jobId)}/cancel`, {
+            method: "POST",
+            headers: headers(false),
+          });
+          state.analysisProgress = progress;
+          renderAnalysisProgressPanel(progress);
+          setMsg("modelMsg", formatAnalysisProgress(progress), "warn");
+        } catch (err) {
+          setMsg("modelMsg", `Cancel error: ${err.message}`, "error");
+        }
+      }
+
+      function startAnalysisProgressPolling(messageId, jobId) {
+        let timer = null;
+        let stopped = false;
+        let latest = null;
+
+        const poll = async () => {
+          if (stopped) return;
+          try {
+            const progress = await fetchAnalysisProgress(jobId);
+            if (!progress) return;
+            latest = progress;
+            if (progress.status !== "unknown") {
+              setMsg(messageId, formatAnalysisProgress(progress));
+            }
+            if (isTerminalAnalysisStatus(progress.status)) {
+              return;
+            }
+          } catch (_) {
+            // Keep the visible error owned by the main request.
+          } finally {
+            if (!stopped && (!latest || !isTerminalAnalysisStatus(latest.status))) {
+              timer = window.setTimeout(poll, 900);
+            }
+          }
+        };
+
+        poll();
+        return {
+          stop() {
+            stopped = true;
+            if (timer !== null) window.clearTimeout(timer);
+          },
+          latest() {
+            return latest;
+          },
+        };
       }
 
       function setOptions(id, values) {
@@ -594,9 +862,11 @@
       function updateLocks() {
         const readyForAnalyze = !!(state.status && state.status.ready_for_model_analysis);
         const hasAnalysis = !!(state.analysis || state.fixedAnalysis);
-        document.getElementById("analyzeBtn").disabled = !readyForAnalyze;
-        document.getElementById("fixBtn").disabled = !state.analysis;
+        const analysisBusy = !!(state.analysisProgress && isActiveAnalysisStatus(state.analysisProgress.status));
+        document.getElementById("analyzeBtn").disabled = !readyForAnalyze || analysisBusy;
+        document.getElementById("fixBtn").disabled = !state.analysis || analysisBusy;
         document.getElementById("settingsBtn").disabled = !hasAnalysis;
+        document.getElementById("cancelAnalyzeBtn").disabled = !analysisBusy;
       }
 
       function updateStatusChips(status) {
@@ -677,13 +947,32 @@
         analyzeBtn.disabled = true;
         const analysisLevel = document.getElementById("analysisLevel").value || "minimum";
         const timeoutMs = analysisTimeoutMs(analysisLevel, file.size || 0);
-        const stopProgress = startStepProgress("modelMsg", ANALYZE_STEPS);
+        const progressJobId = createProgressJobId();
+        state.activeAnalysisJobId = progressJobId;
+        state.analysisProgress = {
+          job_id: progressJobId,
+          status: "queued",
+          stage: "save_upload",
+          message: "Preparing STL upload for analysis.",
+          elapsed_seconds: 0,
+          stage_elapsed_seconds: 0,
+          updated_at: new Date().toISOString(),
+          cancel_requested: false,
+          error: null,
+          performance_ms: {},
+          stage_timings_ms: {},
+        };
+        renderAnalysisProgressPanel(state.analysisProgress);
+        const progressPoller = startAnalysisProgressPolling("modelMsg", progressJobId);
+        setMsg("modelMsg", "Preparing STL upload for analysis...");
         document.getElementById("modelDownload").innerHTML = "";
+        updateLocks();
         try {
           const fd = new FormData();
           fd.append("file", file);
           fd.append("slice_height_mm", document.getElementById("sliceHeight").value || "0.01");
           fd.append("analysis_level", analysisLevel);
+          fd.append("progress_job_id", progressJobId);
           const body = await callApiTimed("/wizard/model/check", {
             method: "POST",
             headers: headers(false),
@@ -691,21 +980,32 @@
           }, timeoutMs);
           state.analysis = body.analysis;
           state.fixedAnalysis = null;
+          await fetchAnalysisProgress(progressJobId);
           updateLocks();
 
           const health = body.analysis.mesh_health || {};
+          const nonManifoldEdges =
+            health.non_manifold_edge_count == null ? "skipped in minimum mode" : health.non_manifold_edge_count;
+          const boundaryEdges =
+            health.boundary_edge_count == null ? "skipped in minimum mode" : health.boundary_edge_count;
           const msg = [
             `Analysis complete.`,
             `Watertight: ${health.watertight ? "Yes" : "No"}`,
-            `Non-manifold edges: ${health.non_manifold_edge_count || 0}`,
-            `Boundary edges: ${health.boundary_edge_count || 0}`,
+            `Non-manifold edges: ${nonManifoldEdges}`,
+            `Boundary edges: ${boundaryEdges}`,
             body.requires_fix ? "Auto-fix is recommended." : "No critical fix required.",
             performanceSummary(body.analysis),
           ].join(" ");
           setMsg("modelMsg", msg, body.requires_fix ? "warn" : "");
         } catch (err) {
-          const message = String(err && err.message ? err.message : err);
-          if (message.toLowerCase().includes("timed out")) {
+          const progress = (await fetchAnalysisProgress(progressJobId)) || progressPoller.latest();
+          const message =
+            progress && ["failed", "cancelled"].includes(progress.status) && progress.message
+              ? String(progress.message)
+              : String(err && err.message ? err.message : err);
+          if (progress && progress.status === "cancelled") {
+            setMsg("modelMsg", `Analyze cancelled: ${message}`, "warn");
+          } else if (message.toLowerCase().includes("timed out")) {
             setMsg(
               "modelMsg",
               `Analyze error: ${message} Try minimum depth and a larger slice height (for example 0.05mm) for very large models.`,
@@ -715,7 +1015,11 @@
             setMsg("modelMsg", `Analyze error: ${message}`, "error");
           }
         } finally {
-          stopProgress();
+          progressPoller.stop();
+          if (state.analysisProgress && isTerminalAnalysisStatus(state.analysisProgress.status)) {
+            state.activeAnalysisJobId = null;
+          }
+          renderAnalysisProgressPanel(state.analysisProgress);
           updateLocks();
         }
       }
