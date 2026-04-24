@@ -253,6 +253,64 @@
         padding: 8px;
       }
 
+      .check-card {
+        border: 1px solid #24394d;
+        border-radius: 10px;
+        background: #0b1521;
+        padding: 10px;
+      }
+
+      .check-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 650;
+      }
+
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 68px;
+        padding: 3px 8px;
+        border-radius: 999px;
+        font-size: 0.76rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .status-pass {
+        background: rgba(27, 179, 154, 0.18);
+        color: #8bf0de;
+        border: 1px solid rgba(27, 179, 154, 0.35);
+      }
+
+      .status-warn {
+        background: rgba(214, 161, 79, 0.16);
+        color: #ffd89a;
+        border: 1px solid rgba(214, 161, 79, 0.35);
+      }
+
+      .status-fail {
+        background: rgba(225, 109, 109, 0.14);
+        color: #ffb3b3;
+        border: 1px solid rgba(225, 109, 109, 0.35);
+      }
+
+      .status-info {
+        background: rgba(61, 84, 105, 0.3);
+        color: #d7e7f7;
+        border: 1px solid rgba(118, 151, 179, 0.24);
+      }
+
+      .check-detail {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 0.84rem;
+        line-height: 1.4;
+      }
+
       .catalog-list {
         margin-top: 6px;
         max-height: 220px;
@@ -313,6 +371,16 @@
             <span class="chip" id="chipCompleteness">Completeness: -</span>
           </div>
           <div id="dbMsg" class="msg">Database not checked yet.</div>
+          <div id="dbScanPanel" class="progress-panel" style="display:none">
+            <div class="progress-meta">
+              <span class="progress-chip" id="dbScanState">Catalog: unknown</span>
+              <span class="progress-chip" id="dbSourceReliability">Source reliability: -</span>
+              <span class="progress-chip" id="dbFeedbackSignals">Feedback signals: -</span>
+            </div>
+            <div class="tiny" id="dbScanSummary">No scan report yet.</div>
+            <div id="dbScanChecks" class="grid grid-2" style="margin-top: 10px"></div>
+            <div id="dbSmartSettings" class="summary" style="display:none"></div>
+          </div>
         </article>
 
         <article class="card">
@@ -430,6 +498,14 @@
           <div id="settingsDownloads" class="downloads"></div>
           <div id="settingsNotes" class="tiny"></div>
           <div id="settingsRefs" class="tiny"></div>
+          <div id="settingsSmartPanel" class="progress-panel" style="display:none">
+            <div class="progress-meta">
+              <span class="progress-chip" id="settingsSmartStatus">Smart check: waiting</span>
+              <span class="progress-chip" id="settingsSmartRecords">Field records: -</span>
+              <span class="progress-chip" id="settingsSmartTrust">Trust: -</span>
+            </div>
+            <div class="tiny" id="settingsSmartSummary"></div>
+          </div>
         </article>
       </section>
     </main>
@@ -437,6 +513,9 @@
     <script>
       const state = {
         status: null,
+        databaseSetupResult: null,
+        databaseGaps: null,
+        feedbackHistoryTotal: 0,
         catalogPrinters: [],
         catalogResins: [],
         compatibilityMap: {},
@@ -488,6 +567,14 @@
         "Applying geometry-aware optimization logic",
         "Applying temperature and film adjustments",
         "Generating final settings package",
+      ];
+
+      const DB_SETUP_STEPS = [
+        "Loading official local dataset",
+        "Curating printer records and provenance",
+        "Curating resin records and provenance",
+        "Curating profile presets and confidence",
+        "Refreshing smart-settings readiness",
       ];
 
       function headers(json = true) {
@@ -637,6 +724,282 @@
         const el = document.getElementById(id);
         el.textContent = text;
         el.className = `msg${type ? ` ${type}` : ""}`;
+      }
+
+      function statusBadgeClass(tone) {
+        if (tone === "pass") return "status-badge status-pass";
+        if (tone === "warn") return "status-badge status-warn";
+        if (tone === "fail") return "status-badge status-fail";
+        return "status-badge status-info";
+      }
+
+      function statusLabel(tone) {
+        if (tone === "pass") return "Pass";
+        if (tone === "warn") return "Warn";
+        if (tone === "fail") return "Fail";
+        return "Info";
+      }
+
+      function formatRatio(count, total) {
+        const safeCount = Math.max(0, Number(count) || 0);
+        const safeTotal = Math.max(0, Number(total) || 0);
+        if (!safeTotal) return `${safeCount}/0`;
+        return `${safeCount}/${safeTotal}`;
+      }
+
+      function percentFromCounts(count, total) {
+        const safeCount = Math.max(0, Number(count) || 0);
+        const safeTotal = Math.max(0, Number(total) || 0);
+        if (!safeTotal) return 0;
+        return Math.round((safeCount / safeTotal) * 100);
+      }
+
+      function buildDatabaseCheck(label, tone, summary, detail = "", examples = []) {
+        return { label, tone, summary, detail, examples };
+      }
+
+      function buildDatabaseChecks(status, gaps, setupResult) {
+        const checks = [];
+        if (!status) return checks;
+
+        const printerMissing = Number(gaps && gaps.missing_printer_sources_count) || 0;
+        const resinMissing = Number(gaps && gaps.missing_resin_sources_count) || 0;
+        const profileMissing = Number(gaps && gaps.missing_profile_sources_count) || 0;
+        const printersWithoutProfiles = Number(gaps && gaps.printers_without_profiles_count) || 0;
+        const resinsWithoutProfiles = Number(gaps && gaps.resins_without_profiles_count) || 0;
+
+        if (setupResult) {
+          const curation = setupResult.curation || {};
+          const kept = curation.kept_counts || {};
+          const dropped = curation.dropped_counts || {};
+          const droppedTotal =
+            (Number(dropped.printers) || 0) + (Number(dropped.resins) || 0) + (Number(dropped.profiles) || 0);
+          const reliability = Number(curation.source_reliability);
+          const reliabilityText = Number.isFinite(reliability) ? `${Math.round(reliability * 100)}%` : "unknown";
+          checks.push(
+            buildDatabaseCheck(
+              "Latest import scan",
+              droppedTotal === 0 ? "pass" : "warn",
+              `Imported ${setupResult.printers_upserted} printers, ${setupResult.resins_upserted} resins, ${setupResult.profiles_upserted} profiles from ${setupResult.mode}.`,
+              `Curated keep/drop: printers ${Number(kept.printers) || 0}/${Number(dropped.printers) || 0}, resins ${Number(kept.resins) || 0}/${Number(dropped.resins) || 0}, profiles ${Number(kept.profiles) || 0}/${Number(dropped.profiles) || 0}. Source reliability estimate: ${reliabilityText}.`,
+              Array.isArray(setupResult.notes) ? setupResult.notes.slice(0, 3) : []
+            )
+          );
+        }
+
+        checks.push(
+          buildDatabaseCheck(
+            "Printer source scan",
+            status.printers_total === 0 ? "fail" : printerMissing === 0 ? "pass" : "warn",
+            status.printers_total === 0
+              ? "No printers are loaded yet."
+              : `${formatRatio(status.printers_with_sources, status.printers_total)} printers have source links.`,
+            printerMissing === 0
+              ? "Every loaded printer carries manufacturer/source provenance."
+              : `${printerMissing} printers are still missing source URLs.`,
+            (gaps && gaps.missing_printer_sources) || []
+          )
+        );
+        checks.push(
+          buildDatabaseCheck(
+            "Resin source scan",
+            status.resins_total === 0 ? "fail" : resinMissing === 0 ? "pass" : "warn",
+            status.resins_total === 0
+              ? "No resins are loaded yet."
+              : `${formatRatio(status.resins_with_sources, status.resins_total)} resins have source links.`,
+            resinMissing === 0
+              ? "Every loaded resin carries manufacturer/source provenance."
+              : `${resinMissing} resins are still missing source URLs.`,
+            (gaps && gaps.missing_resin_sources) || []
+          )
+        );
+        checks.push(
+          buildDatabaseCheck(
+            "Profile source scan",
+            status.profiles_total === 0 ? "fail" : profileMissing === 0 ? "pass" : "warn",
+            status.profiles_total === 0
+              ? "No printer/resin profiles are loaded yet."
+              : `${formatRatio(status.profiles_with_sources, status.profiles_total)} profiles have source links.`,
+            profileMissing === 0
+              ? "Every loaded profile has upstream source references."
+              : `${profileMissing} profiles are still missing source URLs.`,
+            (gaps && gaps.missing_profile_sources) || []
+          )
+        );
+        checks.push(
+          buildDatabaseCheck(
+            "Coverage by paired presets",
+            status.profiles_total === 0
+              ? "fail"
+              : printersWithoutProfiles === 0 && resinsWithoutProfiles === 0
+                ? "pass"
+                : "warn",
+            status.profiles_total === 0
+              ? "Settings cannot be generated until at least one printer/resin profile exists."
+              : printersWithoutProfiles === 0 && resinsWithoutProfiles === 0
+                ? "All loaded printers and resins participate in at least one preset pairing."
+                : `${printersWithoutProfiles} printers and ${resinsWithoutProfiles} resins still have no paired preset.`,
+            status.ready_for_settings
+              ? "Catalog can generate settings for supported pairings."
+              : "Catalog still has gaps that block full settings readiness.",
+            [
+              ...(((gaps && gaps.printers_without_profiles) || []).slice(0, 2).map((item) => `Printer gap: ${item}`)),
+              ...(((gaps && gaps.resins_without_profiles) || []).slice(0, 2).map((item) => `Resin gap: ${item}`)),
+            ]
+          )
+        );
+
+        const confidenceDistribution = setupResult && setupResult.curation && setupResult.curation.confidence_distribution;
+        const confidenceExamples = [];
+        if (confidenceDistribution) {
+          confidenceExamples.push(
+            `High ${Number(confidenceDistribution.high) || 0} | Medium ${Number(confidenceDistribution.medium) || 0} | Low ${Number(confidenceDistribution.low) || 0}`
+          );
+        }
+        checks.push(
+          buildDatabaseCheck(
+            "Profile confidence scan",
+            status.profiles_total === 0
+              ? "fail"
+              : status.profiles_with_confidence === status.profiles_total
+                ? "pass"
+                : status.profiles_with_confidence > 0
+                  ? "warn"
+                  : "fail",
+            status.profiles_total === 0
+              ? "No profile confidence data is available yet."
+              : `${formatRatio(status.profiles_with_confidence, status.profiles_total)} profiles include confidence metadata.`,
+            status.profiles_with_confidence === status.profiles_total
+              ? "Every profile has a confidence score for downstream trust decisions."
+              : "Missing confidence scores reduce smart-settings trust for some presets.",
+            confidenceExamples
+          )
+        );
+
+        return checks;
+      }
+
+      function renderDatabasePendingScan(message) {
+        const panel = document.getElementById("dbScanPanel");
+        panel.style.display = "block";
+        document.getElementById("dbScanState").textContent = "Catalog: scanning";
+        document.getElementById("dbSourceReliability").textContent = "Source reliability: checking";
+        document.getElementById("dbFeedbackSignals").textContent = `Feedback signals: ${state.feedbackHistoryTotal}`;
+        document.getElementById("dbScanSummary").textContent = message;
+      }
+
+      function renderDatabaseScanPanel(status, gaps, setupResult, feedbackHistoryTotal) {
+        const panel = document.getElementById("dbScanPanel");
+        const checksEl = document.getElementById("dbScanChecks");
+        const smartEl = document.getElementById("dbSmartSettings");
+        if (!status) {
+          panel.style.display = "none";
+          smartEl.style.display = "none";
+          checksEl.innerHTML = "";
+          return;
+        }
+
+        panel.style.display = "block";
+        const sourceReliability = Number(setupResult && setupResult.curation && setupResult.curation.source_reliability);
+        const sourceCoverage = percentFromCounts(status.profiles_with_sources, status.profiles_total);
+        document.getElementById("dbScanState").textContent = `Catalog: ${status.ready_for_settings ? "ready" : "review needed"}`;
+        document.getElementById("dbSourceReliability").textContent = Number.isFinite(sourceReliability)
+          ? `Source reliability: ${Math.round(sourceReliability * 100)}%`
+          : `Source-backed profiles: ${sourceCoverage}%`;
+        document.getElementById("dbFeedbackSignals").textContent = `Feedback signals: ${feedbackHistoryTotal}`;
+
+        const summaryParts = [];
+        if (setupResult) {
+          summaryParts.push(`Last import ran in ${setupResult.mode} mode from ${setupResult.source}.`);
+        }
+        if (status.manufacturers && status.manufacturers.length) {
+          summaryParts.push(`${status.manufacturers.length} manufacturers currently represented.`);
+        }
+        if (status.official_dataset_updated_at) {
+          summaryParts.push(`Dataset updated ${status.official_dataset_updated_at}.`);
+        }
+        if (!summaryParts.length) {
+          summaryParts.push("Scan report loaded.");
+        }
+        document.getElementById("dbScanSummary").textContent = summaryParts.join(" ");
+
+        const checks = buildDatabaseChecks(status, gaps, setupResult);
+        checksEl.innerHTML = checks
+          .map((check) => {
+            const examples = Array.isArray(check.examples) && check.examples.length
+              ? `<div class="check-detail">Examples: ${check.examples.slice(0, 3).map((item) => escapeHtml(item)).join(" | ")}</div>`
+              : "";
+            const detail = check.detail ? `<div class="check-detail">${escapeHtml(check.detail)}</div>` : "";
+            return `
+              <div class="check-card">
+                <div class="check-title">
+                  <span class="${statusBadgeClass(check.tone)}">${escapeHtml(statusLabel(check.tone))}</span>
+                  <span>${escapeHtml(check.label)}</span>
+                </div>
+                <div class="check-detail">${escapeHtml(check.summary)}</div>
+                ${detail}
+                ${examples}
+              </div>
+            `;
+          })
+          .join("");
+
+        const manufacturerCoverage = percentFromCounts(status.profiles_with_sources, status.profiles_total);
+        const confidenceCoverage = percentFromCounts(status.profiles_with_confidence, status.profiles_total);
+        const crossCheckReady = status.profiles_with_sources > 0 && feedbackHistoryTotal > 0;
+        smartEl.style.display = "block";
+        smartEl.innerHTML = [
+          `<div class="summary-row"><div>Smart settings mode</div><div>${escapeHtml(crossCheckReady ? "Cross-checked" : status.profiles_with_sources > 0 ? "Manufacturer-only" : "Limited evidence")}</div></div>`,
+          `<div class="summary-row"><div>Manufacturer-backed profiles</div><div>${escapeHtml(formatRatio(status.profiles_with_sources, status.profiles_total))} (${manufacturerCoverage}%)</div></div>`,
+          `<div class="summary-row"><div>Confidence-scored profiles</div><div>${escapeHtml(formatRatio(status.profiles_with_confidence, status.profiles_total))} (${confidenceCoverage}%)</div></div>`,
+          `<div class="summary-row"><div>Imported field/community records</div><div>${escapeHtml(String(feedbackHistoryTotal))}</div></div>`,
+          `<div class="summary-row"><div>Next trust step</div><div>${escapeHtml(crossCheckReady ? "Use selected printer/resin smart check below." : "Import community sheets, YouTube logs, or normalized Reddit/forum findings to cross-check presets.")}</div></div>`,
+        ].join("");
+      }
+
+      function renderSettingsSmartPanel(provenance = null, feedbackResult = null) {
+        const panel = document.getElementById("settingsSmartPanel");
+        const statusEl = document.getElementById("settingsSmartStatus");
+        const recordsEl = document.getElementById("settingsSmartRecords");
+        const trustEl = document.getElementById("settingsSmartTrust");
+        const summaryEl = document.getElementById("settingsSmartSummary");
+
+        if (!provenance && !feedbackResult) {
+          panel.style.display = "none";
+          summaryEl.textContent = "";
+          return;
+        }
+
+        const totalCount = Number(feedbackResult && feedbackResult.total_count) || 0;
+        const summary = feedbackResult && feedbackResult.summary ? feedbackResult.summary : null;
+        const manufacturerBacked = !!(provenance && provenance.real_data_backed);
+        const crossChecked = manufacturerBacked && totalCount > 0;
+        let trust = "Low evidence";
+        if (crossChecked) trust = "Cross-checked";
+        else if (manufacturerBacked) trust = "Manufacturer-backed only";
+        else if (totalCount > 0) trust = "Community-only signal";
+
+        panel.style.display = "block";
+        statusEl.textContent = `Smart check: ${crossChecked ? "cross-checked" : manufacturerBacked ? "manufacturer-backed" : "limited"}`;
+        recordsEl.textContent = `Field records: ${totalCount}`;
+        trustEl.textContent = `Trust: ${trust}`;
+
+        const parts = [];
+        if (provenance && Number(provenance.source_count) > 0) {
+          parts.push(`Manufacturer references: ${Number(provenance.source_count)}.`);
+        }
+        if (summary && summary.record_count > 0) {
+          parts.push(summary.recommendation || "Community summary loaded.");
+          parts.push(
+            `Real-world signal ${Math.round((Number(summary.real_world_ratio) || 0) * 100)}%, marketing-heavy ${Math.round((Number(summary.marketing_ratio) || 0) * 100)}%.`
+          );
+        } else {
+          parts.push("No imported community or field history exists for this printer + resin yet.");
+        }
+        if (!crossChecked) {
+          parts.push("Import community sheets, YouTube transcripts, or normalized Reddit/forum notes to cross-check manufacturer presets.");
+        }
+        summaryEl.textContent = parts.join(" ");
       }
 
       function startStepProgress(messageId, steps) {
@@ -959,9 +1322,20 @@
 
       async function refreshStatus() {
         try {
-          const status = await callApi("/wizard/database/status", { headers: headers(false) });
+          const [status, gaps, feedbackHistory] = await Promise.all([
+            callApi("/wizard/database/status", { headers: headers(false) }),
+            callApi("/wizard/database/gaps", { headers: headers(false) }).catch(() => null),
+            callApi("/phase3/history/query", {
+              method: "POST",
+              headers: headers(true),
+              body: JSON.stringify({ limit: 1, offset: 0 }),
+            }).catch(() => ({ total_count: 0, records: [] })),
+          ]);
           state.status = status;
+          state.databaseGaps = gaps;
+          state.feedbackHistoryTotal = Number(feedbackHistory && feedbackHistory.total_count) || 0;
           updateStatusChips(status);
+          renderDatabaseScanPanel(status, gaps, state.databaseSetupResult, state.feedbackHistoryTotal);
           if (status.ready_for_model_analysis) {
             setMsg("dbMsg", "Database is ready. You can upload STL now.");
           } else {
@@ -977,8 +1351,10 @@
         const btn = document.getElementById("setupBtn");
         btn.disabled = true;
         setMsg("dbMsg", "Setting up / updating database...");
+        renderDatabasePendingScan("Scanning local dataset and validating source coverage...");
+        const stopProgress = startStepProgress("dbMsg", DB_SETUP_STEPS);
         try {
-          await callApi("/wizard/database/setup", {
+          const setupResult = await callApi("/wizard/database/setup", {
             method: "POST",
             headers: headers(true),
             body: JSON.stringify({
@@ -988,9 +1364,16 @@
               source: "wizard_setup",
             }),
           });
+          state.databaseSetupResult = setupResult;
           await Promise.all([refreshStatus(), refreshOptions()]);
-          setMsg("dbMsg", "Database setup/update completed.");
+          stopProgress();
+          const notes = Array.isArray(setupResult.notes) ? setupResult.notes.slice(0, 2) : [];
+          setMsg(
+            "dbMsg",
+            notes.length ? `Database setup/update completed. ${notes.join(" ")}` : "Database setup/update completed."
+          );
         } catch (err) {
+          stopProgress();
           setMsg("dbMsg", `Setup error: ${err.message}`, "error");
         } finally {
           btn.disabled = false;
@@ -1225,6 +1608,7 @@
         document.getElementById("settingsDownloads").innerHTML = "";
         document.getElementById("settingsNotes").textContent = "";
         document.getElementById("settingsRefs").innerHTML = "";
+        renderSettingsSmartPanel(null, null);
 
         try {
           const payload = {
@@ -1245,6 +1629,16 @@
 
           renderSettingsSummary(body.settings);
           renderSettingsReferences(body.settings.provenance || {});
+          const feedbackResult = await callApi("/phase3/history/summary", {
+            method: "POST",
+            headers: headers(true),
+            body: JSON.stringify({
+              printer,
+              resin_type: resin,
+              limit: 200,
+            }),
+          }).catch(() => null);
+          renderSettingsSmartPanel(body.settings.provenance || {}, feedbackResult);
           setMsg("settingsMsg", "Settings generated successfully.");
 
           renderDownloadActions("settingsDownloads", [

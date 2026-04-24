@@ -123,6 +123,11 @@ def test_wizard_ui_and_status_route(tmp_path, monkeypatch):
     assert "progress_job_id" in ui.text
     assert "cancelAnalyzeBtn" in ui.text
     assert "analysisProgressPanel" in ui.text
+    assert "dbScanPanel" in ui.text
+    assert "/wizard/database/gaps" in ui.text
+    assert "/phase3/history/query" in ui.text
+    assert "Smart check:" in ui.text
+    assert "/phase3/history/summary" in ui.text
 
     status = client.get("/wizard/database/status")
     assert status.status_code == 200
