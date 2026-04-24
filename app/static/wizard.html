@@ -52,6 +52,33 @@
         color: #d6e9ff;
       }
 
+      .hero-actions {
+        margin-top: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .hero-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        padding: 0 14px;
+        border-radius: 10px;
+        border: 1px solid rgba(232, 241, 255, 0.22);
+        background: rgba(7, 17, 27, 0.22);
+        color: #f4fbff;
+        text-decoration: none;
+        font-size: 0.94rem;
+        font-weight: 650;
+      }
+
+      .hero-link.secondary {
+        background: rgba(12, 20, 31, 0.4);
+        color: #d6e9ff;
+      }
+
       .auth {
         margin-top: 12px;
         display: grid;
@@ -349,6 +376,9 @@
       <section class="hero">
         <h1>Geekatplay Studio Wizard</h1>
         <p>Clean flow: 1) setup database, 2) upload STL + check/fix, 3) choose printer + resin and get settings.</p>
+        <div class="hero-actions">
+          <a class="hero-link secondary" href="/app">Open Advanced Mode</a>
+        </div>
         <div class="auth">
           <input id="authToken" placeholder="Authorization token (optional in standalone mode)" />
           <input id="actor" placeholder="Actor" value="wizard-user" />

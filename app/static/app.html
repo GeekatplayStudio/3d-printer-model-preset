@@ -53,6 +53,28 @@
         opacity: 0.9;
       }
 
+      .hero-actions {
+        margin-top: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .hero-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        padding: 0 14px;
+        border-radius: 10px;
+        background: rgba(8, 20, 32, 0.24);
+        border: 1px solid rgba(230, 241, 255, 0.2);
+        color: #eaf5ff;
+        text-decoration: none;
+        font-size: 0.93rem;
+        font-weight: 650;
+      }
+
       .auth-bar {
         margin-top: 16px;
         display: grid;
@@ -206,9 +228,11 @@
     <div class="shell">
       <section class="hero">
         <h1>Geekatplay Studio Ops Console</h1>
-        <p>Pipeline execution, technical catalog management, sync automation, and ops monitoring.</p>
+        <p>Advanced mode: pipeline execution, technical catalog management, sync automation, and ops monitoring.</p>
         <p style="margin-top: 6px; font-size: 0.9rem; color: #c4daef">Standalone mode: your data stays in your local database.</p>
-        <p style="margin-top: 6px; font-size: 0.9rem; color: #c4daef">Need guided flow? Open the wizard at <a href="/wizard" style="color: #b8fff4">/wizard</a>.</p>
+        <div class="hero-actions">
+          <a class="hero-link" href="/wizard">Back To Wizard Mode</a>
+        </div>
         <div class="auth-bar">
           <input id="authToken" placeholder="Authorization token (optional, only needed in shared/server mode)" />
           <input id="actor" placeholder="Actor (example: github-username)" value="ops-admin" />

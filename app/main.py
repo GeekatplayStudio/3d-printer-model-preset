@@ -846,7 +846,7 @@ async def metrics_middleware(request, call_next):  # type: ignore[no-untyped-def
 
 @app.get("/", include_in_schema=False)
 def root_redirect() -> RedirectResponse:
-    return RedirectResponse(url="/app")
+    return RedirectResponse(url="/wizard")
 
 
 @app.get("/app", response_class=HTMLResponse, include_in_schema=False)

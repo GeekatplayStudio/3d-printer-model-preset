@@ -48,7 +48,9 @@ def test_app_ui_route_served(tmp_path, monkeypatch):
     client = _client(tmp_path, monkeypatch)
     response = client.get("/app")
     assert response.status_code == 200
-    assert "ResinLogic Ops Console" in response.text
+    assert "Geekatplay Studio Ops Console" in response.text
+    assert "Advanced mode:" in response.text
+    assert "Back To Wizard Mode" in response.text
 
 
 def test_auth_whoami_default_dev_mode(tmp_path, monkeypatch):

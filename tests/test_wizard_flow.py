@@ -113,9 +113,14 @@ def _analysis_payload() -> dict:
 def test_wizard_ui_and_status_route(tmp_path, monkeypatch):
     client = _client(tmp_path, monkeypatch)
 
+    root = client.get("/", follow_redirects=False)
+    assert root.status_code in {302, 307}
+    assert root.headers["location"] == "/wizard"
+
     ui = client.get("/wizard")
     assert ui.status_code == 200
     assert "Geekatplay Studio Wizard" in ui.text
+    assert "Open Advanced Mode" in ui.text
     assert "downloadArtifact(" in ui.text
     assert "Show Catalog List" in ui.text
     assert "Analysis depth" in ui.text
