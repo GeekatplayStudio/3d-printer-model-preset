@@ -1,6 +1,9 @@
 services:
   api:
-    build: .
+    build:
+      context: .
+      args:
+        INSTALL_BLENDER: "1"
     container_name: resinlogic-api
     restart: unless-stopped
     ports:
@@ -10,6 +13,7 @@ services:
       RESINLOGIC_ENFORCE_AUTH: "0"
       RESINLOGIC_DATA_DIR: "/app/local-data"
       RESINLOGIC_ENABLE_SCHEDULER: "1"
+      RESINLOGIC_BLENDER_EXECUTABLE: "/usr/bin/blender"
     volumes:
       - ./local-data:/app/local-data
 

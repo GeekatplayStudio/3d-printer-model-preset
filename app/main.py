@@ -14,6 +14,7 @@ from uuid import uuid4
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.audit_store import (
     create_catalog_version,
@@ -62,7 +63,7 @@ from app.feedback_store import (
     query_feedback_records,
     save_feedback_records,
 )
-from app.geometry import AnalysisCancelledError, repair_mesh_file
+from app.geometry import AnalysisCancelledError, mesh_health_actionable_issues, mesh_health_requires_fix, repair_mesh_file
 from app.job_queue import InMemoryJobQueue
 from app.job_store import cleanup_jobs, count_jobs, init_job_store
 from app.monitoring import InMemoryMetrics
@@ -125,14 +126,17 @@ from app.models import (
     WizardDatabaseStatus,
     WizardModelCheckResponse,
     WizardModelFixResponse,
+    WizardModelRetopologyResponse,
     WizardRunUpdateNowRequest,
     WizardSettingsRequest,
     WizardSettingsResponse,
     WizardUpdateScheduleStatus,
     WizardUpdateStatusResponse,
+    RetopologyMode,
     YouTubeIngestRequest,
 )
 from app.pipeline import ModularAgenticPipeline
+from app.retopology import RetopologyError, run_blender_retopology
 from app.resin_db import load_resin_database
 from app.scheduler import TechnicalSyncScheduler
 from app.sync_service import (
@@ -185,9 +189,10 @@ AUDIT_PATH = init_audit_store(DATA_DIR / "audit_log.db")
 JOBS_PATH = init_job_store(DATA_DIR / "jobs.db")
 SCHEDULES_PATH = init_sync_schedule_store(DATA_DIR / "sync_schedules.db")
 seed_catalog_from_legacy_json(db_path=CATALOG_PATH)
-ADMIN_UI_PATH = Path(__file__).resolve().parent / "static" / "catalog_admin.html"
-APP_UI_PATH = Path(__file__).resolve().parent / "static" / "app.html"
-WIZARD_UI_PATH = Path(__file__).resolve().parent / "static" / "wizard.html"
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+ADMIN_UI_PATH = STATIC_DIR / "catalog_admin.html"
+APP_UI_PATH = STATIC_DIR / "app.html"
+WIZARD_UI_PATH = STATIC_DIR / "wizard.html"
 OFFICIAL_SYNC_PATH = Path(__file__).resolve().parent.parent / "data" / "official_catalog_sync.json"
 WIZARD_ARTIFACTS_DIR = DATA_DIR / "wizard_artifacts"
 WIZARD_ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -212,6 +217,7 @@ WIZARD_ANALYSIS_STAGE_LABELS = {
     "finalize": "report finalization",
     "completed": "completed analysis",
 }
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 def _cleanup_wizard_artifacts() -> None:
@@ -254,6 +260,17 @@ def _wizard_artifact(artifact_id: str) -> dict[str, object]:
 
 def _wizard_download_url(artifact_id: str) -> str:
     return f"/wizard/download/{artifact_id}"
+
+
+def _default_retopology_target_faces(analysis: GeometryAnalysis) -> int:
+    base_faces = max(1, int(analysis.triangle_count))
+    return max(200, min(int(round(base_faces * 0.5)), 120_000))
+
+
+def _default_retopology_voxel_size_mm(analysis: GeometryAnalysis) -> float:
+    dimensions = [float(value) for value in (analysis.bounding_box_mm or []) if value is not None]
+    max_dimension = max(dimensions) if dimensions else 24.0
+    return round(min(max(max_dimension / 180.0, 0.05), 0.85), 4)
 
 
 def _normalize_wizard_analysis_job_id(job_id: str | None) -> str | None:
@@ -2091,22 +2108,9 @@ async def wizard_model_check(
             cancel_check=cancel_check,
         )
         health = analysis.mesh_health
-        requires_fix = bool(
-            health
-            and (
-                not health.watertight
-                or not health.winding_consistent
-                or (health.boundary_edge_count or 0) > 0
-                or (health.non_manifold_edge_count or 0) > 0
-                or health.degenerate_face_count > 0
-                or health.duplicate_face_count > 0
-                or (health.connected_components or 1) > 1
-            )
-        )
-        has_issues = bool(
-            health
-            and any(not str(issue).lower().startswith("no major mesh topology issues") for issue in health.issues)
-        )
+        requires_fix = mesh_health_requires_fix(health)
+        fix_reasons = mesh_health_actionable_issues(health) if requires_fix else []
+        has_issues = bool(mesh_health_actionable_issues(health))
         _audit(
             auth=auth,
             action="wizard.model.check",
@@ -2116,6 +2120,7 @@ async def wizard_model_check(
                 "slice_height_mm": slice_height_mm,
                 "analysis_level": analysis_level,
                 "requires_fix": requires_fix,
+                "fix_reasons": fix_reasons,
             },
         )
         _set_wizard_analysis_progress(
@@ -2126,7 +2131,12 @@ async def wizard_model_check(
             cancel_requested=False,
             performance_ms=analysis.performance_ms,
         )
-        return WizardModelCheckResponse(analysis=analysis, has_issues=has_issues, requires_fix=requires_fix)
+        return WizardModelCheckResponse(
+            analysis=analysis,
+            has_issues=has_issues,
+            requires_fix=requires_fix,
+            fix_reasons=fix_reasons,
+        )
     except AnalysisCancelledError as exc:
         detail = str(exc)
         _set_wizard_analysis_progress(
@@ -2177,13 +2187,24 @@ async def wizard_model_fix(
     out_name = f"{safe_base}_fixed_{uuid4().hex[:8]}.stl"
     output_path = WIZARD_ARTIFACTS_DIR / out_name
     try:
-        repair_report = repair_mesh_file(str(temp_file), str(output_path))
+        repair_outcome = repair_mesh_file(str(temp_file), str(output_path))
         analysis = pipeline.run_phase_1_geometry(
             file_path=str(output_path),
             slice_height_mm=slice_height_mm,
             auto_repair=False,
             analysis_level=analysis_level,
         )
+        final_health = analysis.mesh_health or repair_outcome.after_fix
+        after_fix = final_health.model_copy(
+            update={
+                "repaired": repair_outcome.repaired,
+                "repair_actions": list(repair_outcome.repair_actions),
+            }
+        )
+        before_issues = mesh_health_actionable_issues(repair_outcome.before_fix)
+        after_issues = mesh_health_actionable_issues(after_fix)
+        resolved_issues = [issue for issue in before_issues if issue not in after_issues]
+        fully_repaired = not mesh_health_requires_fix(after_fix)
         download_name = f"{safe_base}_fixed.stl"
         artifact_id = _register_wizard_artifact(
             output_path,
@@ -2197,15 +2218,22 @@ async def wizard_model_fix(
             details={
                 "file_name": file.filename,
                 "analysis_level": analysis_level,
-                "repaired": repair_report.repaired,
-                "repair_actions": repair_report.repair_actions,
+                "repaired": repair_outcome.repaired,
+                "fully_repaired": fully_repaired,
+                "repair_actions": repair_outcome.repair_actions,
+                "remaining_issues": after_issues,
                 "artifact_id": artifact_id,
             },
         )
         return WizardModelFixResponse(
             analysis=analysis,
-            repaired=repair_report.repaired,
-            repair_actions=repair_report.repair_actions,
+            repaired=repair_outcome.repaired,
+            fully_repaired=fully_repaired,
+            repair_actions=repair_outcome.repair_actions,
+            resolved_issues=resolved_issues,
+            remaining_issues=after_issues,
+            before_fix=repair_outcome.before_fix,
+            after_fix=after_fix,
             download_id=artifact_id,
             download_url=_wizard_download_url(artifact_id),
             output_file_name=download_name,
@@ -2221,6 +2249,148 @@ async def wizard_model_fix(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     finally:
         _safe_unlink(temp_file)
+
+
+@app.post("/wizard/model/retopology", response_model=WizardModelRetopologyResponse)
+async def wizard_model_retopology(
+    file: UploadFile = File(...),
+    slice_height_mm: float = Form(0.01),
+    analysis_level: AnalysisLevel = Form("extreme"),
+    mode: RetopologyMode = Form("quad"),
+    target_faces: int | None = Form(default=None),
+    voxel_size_mm: float | None = Form(default=None),
+    preserve_sharp: bool = Form(True),
+    preserve_boundary: bool = Form(True),
+    auth: AuthContext = Depends(require_role("operator")),
+) -> WizardModelRetopologyResponse:
+    _require_stl_upload(file)
+    if target_faces is not None and target_faces < 1:
+        raise HTTPException(status_code=400, detail="target_faces must be at least 1 when provided.")
+    if voxel_size_mm is not None and voxel_size_mm <= 0:
+        raise HTTPException(status_code=400, detail="voxel_size_mm must be greater than 0 when provided.")
+
+    temp_file = await asyncio.to_thread(_save_upload, file)
+    original_name = Path(file.filename or "model.stl")
+    safe_base = _safe_slug(original_name.stem, "model")
+    output_name = f"{safe_base}_{mode}_retopo_{uuid4().hex[:8]}.stl"
+    output_path = WIZARD_ARTIFACTS_DIR / output_name
+    preprocessing_path: Path | None = None
+    try:
+        source_analysis = await asyncio.to_thread(
+            pipeline.run_phase_1_geometry,
+            file_path=str(temp_file),
+            slice_height_mm=slice_height_mm,
+            auto_repair=False,
+            analysis_level=analysis_level,
+        )
+
+        preprocessing_fix = None
+        retopology_source_path = Path(temp_file)
+        notes: list[str] = []
+        if mesh_health_requires_fix(source_analysis.mesh_health):
+            preprocessing_path = temp_file.with_name(f"{temp_file.stem}_pre_retopo_{uuid4().hex[:8]}.stl")
+            preprocessing_fix = await asyncio.to_thread(
+                repair_mesh_file,
+                str(temp_file),
+                str(preprocessing_path),
+            )
+            retopology_source_path = preprocessing_path
+            notes.append(
+                "Input mesh needed a repair pre-pass before retopology, so the existing STL repair flow ran first."
+            )
+            if preprocessing_fix.remaining_issues:
+                notes.append(
+                    "Retopology continued from the repaired mesh even though some save/reload issues remained."
+                )
+
+        resolved_target_faces = target_faces if mode == "quad" else None
+        if mode == "quad" and resolved_target_faces is None:
+            resolved_target_faces = _default_retopology_target_faces(source_analysis)
+
+        resolved_voxel_size_mm = voxel_size_mm if mode == "voxel" else None
+        if mode == "voxel" and resolved_voxel_size_mm is None:
+            resolved_voxel_size_mm = _default_retopology_voxel_size_mm(source_analysis)
+
+        notes.extend(
+            await asyncio.to_thread(
+                run_blender_retopology,
+                input_path=str(retopology_source_path),
+                output_path=str(output_path),
+                mode=mode,
+                target_faces=resolved_target_faces,
+                voxel_size_mm=resolved_voxel_size_mm,
+                preserve_sharp=preserve_sharp,
+                preserve_boundary=preserve_boundary,
+            )
+        )
+
+        retopology_analysis = await asyncio.to_thread(
+            pipeline.run_phase_1_geometry,
+            file_path=str(output_path),
+            slice_height_mm=slice_height_mm,
+            auto_repair=False,
+            analysis_level=analysis_level,
+        )
+
+        download_name = f"{safe_base}_{mode}_retopo.stl"
+        artifact_id = _register_wizard_artifact(
+            output_path,
+            download_name=download_name,
+            media_type="model/stl",
+        )
+        _audit(
+            auth=auth,
+            action="wizard.model.retopology",
+            resource_type="model",
+            details={
+                "file_name": file.filename,
+                "analysis_level": analysis_level,
+                "mode": mode,
+                "target_faces": resolved_target_faces,
+                "voxel_size_mm": resolved_voxel_size_mm,
+                "preserve_sharp": preserve_sharp,
+                "preserve_boundary": preserve_boundary,
+                "artifact_id": artifact_id,
+            },
+        )
+        return WizardModelRetopologyResponse(
+            source_analysis=source_analysis,
+            retopology_analysis=retopology_analysis,
+            mode=mode,
+            backend_requested="blender",
+            backend_used="blender",
+            target_faces=resolved_target_faces,
+            voxel_size_mm=resolved_voxel_size_mm,
+            preserve_sharp=preserve_sharp,
+            preserve_boundary=preserve_boundary,
+            preprocessing_fix=preprocessing_fix,
+            notes=notes,
+            download_id=artifact_id,
+            download_url=_wizard_download_url(artifact_id),
+            output_file_name=download_name,
+        )
+    except RetopologyError as exc:
+        _audit(
+            auth=auth,
+            action="wizard.model.retopology",
+            resource_type="model",
+            status="failed",
+            details={"file_name": file.filename, "analysis_level": analysis_level, "mode": mode, "error": str(exc)},
+        )
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        _audit(
+            auth=auth,
+            action="wizard.model.retopology",
+            resource_type="model",
+            status="failed",
+            details={"file_name": file.filename, "analysis_level": analysis_level, "mode": mode, "error": str(exc)},
+        )
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        _safe_unlink(temp_file)
+        if preprocessing_path is not None:
+            _safe_unlink(preprocessing_path)
 
 
 @app.post("/wizard/settings/recommend", response_model=WizardSettingsResponse)

@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import time
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 import trimesh
 from fastapi.testclient import TestClient
@@ -129,10 +130,41 @@ def test_wizard_ui_and_status_route(tmp_path, monkeypatch):
     assert "cancelAnalyzeBtn" in ui.text
     assert "analysisProgressPanel" in ui.text
     assert "dbScanPanel" in ui.text
+    assert "modelPreviewPanel" in ui.text
+    assert "modelStatsPanel" in ui.text
+    assert "modelRepairPanel" in ui.text
+    assert "modelRetopologyPanel" in ui.text
+    assert "Detected Issues" in ui.text
+    assert "Retopology and Download STL" in ui.text
+    assert "/wizard/model/retopology" in ui.text
+    assert "/static/vendor/three/build/three.module.js" in ui.text
+    assert "/static/vendor/three/build/three.core.js" in ui.text
+    assert "3D preview runtime load failed" in ui.text
+    assert "https://cdn.jsdelivr.net" not in ui.text
     assert "/wizard/database/gaps" in ui.text
     assert "/phase3/history/query" in ui.text
     assert "Smart check:" in ui.text
     assert "/phase3/history/summary" in ui.text
+
+
+def test_wizard_static_preview_assets_are_served(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+
+    three = client.get("/static/vendor/three/build/three.module.js")
+    assert three.status_code == 200
+    assert len(three.text) > 1000
+
+    three_core = client.get("/static/vendor/three/build/three.core.js")
+    assert three_core.status_code == 200
+    assert len(three_core.text) > 1000
+
+    controls = client.get("/static/vendor/three/examples/jsm/controls/OrbitControls.js")
+    assert controls.status_code == 200
+    assert "OrbitControls" in controls.text
+
+    loader = client.get("/static/vendor/three/examples/jsm/loaders/STLLoader.js")
+    assert loader.status_code == 200
+    assert "STLLoader" in loader.text
 
     status = client.get("/wizard/database/status")
     assert status.status_code == 200
@@ -279,6 +311,7 @@ def test_wizard_model_fix_and_settings_downloads(tmp_path, monkeypatch):
     check_body = check.json()
     assert "analysis" in check_body
     assert check_body["analysis"]["mesh_health"]["duplicate_face_count"] >= 1
+    assert any("Mesh is not watertight." == issue for issue in check_body["fix_reasons"])
 
     fix = client.post(
         "/wizard/model/fix",
@@ -288,6 +321,12 @@ def test_wizard_model_fix_and_settings_downloads(tmp_path, monkeypatch):
     assert fix.status_code == 200
     fix_body = fix.json()
     assert fix_body["download_url"].startswith("/wizard/download/")
+    assert fix_body["repaired"] is True
+    assert fix_body["fully_repaired"] is False
+    assert fix_body["before_fix"]["duplicate_face_count"] >= 1
+    assert fix_body["after_fix"]["duplicate_face_count"] == 0
+    assert any("Mesh is not watertight." == issue for issue in fix_body["remaining_issues"])
+    assert fix_body["resolved_issues"]
 
     repaired_download = client.get(fix_body["download_url"])
     assert repaired_download.status_code == 200
@@ -328,6 +367,43 @@ def test_wizard_model_fix_and_settings_downloads(tmp_path, monkeypatch):
     # Ensure artifacts survive a short delay and remain downloadable.
     time.sleep(0.01)
     assert client.get(settings_body["cfg_download_url"]).status_code == 200
+
+
+def test_wizard_model_retopology_runs_repair_prepass_and_downloads(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+
+    def fake_blender_retopology(**kwargs):
+        mesh = trimesh.creation.icosphere(subdivisions=1, radius=1.0)
+        Path(kwargs["output_path"]).write_bytes(mesh.export(file_type="stl"))
+        return [
+            "Retopology backend: Blender (stubbed for tests).",
+            f"Mode: {kwargs['mode']}",
+        ]
+
+    monkeypatch.setattr(main, "run_blender_retopology", fake_blender_retopology)
+
+    response = client.post(
+        "/wizard/model/retopology",
+        files={"file": ("broken.stl", _broken_mesh_bytes(), "model/stl")},
+        data={"slice_height_mm": "0.2", "analysis_level": "extreme", "mode": "quad"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["mode"] == "quad"
+    assert body["backend_used"] == "blender"
+    assert body["source_analysis"]["analysis_level"] == "extreme"
+    assert body["retopology_analysis"]["analysis_level"] == "extreme"
+    assert body["source_analysis"]["mesh_health"]["duplicate_face_count"] >= 1
+    assert body["retopology_analysis"]["triangle_count"] > 0
+    assert body["preprocessing_fix"] is not None
+    assert body["target_faces"] >= 200
+    assert body["download_url"].startswith("/wizard/download/")
+    assert any("repair pre-pass" in note for note in body["notes"])
+
+    download = client.get(body["download_url"])
+    assert download.status_code == 200
+    assert len(download.content) > 100
 
 
 def test_wizard_download_requires_auth_headers_when_enforced(tmp_path, monkeypatch):

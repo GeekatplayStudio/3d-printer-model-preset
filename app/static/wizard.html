@@ -361,12 +361,142 @@
         font-size: 0.83rem;
       }
 
+      .analysis-grid {
+        margin-top: 10px;
+        display: grid;
+        gap: 10px;
+        grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+      }
+
+      .panel-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .preview-toolbar {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+      }
+
+      .mode-switch {
+        display: inline-flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .mode-switch button {
+        width: auto;
+        min-width: 76px;
+        padding: 8px 12px;
+        background: #284055;
+      }
+
+      .mode-switch button.active {
+        background: var(--primary);
+        color: #ffffff;
+      }
+
+      .preview-stage {
+        position: relative;
+        min-height: 360px;
+        border: 1px solid #24394d;
+        border-radius: 12px;
+        overflow: hidden;
+        background: radial-gradient(circle at 50% 18%, rgba(39, 95, 122, 0.7) 0%, rgba(11, 19, 29, 0.96) 58%, #06101a 100%);
+      }
+
+      #modelPreviewCanvas {
+        display: block;
+        width: 100%;
+        height: 360px;
+      }
+
+      .preview-empty {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        text-align: center;
+        color: var(--muted);
+        background: linear-gradient(180deg, rgba(8, 17, 27, 0.18), rgba(8, 17, 27, 0.82));
+      }
+
+      .preview-hud {
+        position: absolute;
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        pointer-events: none;
+      }
+
+      .analysis-scan-line {
+        position: absolute;
+        left: 10px;
+        right: 10px;
+        height: 2px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, rgba(127, 229, 213, 0), rgba(127, 229, 213, 0.96), rgba(127, 229, 213, 0));
+        box-shadow: 0 0 20px rgba(127, 229, 213, 0.55);
+        animation: previewScan 1.8s linear infinite;
+        pointer-events: none;
+      }
+
+      @keyframes previewScan {
+        0% {
+          top: 16px;
+          opacity: 0.18;
+        }
+
+        50% {
+          opacity: 1;
+        }
+
+        100% {
+          top: calc(100% - 16px);
+          opacity: 0.18;
+        }
+      }
+
+      .detail-list {
+        margin: 8px 0 0;
+        padding-left: 18px;
+        color: var(--text);
+        font-size: 0.9rem;
+        line-height: 1.45;
+      }
+
+      .detail-list li {
+        margin: 4px 0;
+      }
+
+      .placeholder-copy {
+        color: var(--muted);
+        font-size: 0.88rem;
+        line-height: 1.45;
+      }
+
       @media (max-width: 900px) {
         .auth,
         .grid-2,
         .grid-3,
-        .summary-row {
+        .summary-row,
+        .analysis-grid {
           grid-template-columns: 1fr;
+        }
+
+        #modelPreviewCanvas {
+          height: 300px;
         }
       }
     </style>
@@ -415,7 +545,7 @@
 
         <article class="card">
           <h2>Step 2: Upload STL and Analyze / Fix</h2>
-          <p class="sub">STL only. We check for mesh issues and can auto-fix when needed.</p>
+          <p class="sub">STL only. We run a careful topology scan, can auto-fix when needed, and can generate a separate retopologized STL.</p>
           <div class="grid grid-2" style="margin-top: 10px">
             <div>
               <label>Model file (.stl)</label>
@@ -430,15 +560,36 @@
             <div>
               <label>Analysis depth</label>
               <select id="analysisLevel">
-                <option value="minimum" selected>minimum (fastest)</option>
+                <option value="minimum">minimum (fastest)</option>
                 <option value="balanced">balanced</option>
-                <option value="deep">deep (slowest, most detail)</option>
+                <option value="deep">deep (detailed)</option>
+                <option value="extreme" selected>extreme (slowest, highest detail)</option>
               </select>
+            </div>
+          </div>
+          <div class="grid grid-3" style="margin-top: 8px">
+            <div>
+              <label>Retopology mode</label>
+              <select id="retopoMode">
+                <option value="quad" selected>quad remesh (best topology)</option>
+                <option value="voxel">voxel remesh (best cleanup)</option>
+              </select>
+            </div>
+            <div>
+              <label>Target faces (quad only)</label>
+              <input id="retopoTargetFaces" type="number" min="1" placeholder="auto" />
+            </div>
+            <div>
+              <label>Voxel size (mm, voxel only)</label>
+              <input id="retopoVoxelSize" type="number" min="0.001" step="0.001" placeholder="auto" />
             </div>
           </div>
           <div class="grid grid-2" style="margin-top: 10px">
             <button id="analyzeBtn" onclick="analyzeModel()" disabled>Analyze STL</button>
             <button id="fixBtn" class="warn" onclick="fixModel()" disabled>Auto-Fix and Download STL</button>
+          </div>
+          <div class="grid" style="margin-top: 8px">
+            <button id="retopoBtn" class="secondary" onclick="retopologizeModel()" disabled>Retopology and Download STL</button>
           </div>
           <div class="grid" style="margin-top: 8px">
             <button id="cancelAnalyzeBtn" class="warn" onclick="cancelActiveAnalysis()" disabled>Cancel Running Analysis</button>
@@ -456,6 +607,78 @@
             <div id="analysisProgressTimings" class="summary" style="display:none"></div>
           </div>
           <div id="modelDownload" class="downloads"></div>
+          <div class="analysis-grid">
+            <div id="modelPreviewPanel" class="catalog-panel">
+              <div class="preview-toolbar">
+                <div>
+                  <div class="check-title">3D Model Preview</div>
+                  <div class="tiny" id="modelPreviewStatus">Load an STL to inspect it in wire, mesh, or solid view.</div>
+                </div>
+                <div class="mode-switch">
+                  <button id="previewWireBtn" type="button" class="secondary" onclick="setPreviewMode('wire')">Wire</button>
+                  <button id="previewMeshBtn" type="button" class="secondary" onclick="setPreviewMode('mesh')">Mesh</button>
+                  <button id="previewSolidBtn" type="button" class="secondary" onclick="setPreviewMode('solid')">Solid</button>
+                </div>
+              </div>
+              <div id="modelPreviewViewport" class="preview-stage">
+                <canvas id="modelPreviewCanvas"></canvas>
+                <div id="modelPreviewEmpty" class="preview-empty">
+                  Load an STL to preview it here. Drag to orbit, use the wheel to zoom, and switch between wire, mesh, and solid rendering.
+                </div>
+                <div id="analysisScanLine" class="analysis-scan-line" style="display:none"></div>
+                <div class="preview-hud">
+                  <span class="progress-chip" id="modelPreviewSource">Source: none</span>
+                  <span class="progress-chip" id="modelPreviewCounts">Triangles: -</span>
+                  <span class="progress-chip" id="modelPreviewModeChip">View: mesh</span>
+                </div>
+              </div>
+              <div class="tiny" id="modelPreviewHint">Idle preview auto-rotates after load. Analysis scan pauses rotation to reduce GPU use.</div>
+            </div>
+
+            <div id="modelStatsPanel" class="catalog-panel">
+              <div class="panel-title">
+                <strong>Model Statistics</strong>
+                <span class="status-badge status-info" id="modelStatsBadge">Waiting</span>
+              </div>
+              <div class="tiny" id="modelStatsSummary">Load and analyze an STL to populate geometry statistics.</div>
+              <div id="modelStatsTable" class="summary" style="display:none"></div>
+            </div>
+
+            <div id="modelHealthPanel" class="catalog-panel">
+              <div class="panel-title">
+                <strong>Detected Issues</strong>
+                <span class="status-badge status-info" id="modelHealthBadge">Waiting</span>
+              </div>
+              <div class="tiny" id="modelHealthSummary">No topology report yet.</div>
+              <div id="modelHealthChecks" class="grid" style="margin-top: 10px"></div>
+            </div>
+
+            <div id="modelRepairPanel" class="catalog-panel">
+              <div class="panel-title">
+                <strong>Repair Report</strong>
+                <span class="status-badge status-info" id="modelRepairBadge">Waiting</span>
+              </div>
+              <div class="tiny" id="modelRepairSummary">Run Auto-Fix to capture before/after repair details.</div>
+              <div id="modelRepairContent" class="placeholder-copy" style="margin-top: 10px">No repair report yet.</div>
+            </div>
+
+            <div id="modelRetopologyPanel" class="catalog-panel">
+              <div class="panel-title">
+                <strong>Retopology Report</strong>
+                <span class="status-badge status-info" id="modelRetopologyBadge">Waiting</span>
+              </div>
+              <div class="tiny" id="modelRetopologySummary">Run detailed analysis first, then retopology when you want a separate remeshed STL.</div>
+              <div id="modelRetopologyContent" class="placeholder-copy" style="margin-top: 10px">No retopology report yet.</div>
+            </div>
+
+            <div id="modelNotesPanel" class="catalog-panel">
+              <div class="panel-title">
+                <strong>Analysis Notes</strong>
+                <span class="status-badge status-info" id="modelNotesBadge">Waiting</span>
+              </div>
+              <div id="modelNotesContent" class="placeholder-copy" style="margin-top: 10px">Run analysis to see runtime notes, performance highlights, and printability hints.</div>
+            </div>
+          </div>
         </article>
 
         <article class="card">
@@ -551,8 +774,18 @@
         compatibilityMap: {},
         analysis: null,
         fixedAnalysis: null,
+        lastCheckResult: null,
+        lastFixResult: null,
+        lastRetopologyResult: null,
         analysisProgress: null,
         activeAnalysisJobId: null,
+        preview: {
+          mode: "mesh",
+          renderedMode: "mesh",
+          sourceLabel: "none",
+          geometryStats: null,
+          analysisScanActive: false,
+        },
       };
 
       const ANALYZE_STAGE_ORDER = [
@@ -592,6 +825,14 @@
         "Preparing repaired STL download",
       ];
 
+      const RETOPO_STEPS = [
+        "Validating STL and current analysis profile",
+        "Running repair pre-pass when the source shell needs it",
+        "Launching Blender remesh backend",
+        "Re-analyzing the retopologized STL",
+        "Preparing remeshed STL download",
+      ];
+
       const SETTINGS_STEPS = [
         "Loading selected printer + resin profiles",
         "Applying geometry-aware optimization logic",
@@ -606,6 +847,819 @@
         "Curating profile presets and confidence",
         "Refreshing smart-settings readiness",
       ];
+
+      const PREVIEW_RUNTIME_URLS = [
+        "/static/vendor/three/build/three.module.js",
+        "/static/vendor/three/build/three.core.js",
+        "/static/vendor/three/examples/jsm/controls/OrbitControls.js",
+        "/static/vendor/three/examples/jsm/loaders/STLLoader.js",
+      ];
+
+      let previewRuntime = null;
+      let previewRuntimePromise = null;
+      let previewAnalysisTimer = null;
+
+      function formatNumber(value, maximumFractionDigits = 2) {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) return "-";
+        return numeric.toLocaleString(undefined, {
+          maximumFractionDigits,
+          minimumFractionDigits: maximumFractionDigits === 0 ? 0 : 0,
+        });
+      }
+
+      function formatMetric(value, unit = "", maximumFractionDigits = 2) {
+        const formatted = formatNumber(value, maximumFractionDigits);
+        if (formatted === "-") return "-";
+        return unit ? `${formatted} ${unit}` : formatted;
+      }
+
+      function previewModeLabel(mode) {
+        if (mode === "wire") return "wire";
+        if (mode === "solid") return "solid";
+        return "mesh";
+      }
+
+      function currentAnalysisResult() {
+        return (state.lastRetopologyResult && state.lastRetopologyResult.retopology_analysis) || state.fixedAnalysis || state.analysis;
+      }
+
+      function currentHealthReport() {
+        const analysis = currentAnalysisResult();
+        return analysis && analysis.mesh_health ? analysis.mesh_health : null;
+      }
+
+      function meshBlockingIssues(health) {
+        if (!health) return [];
+        const issues = [];
+        if ((Number(health.boundary_edge_count) || 0) > 0) {
+          issues.push(`Open boundaries detected (${health.boundary_edge_count} boundary edges).`);
+        }
+        if ((Number(health.non_manifold_edge_count) || 0) > 0) {
+          issues.push(`Non-manifold topology detected (${health.non_manifold_edge_count} non-manifold edges).`);
+        }
+        if ((Number(health.connected_components) || 1) > 1) {
+          issues.push(`Multiple disconnected shells detected (${health.connected_components} components).`);
+        }
+        if ((Number(health.degenerate_face_count) || 0) > 0) {
+          issues.push(`Degenerate triangles detected (${health.degenerate_face_count} faces).`);
+        }
+        if ((Number(health.duplicate_face_count) || 0) > 0) {
+          issues.push(`Duplicate triangles detected (${health.duplicate_face_count} faces).`);
+        }
+        if (health.winding_consistent === false) {
+          issues.push("Face winding is inconsistent.");
+        }
+        if (health.watertight === false) {
+          issues.push("Mesh is not watertight.");
+        }
+        return issues;
+      }
+
+      function setPanelBadge(id, tone, text) {
+        const el = document.getElementById(id);
+        el.className = statusBadgeClass(tone);
+        el.textContent = text;
+      }
+
+      function buildSummaryRows(rows) {
+        return rows
+          .map(
+            (row) =>
+              `<div class="summary-row"><div>${escapeHtml(row.label)}</div><div>${escapeHtml(String(row.value))}</div></div>`
+          )
+          .join("");
+      }
+
+      function buildList(items, emptyText) {
+        if (!Array.isArray(items) || !items.length) {
+          return `<div class="placeholder-copy">${escapeHtml(emptyText)}</div>`;
+        }
+        return `<ul class="detail-list">${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
+      }
+
+      async function logPreviewRuntimeFailure(error) {
+        const diagnostics = await Promise.all(
+          PREVIEW_RUNTIME_URLS.map(async (url) => {
+            try {
+              const response = await fetch(url, {
+                headers: headers(false),
+                cache: "no-store",
+              });
+              return {
+                url,
+                status: response.status,
+                ok: response.ok,
+                contentType: response.headers.get("content-type") || "",
+                contentLength: response.headers.get("content-length") || "",
+              };
+            } catch (fetchError) {
+              return {
+                url,
+                status: "fetch-failed",
+                ok: false,
+                error: fetchError && fetchError.message ? fetchError.message : String(fetchError),
+              };
+            }
+          })
+        );
+
+        console.group("3D preview runtime load failed");
+        console.error("Preview runtime error:", error);
+        if (error && error.stack) {
+          console.error("Preview runtime stack:", error.stack);
+        }
+        console.info("Preview runtime URLs checked:", PREVIEW_RUNTIME_URLS);
+        console.table(diagnostics);
+        console.info(
+          "If any preview runtime URL reports 404, rebuild or recreate the API container and hard-refresh the browser tab."
+        );
+        console.groupEnd();
+      }
+
+      async function ensurePreviewRuntime() {
+        if (previewRuntime) return previewRuntime;
+        if (previewRuntimePromise) return previewRuntimePromise;
+
+        previewRuntimePromise = Promise.all([
+          import(PREVIEW_RUNTIME_URLS[0]),
+          import(PREVIEW_RUNTIME_URLS[2]),
+          import(PREVIEW_RUNTIME_URLS[3]),
+        ])
+          .then(([THREE, controlsModule, loaderModule]) => {
+            const container = document.getElementById("modelPreviewViewport");
+            const canvas = document.getElementById("modelPreviewCanvas");
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x08111b);
+
+            const camera = new THREE.PerspectiveCamera(40, 1, 0.05, 2000);
+            camera.position.set(2.4, 1.9, 2.7);
+
+            const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+            renderer.outputColorSpace = THREE.SRGBColorSpace;
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+            const controls = new controlsModule.OrbitControls(camera, canvas);
+            controls.enablePan = false;
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 0.85;
+
+            const pivot = new THREE.Group();
+            scene.add(pivot);
+
+            const ambient = new THREE.AmbientLight(0xffffff, 1.45);
+            scene.add(ambient);
+
+            const keyLight = new THREE.DirectionalLight(0xe2fbff, 1.35);
+            keyLight.position.set(3.5, 2.0, 4.5);
+            scene.add(keyLight);
+
+            const rimLight = new THREE.DirectionalLight(0x52c3d0, 0.75);
+            rimLight.position.set(-3.0, -1.8, -4.0);
+            scene.add(rimLight);
+
+            const grid = new THREE.GridHelper(8, 10, 0x2a4259, 0x132434);
+            grid.material.opacity = 0.28;
+            grid.material.transparent = true;
+            scene.add(grid);
+
+            const runtime = {
+              THREE,
+              loader: new loaderModule.STLLoader(),
+              scene,
+              camera,
+              renderer,
+              controls,
+              pivot,
+              grid,
+              mesh: null,
+              edges: null,
+              loopId: 0,
+              materials: {
+                wire: new THREE.MeshBasicMaterial({
+                  color: 0xd8fcff,
+                  wireframe: true,
+                  transparent: true,
+                  opacity: 0.96,
+                }),
+                mesh: new THREE.MeshStandardMaterial({
+                  color: 0x9de7ff,
+                  roughness: 0.64,
+                  metalness: 0.04,
+                  transparent: true,
+                  opacity: 0.34,
+                }),
+                solid: new THREE.MeshStandardMaterial({
+                  color: 0x76ddd1,
+                  roughness: 0.5,
+                  metalness: 0.1,
+                }),
+                edges: new THREE.LineBasicMaterial({
+                  color: 0xe8f1ff,
+                  transparent: true,
+                  opacity: 0.5,
+                }),
+              },
+            };
+
+            runtime.renderFrame = () => {
+              runtime.renderer.render(runtime.scene, runtime.camera);
+            };
+
+            runtime.stopLoop = () => {
+              if (runtime.loopId) {
+                window.cancelAnimationFrame(runtime.loopId);
+                runtime.loopId = 0;
+              }
+            };
+
+            runtime.startLoop = () => {
+              if (runtime.loopId) return;
+              const tick = () => {
+                runtime.loopId = window.requestAnimationFrame(tick);
+                if (runtime.controls.autoRotate) {
+                  runtime.controls.update();
+                  runtime.renderFrame();
+                  return;
+                }
+                runtime.stopLoop();
+                runtime.renderFrame();
+              };
+              tick();
+            };
+
+            const resize = () => {
+              const width = Math.max(container.clientWidth, 1);
+              const height = Math.max(container.clientHeight, 300);
+              runtime.camera.aspect = width / height;
+              runtime.camera.updateProjectionMatrix();
+              runtime.renderer.setSize(width, height, false);
+              runtime.renderFrame();
+            };
+
+            if (window.ResizeObserver) {
+              new ResizeObserver(resize).observe(container);
+            } else {
+              window.addEventListener("resize", resize);
+            }
+            controls.addEventListener("change", runtime.renderFrame);
+
+            resize();
+            previewRuntime = runtime;
+            return runtime;
+          })
+          .catch(async (error) => {
+            previewRuntimePromise = null;
+            await logPreviewRuntimeFailure(error);
+            throw error;
+          });
+
+        return previewRuntimePromise;
+      }
+
+      function disposePreviewGeometry(runtime) {
+        if (runtime.mesh) {
+          runtime.pivot.remove(runtime.mesh);
+          runtime.mesh.geometry.dispose();
+          runtime.mesh = null;
+        }
+        if (runtime.edges) {
+          runtime.pivot.remove(runtime.edges);
+          runtime.edges.geometry.dispose();
+          runtime.edges = null;
+        }
+      }
+
+      function fitPreviewCamera(runtime, size) {
+        const maxDimension = Math.max(size.x || 0, size.y || 0, size.z || 0, 1);
+        const distance = maxDimension * 2.2;
+        runtime.camera.near = Math.max(maxDimension / 500, 0.01);
+        runtime.camera.far = Math.max(maxDimension * 30, 200);
+        runtime.camera.position.set(distance * 0.78, distance * 0.56, distance);
+        runtime.camera.updateProjectionMatrix();
+        runtime.controls.target.set(0, 0, 0);
+        runtime.grid.position.y = -(size.y / 2) - Math.max(maxDimension * 0.08, 0.25);
+      }
+
+      function applyPreviewMode(mode) {
+        state.preview.renderedMode = mode;
+        if (!previewRuntime || !previewRuntime.mesh) {
+          updatePreviewModeButtons();
+          updatePreviewHud();
+          return;
+        }
+
+        if (mode === "wire") {
+          previewRuntime.mesh.material = previewRuntime.materials.wire;
+          previewRuntime.edges.visible = false;
+        } else if (mode === "solid") {
+          previewRuntime.mesh.material = previewRuntime.materials.solid;
+          previewRuntime.edges.visible = false;
+        } else {
+          previewRuntime.mesh.material = previewRuntime.materials.mesh;
+          previewRuntime.edges.visible = true;
+        }
+        updatePreviewModeButtons();
+        updatePreviewHud();
+        previewRuntime.renderFrame();
+      }
+
+      function updatePreviewModeButtons() {
+        const activeMode = state.preview.analysisScanActive ? state.preview.renderedMode : state.preview.mode;
+        [
+          ["previewWireBtn", "wire"],
+          ["previewMeshBtn", "mesh"],
+          ["previewSolidBtn", "solid"],
+        ].forEach(([id, mode]) => {
+          const button = document.getElementById(id);
+          button.classList.toggle("active", mode === activeMode);
+          button.disabled = state.preview.analysisScanActive;
+        });
+      }
+
+      function updatePreviewHud() {
+        const stats = state.preview.geometryStats;
+        document.getElementById("modelPreviewSource").textContent = `Source: ${state.preview.sourceLabel || "none"}`;
+        document.getElementById("modelPreviewCounts").textContent = stats
+          ? `Triangles: ${formatNumber(stats.triangleCount, 0)} | Vertices: ${formatNumber(stats.vertexCount, 0)}`
+          : "Triangles: -";
+        document.getElementById("modelPreviewModeChip").textContent = `View: ${previewModeLabel(state.preview.renderedMode)}`;
+      }
+
+      function resetPreviewPanel(
+        statusText = "Preview: waiting for STL upload.",
+        hintText = "Select an STL and the preview will appear here. After load, drag to orbit, wheel to zoom, and switch between wire, mesh, and solid rendering."
+      ) {
+        const panel = document.getElementById("modelPreviewPanel");
+        panel.style.display = "block";
+        state.preview.sourceLabel = "none";
+        state.preview.geometryStats = null;
+        state.preview.analysisScanActive = false;
+        state.preview.renderedMode = state.preview.mode;
+        document.getElementById("modelPreviewEmpty").style.display = "flex";
+        document.getElementById("analysisScanLine").style.display = "none";
+        document.getElementById("modelPreviewStatus").textContent = statusText;
+        document.getElementById("modelPreviewHint").textContent = hintText;
+        if (previewRuntime) {
+          disposePreviewGeometry(previewRuntime);
+          previewRuntime.controls.enabled = true;
+          previewRuntime.controls.autoRotate = false;
+          previewRuntime.stopLoop();
+          previewRuntime.renderFrame();
+        }
+        updatePreviewModeButtons();
+        updatePreviewHud();
+      }
+
+      function setPreviewMode(mode) {
+        if (state.preview.analysisScanActive) return;
+        state.preview.mode = mode;
+        applyPreviewMode(mode);
+      }
+
+      async function loadPreviewFromArrayBuffer(arrayBuffer, sourceLabel) {
+        const panel = document.getElementById("modelPreviewPanel");
+        panel.style.display = "block";
+        document.getElementById("modelPreviewStatus").textContent = `Preview: loading ${sourceLabel}.`;
+        try {
+          const runtime = await ensurePreviewRuntime();
+          const geometry = runtime.loader.parse(arrayBuffer);
+          geometry.computeVertexNormals();
+          geometry.computeBoundingBox();
+          geometry.computeBoundingSphere();
+          geometry.center();
+
+          const size = new runtime.THREE.Vector3();
+          geometry.boundingBox.getSize(size);
+          disposePreviewGeometry(runtime);
+
+          runtime.mesh = new runtime.THREE.Mesh(geometry, runtime.materials.mesh);
+          runtime.edges = new runtime.THREE.LineSegments(
+            new runtime.THREE.EdgesGeometry(geometry, 35),
+            runtime.materials.edges
+          );
+          runtime.pivot.add(runtime.mesh);
+          runtime.pivot.add(runtime.edges);
+          fitPreviewCamera(runtime, size);
+
+          state.preview.sourceLabel = sourceLabel;
+          state.preview.geometryStats = {
+            vertexCount: Number(geometry.attributes.position.count) || 0,
+            triangleCount: Math.round((Number(geometry.attributes.position.count) || 0) / 3),
+            sizeMm: [size.x || 0, size.y || 0, size.z || 0],
+          };
+          state.preview.analysisScanActive = false;
+          state.preview.renderedMode = state.preview.mode;
+
+          document.getElementById("modelPreviewEmpty").style.display = "none";
+          document.getElementById("modelPreviewHint").textContent =
+            "Drag to orbit, wheel to zoom. Idle preview auto-rotates once after load; analysis scan pauses rotation to reduce GPU use.";
+          document.getElementById("modelPreviewStatus").textContent = `Preview: ${sourceLabel} loaded.`;
+
+          runtime.controls.enabled = true;
+          runtime.controls.autoRotate = true;
+          runtime.startLoop();
+          applyPreviewMode(state.preview.mode);
+          updatePreviewHud();
+          renderModelInsightPanels();
+        } catch (error) {
+          document.getElementById("modelPreviewStatus").textContent = "Preview: failed to load STL preview runtime.";
+          document.getElementById("modelPreviewHint").textContent =
+            "The analysis and repair workflow still works, but the browser could not initialize the 3D preview runtime.";
+          throw error;
+        }
+      }
+
+      async function loadPreviewFromFile(file) {
+        const buffer = await file.arrayBuffer();
+        return loadPreviewFromArrayBuffer(buffer, `Local STL: ${file.name}`);
+      }
+
+      async function loadPreviewFromUrl(url, sourceLabel) {
+        const response = await fetch(url, { headers: headers(false) });
+        if (!response.ok) {
+          throw new Error(`Preview download failed (${response.status})`);
+        }
+        const buffer = await response.arrayBuffer();
+        return loadPreviewFromArrayBuffer(buffer, sourceLabel);
+      }
+
+      function startPreviewAnalysisMode(statusText) {
+        if (!state.preview.geometryStats) return;
+        state.preview.analysisScanActive = true;
+        if (previewRuntime) {
+          previewRuntime.controls.enabled = false;
+          previewRuntime.controls.autoRotate = false;
+          previewRuntime.stopLoop();
+        }
+        window.clearInterval(previewAnalysisTimer);
+        previewAnalysisTimer = null;
+        document.getElementById("analysisScanLine").style.display = "block";
+        document.getElementById("modelPreviewStatus").textContent = statusText;
+        document.getElementById("modelPreviewHint").textContent =
+          "Analysis scan is active. Rotation is paused while the preview alternates between mesh and solid inspection.";
+        const sequence = ["mesh", "solid"];
+        let index = 0;
+        applyPreviewMode(sequence[index]);
+        previewAnalysisTimer = window.setInterval(() => {
+          if (!state.preview.analysisScanActive) return;
+          index = (index + 1) % sequence.length;
+          applyPreviewMode(sequence[index]);
+        }, 1100);
+      }
+
+      function stopPreviewAnalysisMode(statusText = null) {
+        window.clearInterval(previewAnalysisTimer);
+        previewAnalysisTimer = null;
+        state.preview.analysisScanActive = false;
+        document.getElementById("analysisScanLine").style.display = "none";
+        if (previewRuntime) {
+          previewRuntime.controls.enabled = true;
+          previewRuntime.controls.autoRotate = false;
+          previewRuntime.stopLoop();
+        }
+        applyPreviewMode(state.preview.mode);
+        if (statusText) {
+          document.getElementById("modelPreviewStatus").textContent = statusText;
+        }
+        if (state.preview.geometryStats) {
+          document.getElementById("modelPreviewHint").textContent =
+            "Manual rotate is available. Auto-rotation stays paused after analysis to keep GPU usage down.";
+        }
+      }
+
+      function renderModelStatsPanel() {
+        const analysis = currentAnalysisResult();
+        const previewStats = state.preview.geometryStats;
+        const table = document.getElementById("modelStatsTable");
+        const summary = document.getElementById("modelStatsSummary");
+
+        if (!analysis && !previewStats) {
+          setPanelBadge("modelStatsBadge", "info", "Waiting");
+          summary.textContent = "Load and analyze an STL to populate geometry statistics.";
+          table.style.display = "none";
+          table.innerHTML = "";
+          return;
+        }
+
+        const rows = [];
+        if (analysis) {
+          rows.push({ label: "File", value: analysis.file_name || "-" });
+          rows.push({ label: "Triangles", value: formatNumber(analysis.triangle_count, 0) });
+          rows.push({ label: "Vertices", value: formatNumber(analysis.vertex_count, 0) });
+          rows.push({ label: "Surface Area", value: formatMetric(analysis.surface_area_mm2, "mm^2", 2) });
+          rows.push({ label: "Volume", value: formatMetric(analysis.mesh_volume_mm3, "mm^3", 2) });
+          rows.push({ label: "Bounding Box Diagonal", value: formatMetric(analysis.bounding_box_diagonal_mm, "mm", 2) });
+          rows.push({ label: "Surface / Volume", value: formatNumber(analysis.surface_area_ratio, 4) });
+          rows.push({ label: "Detail Density", value: formatNumber(analysis.detail_density, 4) });
+          rows.push({ label: "Curvature Proxy", value: formatNumber(analysis.curvature_proxy, 4) });
+          rows.push({ label: "Euler Number", value: formatNumber(analysis.euler_number, 0) });
+          rows.push({ label: "Peak Cross Section", value: formatMetric(analysis.max_cross_section_mm2, "mm^2", 2) });
+          rows.push({ label: "Peak Plate Ratio", value: `${formatNumber((Number(analysis.max_cross_section_ratio) || 0) * 100, 2)}%` });
+          rows.push({ label: "Structural Risk", value: `${formatNumber(analysis.structural_risk_score, 1)} / 100` });
+          rows.push({ label: "Estimated Intent", value: analysis.estimated_intent || "-" });
+          rows.push({ label: "Suction Cups", value: formatNumber((analysis.suction_cups || []).length, 0) });
+          rows.push({ label: "Islands", value: formatNumber((analysis.islands || []).length, 0) });
+          rows.push({ label: "Slice Height", value: formatMetric(analysis.slice_height_mm, "mm", 4) });
+          rows.push({ label: "Build Plate Area", value: formatMetric(analysis.build_plate_area_mm2, "mm^2", 2) });
+          if (Array.isArray(analysis.bounding_box_mm) && analysis.bounding_box_mm.length >= 3) {
+            rows.push({ label: "Bounding Box X", value: formatMetric(analysis.bounding_box_mm[0], "mm", 2) });
+            rows.push({ label: "Bounding Box Y", value: formatMetric(analysis.bounding_box_mm[1], "mm", 2) });
+            rows.push({ label: "Bounding Box Z", value: formatMetric(analysis.bounding_box_mm[2], "mm", 2) });
+          }
+          if (Array.isArray(analysis.center_of_mass_mm) && analysis.center_of_mass_mm.length >= 3) {
+            rows.push({
+              label: "Center of Mass",
+              value: `${formatNumber(analysis.center_of_mass_mm[0], 2)}, ${formatNumber(analysis.center_of_mass_mm[1], 2)}, ${formatNumber(analysis.center_of_mass_mm[2], 2)} mm`,
+            });
+          }
+        }
+        if (previewStats) {
+          rows.push({ label: "Preview Vertices", value: formatNumber(previewStats.vertexCount, 0) });
+          rows.push({ label: "Preview Size X", value: formatMetric(previewStats.sizeMm[0], "mm", 2) });
+          rows.push({ label: "Preview Size Y", value: formatMetric(previewStats.sizeMm[1], "mm", 2) });
+          rows.push({ label: "Preview Size Z", value: formatMetric(previewStats.sizeMm[2], "mm", 2) });
+        }
+
+        setPanelBadge(
+          "modelStatsBadge",
+          state.lastRetopologyResult ? "pass" : state.fixedAnalysis ? "pass" : analysis ? "info" : "warn",
+          state.lastRetopologyResult ? "Retopo" : state.fixedAnalysis ? "Fixed" : analysis ? "Analyzed" : "Preview"
+        );
+        summary.textContent = !analysis
+          ? "Preview geometry is loaded. Run Analyze STL to add printability and defect statistics."
+          : state.lastRetopologyResult
+            ? `Retopology result is active. Statistics now reflect the remeshed STL analyzed at ${analysis.analysis_level} depth.`
+            : `Analysis level: ${analysis.analysis_level}. Preview and computed printability metrics are shown together.`;
+        table.style.display = rows.length ? "block" : "none";
+        table.innerHTML = rows.length ? buildSummaryRows(rows) : "";
+      }
+
+      function renderModelHealthPanel() {
+        const health = currentHealthReport();
+        const container = document.getElementById("modelHealthChecks");
+        const summary = document.getElementById("modelHealthSummary");
+
+        if (!health) {
+          setPanelBadge("modelHealthBadge", "info", "Waiting");
+          summary.textContent = state.preview.geometryStats
+            ? "Preview is ready. Run analysis to inspect topology health and printability defects."
+            : "No topology report yet.";
+          container.innerHTML = "";
+          return;
+        }
+
+        const checks = [
+          {
+            label: "Watertight shell",
+            tone: health.watertight ? "pass" : "fail",
+            summary: health.watertight ? "Closed shell detected." : "Mesh still has open topology and fails watertightness.",
+          },
+          {
+            label: "Face winding",
+            tone: health.winding_consistent ? "pass" : "fail",
+            summary: health.winding_consistent ? "Face winding is consistent." : "Face winding is inconsistent.",
+          },
+          {
+            label: "Boundary edges",
+            tone:
+              health.boundary_edge_count == null ? "info" : Number(health.boundary_edge_count) === 0 ? "pass" : "fail",
+            summary:
+              health.boundary_edge_count == null
+                ? "Detailed edge scan skipped in minimum analysis."
+                : `${formatNumber(health.boundary_edge_count, 0)} boundary edges detected.`,
+          },
+          {
+            label: "Non-manifold edges",
+            tone:
+              health.non_manifold_edge_count == null
+                ? "info"
+                : Number(health.non_manifold_edge_count) === 0
+                  ? "pass"
+                  : "fail",
+            summary:
+              health.non_manifold_edge_count == null
+                ? "Detailed non-manifold scan skipped in minimum analysis."
+                : `${formatNumber(health.non_manifold_edge_count, 0)} non-manifold edges detected.`,
+          },
+          {
+            label: "Disconnected shells",
+            tone: (Number(health.connected_components) || 1) > 1 ? "fail" : "pass",
+            summary: `${formatNumber(health.connected_components || 1, 0)} connected components detected.`,
+          },
+          {
+            label: "Degenerate triangles",
+            tone: Number(health.degenerate_face_count) === 0 ? "pass" : "fail",
+            summary: `${formatNumber(health.degenerate_face_count, 0)} degenerate triangles detected.`,
+          },
+          {
+            label: "Duplicate triangles",
+            tone: Number(health.duplicate_face_count) === 0 ? "pass" : "fail",
+            summary: `${formatNumber(health.duplicate_face_count, 0)} duplicate triangles detected.`,
+          },
+        ];
+
+        const blocking = state.lastRetopologyResult
+          ? meshBlockingIssues(health)
+          : state.lastFixResult
+            ? state.lastFixResult.remaining_issues || []
+            : state.lastCheckResult && state.lastCheckResult.fix_reasons
+              ? state.lastCheckResult.fix_reasons
+              : meshBlockingIssues(health);
+        setPanelBadge("modelHealthBadge", blocking.length ? "fail" : "pass", blocking.length ? "Blocking" : "Clean");
+        summary.textContent = blocking.length
+          ? `${blocking.length} blocking issue types currently need attention.`
+          : "No blocking mesh defects are currently reported.";
+        container.innerHTML = checks
+          .map(
+            (check) => `
+              <div class="check-card">
+                <div class="check-title">
+                  <span class="${statusBadgeClass(check.tone)}">${escapeHtml(statusLabel(check.tone))}</span>
+                  <span>${escapeHtml(check.label)}</span>
+                </div>
+                <div class="check-detail">${escapeHtml(check.summary)}</div>
+              </div>
+            `
+          )
+          .join("");
+      }
+
+      function renderModelRepairPanel() {
+        const summary = document.getElementById("modelRepairSummary");
+        const content = document.getElementById("modelRepairContent");
+        const retopologyPrepass = state.lastRetopologyResult ? state.lastRetopologyResult.preprocessing_fix : null;
+        const fix = state.lastRetopologyResult ? retopologyPrepass : state.lastFixResult;
+
+        if (!fix) {
+          if (state.lastRetopologyResult) {
+            setPanelBadge("modelRepairBadge", "pass", "Skipped");
+            summary.textContent = "Retopology did not need a repair pre-pass before remeshing.";
+            content.textContent = "Source mesh went straight into the Blender retopology pass.";
+            return;
+          }
+          const check = state.lastCheckResult;
+          if (check && check.requires_fix) {
+            setPanelBadge("modelRepairBadge", "warn", "Recommended");
+            summary.textContent = "Auto-Fix is recommended before settings export.";
+            content.innerHTML = buildList(check.fix_reasons || [], "No blocking issues were supplied.");
+            return;
+          }
+          setPanelBadge("modelRepairBadge", "info", "Waiting");
+          summary.textContent = "Run Auto-Fix to capture before/after repair details.";
+          content.textContent = "No repair report yet.";
+          return;
+        }
+
+        const before = fix.before_fix || {};
+        const after = fix.after_fix || {};
+        const diffRows = [
+          { label: "Boundary Edges", value: `${formatNumber(before.boundary_edge_count, 0)} -> ${formatNumber(after.boundary_edge_count, 0)}` },
+          { label: "Non-Manifold Edges", value: `${formatNumber(before.non_manifold_edge_count, 0)} -> ${formatNumber(after.non_manifold_edge_count, 0)}` },
+          { label: "Components", value: `${formatNumber(before.connected_components, 0)} -> ${formatNumber(after.connected_components, 0)}` },
+          { label: "Degenerate Faces", value: `${formatNumber(before.degenerate_face_count, 0)} -> ${formatNumber(after.degenerate_face_count, 0)}` },
+          { label: "Duplicate Faces", value: `${formatNumber(before.duplicate_face_count, 0)} -> ${formatNumber(after.duplicate_face_count, 0)}` },
+          { label: "Watertight", value: `${before.watertight ? "Yes" : "No"} -> ${after.watertight ? "Yes" : "No"}` },
+        ];
+
+        const actionsHeading = state.lastRetopologyResult ? "Actions applied during retopology pre-pass" : "Actions applied";
+        const resolvedHeading = state.lastRetopologyResult ? "Resolved issues before retopology" : "Resolved issues";
+        const remainingHeading = state.lastRetopologyResult ? "Remaining issues after save/reload pre-pass" : "Remaining issues after save/reload";
+
+        setPanelBadge("modelRepairBadge", fix.fully_repaired ? "pass" : "warn", fix.fully_repaired ? "Passed" : "Partial");
+        summary.textContent = state.lastRetopologyResult
+          ? fix.fully_repaired
+            ? "Retopology pre-pass changed the source mesh and it passed save/reload checks before remeshing."
+            : `Retopology pre-pass changed the source mesh, but ${formatNumber((fix.remaining_issues || []).length, 0)} blocking issue types remained before remeshing.`
+          : fix.fully_repaired
+            ? "Repair changed the mesh and it now passes save/reload checks."
+            : `Repair changed the mesh, but ${formatNumber((fix.remaining_issues || []).length, 0)} blocking issue types remain after save/reload.`;
+        content.innerHTML = `
+          <div class="summary">${buildSummaryRows(diffRows)}</div>
+          <div class="tiny">${escapeHtml(actionsHeading)}</div>
+          ${buildList(fix.repair_actions || [], "No repair actions were reported.")}
+          <div class="tiny">${escapeHtml(resolvedHeading)}</div>
+          ${buildList(fix.resolved_issues || [], "No issue types were cleared.")}
+          <div class="tiny">${escapeHtml(remainingHeading)}</div>
+          ${buildList(fix.remaining_issues || [], "No blocking issues remain.")}
+        `;
+      }
+
+      function renderModelRetopologyPanel() {
+        const summary = document.getElementById("modelRetopologySummary");
+        const content = document.getElementById("modelRetopologyContent");
+        const result = state.lastRetopologyResult;
+
+        if (!result) {
+          setPanelBadge("modelRetopologyBadge", state.analysis ? "info" : "info", state.analysis ? "Ready" : "Waiting");
+          summary.textContent = state.analysis
+            ? "Retopology is available after analysis when you want a separate remeshed STL."
+            : "Run analysis first to enable retopology.";
+          content.textContent = "No retopology report yet.";
+          return;
+        }
+
+        const source = result.source_analysis || {};
+        const output = result.retopology_analysis || {};
+        const outputBlocking = meshBlockingIssues((output && output.mesh_health) || null);
+        const sourceBlocking = meshBlockingIssues((source && source.mesh_health) || null);
+        const rows = [
+          { label: "Mode", value: result.mode || "-" },
+          { label: "Backend", value: result.backend_used || result.backend_requested || "-" },
+          { label: "Triangles", value: `${formatNumber(source.triangle_count, 0)} -> ${formatNumber(output.triangle_count, 0)}` },
+          { label: "Vertices", value: `${formatNumber(source.vertex_count, 0)} -> ${formatNumber(output.vertex_count, 0)}` },
+          {
+            label: "Bounding Box Diagonal",
+            value: `${formatMetric(source.bounding_box_diagonal_mm, "mm", 2)} -> ${formatMetric(output.bounding_box_diagonal_mm, "mm", 2)}`,
+          },
+          {
+            label: "Watertight",
+            value: `${source.mesh_health && source.mesh_health.watertight ? "Yes" : "No"} -> ${output.mesh_health && output.mesh_health.watertight ? "Yes" : "No"}`,
+          },
+        ];
+        if (result.target_faces != null) {
+          rows.splice(2, 0, { label: "Target Faces", value: formatNumber(result.target_faces, 0) });
+        }
+        if (result.voxel_size_mm != null) {
+          rows.splice(2, 0, { label: "Voxel Size", value: formatMetric(result.voxel_size_mm, "mm", 4) });
+        }
+
+        setPanelBadge("modelRetopologyBadge", outputBlocking.length ? "warn" : "pass", outputBlocking.length ? "Review" : "Ready");
+        summary.textContent = outputBlocking.length
+          ? `Retopology finished, but ${outputBlocking.length} blocking issue types still need review.`
+          : "Retopology finished and the remeshed STL is ready for download and settings generation.";
+        content.innerHTML = `
+          <div class="summary">${buildSummaryRows(rows)}</div>
+          <div class="tiny">Source issues before retopology</div>
+          ${buildList(sourceBlocking, "No blocking issues were detected before retopology.")}
+          <div class="tiny">Retopology notes</div>
+          ${buildList(result.notes || [], "No retopology notes were reported.")}
+          <div class="tiny">Remaining issues after retopology</div>
+          ${buildList(outputBlocking, "No blocking issues remain after retopology.")}
+        `;
+      }
+
+      function renderModelNotesPanel() {
+        const analysis = currentAnalysisResult();
+        const content = document.getElementById("modelNotesContent");
+        if (!analysis) {
+          setPanelBadge("modelNotesBadge", "info", "Waiting");
+          content.textContent = "Run analysis to see runtime notes, performance highlights, and printability hints.";
+          return;
+        }
+
+        const notes = Array.isArray(analysis.notes) ? analysis.notes : [];
+        setPanelBadge("modelNotesBadge", notes.length ? "info" : "pass", notes.length ? `${notes.length} notes` : "Clear");
+        content.innerHTML = buildList(
+          notes,
+          "No additional analysis notes were reported."
+        );
+      }
+
+      function renderModelInsightPanels() {
+        renderModelStatsPanel();
+        renderModelHealthPanel();
+        renderModelRepairPanel();
+        renderModelRetopologyPanel();
+        renderModelNotesPanel();
+      }
+
+      function resetModelAnalysisState() {
+        state.analysis = null;
+        state.fixedAnalysis = null;
+        state.lastCheckResult = null;
+        state.lastFixResult = null;
+        state.lastRetopologyResult = null;
+        state.analysisProgress = null;
+        state.activeAnalysisJobId = null;
+        renderAnalysisProgressPanel(null);
+        document.getElementById("modelDownload").innerHTML = "";
+        renderModelInsightPanels();
+      }
+
+      async function onModelFileSelected() {
+        const file = document.getElementById("modelFile").files[0];
+        resetModelAnalysisState();
+        resetPreviewPanel();
+        if (!file) {
+          renderModelInsightPanels();
+          updateLocks();
+          return;
+        }
+        if (!String(file.name || "").toLowerCase().endsWith(".stl")) {
+          setMsg("modelMsg", "Only STL files are allowed.", "error");
+          updateLocks();
+          return;
+        }
+        try {
+          await loadPreviewFromFile(file);
+          setMsg("modelMsg", "STL loaded into preview. Run Analyze STL to inspect defects, statistics, and repair recommendations.");
+        } catch (err) {
+          setMsg("modelMsg", `Preview error: ${err.message}`, "error");
+        } finally {
+          updateLocks();
+        }
+      }
 
       function headers(json = true) {
         const out = {};
@@ -744,10 +1798,18 @@
         let minutes = 10;
         if (level === "balanced") minutes = 20;
         if (level === "deep") minutes = 35;
+        if (level === "extreme") minutes = 55;
         if (sizeMb >= 60) minutes += 5;
         if (sizeMb >= 120) minutes += 10;
         if (sizeMb >= 250) minutes += 20;
         return minutes * 60 * 1000;
+      }
+
+      function readOptionalNumber(id) {
+        const raw = String(document.getElementById(id).value || "").trim();
+        if (!raw) return null;
+        const numeric = Number(raw);
+        return Number.isFinite(numeric) ? numeric : null;
       }
 
       function setMsg(id, text, type = "") {
@@ -1116,6 +2178,7 @@
           panel.style.display = "none";
           cancelBtn.disabled = true;
           cancelBtn.textContent = "Cancel Running Analysis";
+          stopPreviewAnalysisMode();
           return;
         }
 
@@ -1151,6 +2214,11 @@
 
         cancelBtn.disabled = !isActiveAnalysisStatus(progress.status);
         cancelBtn.textContent = progress.status === "cancelling" ? "Cancelling..." : "Cancel Running Analysis";
+        if (isActiveAnalysisStatus(progress.status)) {
+          startPreviewAnalysisMode(`Preview scan: ${formatStageLabel(progress.stage)}`);
+        } else {
+          stopPreviewAnalysisMode(`Preview: analysis ${progress.status}. Manual rotation is available.`);
+        }
       }
 
       async function fetchAnalysisProgress(jobId) {
@@ -1325,10 +2393,11 @@
 
       function updateLocks() {
         const readyForAnalyze = !!(state.status && state.status.ready_for_model_analysis);
-        const hasAnalysis = !!(state.analysis || state.fixedAnalysis);
+        const hasAnalysis = !!currentAnalysisResult();
         const analysisBusy = !!(state.analysisProgress && isActiveAnalysisStatus(state.analysisProgress.status));
         document.getElementById("analyzeBtn").disabled = !readyForAnalyze || analysisBusy;
         document.getElementById("fixBtn").disabled = !state.analysis || analysisBusy;
+        document.getElementById("retopoBtn").disabled = !state.analysis || analysisBusy;
         document.getElementById("settingsBtn").disabled = !hasAnalysis;
         document.getElementById("cancelAnalyzeBtn").disabled = !analysisBusy;
       }
@@ -1429,7 +2498,7 @@
 
         const analyzeBtn = document.getElementById("analyzeBtn");
         analyzeBtn.disabled = true;
-        const analysisLevel = document.getElementById("analysisLevel").value || "minimum";
+        const analysisLevel = document.getElementById("analysisLevel").value || "extreme";
         const timeoutMs = analysisTimeoutMs(analysisLevel, file.size || 0);
         const progressJobId = createProgressJobId();
         state.activeAnalysisJobId = progressJobId;
@@ -1450,6 +2519,7 @@
         const progressPoller = startAnalysisProgressPolling("modelMsg", progressJobId);
         setMsg("modelMsg", "Preparing STL upload for analysis...");
         document.getElementById("modelDownload").innerHTML = "";
+        startPreviewAnalysisMode("Preview scan: preparing uploaded STL for analysis.");
         updateLocks();
         try {
           const fd = new FormData();
@@ -1464,7 +2534,11 @@
           }, timeoutMs);
           state.analysis = body.analysis;
           state.fixedAnalysis = null;
+          state.lastCheckResult = body;
+          state.lastFixResult = null;
+          state.lastRetopologyResult = null;
           await fetchAnalysisProgress(progressJobId);
+          renderModelInsightPanels();
           updateLocks();
 
           const health = body.analysis.mesh_health || {};
@@ -1472,12 +2546,16 @@
             health.non_manifold_edge_count == null ? "skipped in minimum mode" : health.non_manifold_edge_count;
           const boundaryEdges =
             health.boundary_edge_count == null ? "skipped in minimum mode" : health.boundary_edge_count;
+          const issueText = Array.isArray(body.fix_reasons) && body.fix_reasons.length
+            ? `Blocking issues: ${body.fix_reasons.slice(0, 3).join(" | ")}`
+            : "No blocking topology issues detected.";
           const msg = [
             `Analysis complete.`,
             `Watertight: ${health.watertight ? "Yes" : "No"}`,
             `Non-manifold edges: ${nonManifoldEdges}`,
             `Boundary edges: ${boundaryEdges}`,
             body.requires_fix ? "Auto-fix is recommended." : "No critical fix required.",
+            issueText,
             performanceSummary(body.analysis),
           ].join(" ");
           setMsg("modelMsg", msg, body.requires_fix ? "warn" : "");
@@ -1498,6 +2576,7 @@
           } else {
             setMsg("modelMsg", `Analyze error: ${message}`, "error");
           }
+          renderModelInsightPanels();
         } finally {
           progressPoller.stop();
           if (state.analysisProgress && isTerminalAnalysisStatus(state.analysisProgress.status)) {
@@ -1514,10 +2593,11 @@
 
         const fixBtn = document.getElementById("fixBtn");
         fixBtn.disabled = true;
-        const analysisLevel = document.getElementById("analysisLevel").value || "minimum";
+        const analysisLevel = document.getElementById("analysisLevel").value || "extreme";
         const timeoutMs = analysisTimeoutMs(analysisLevel, file.size || 0);
         const stopProgress = startStepProgress("modelMsg", FIX_STEPS);
         document.getElementById("modelDownload").innerHTML = "";
+        startPreviewAnalysisMode("Preview scan: applying repair pipeline.");
         try {
           const fd = new FormData();
           fd.append("file", file);
@@ -1529,10 +2609,24 @@
             body: fd,
           }, timeoutMs);
           state.fixedAnalysis = body.analysis;
+          state.lastFixResult = body;
+          state.lastRetopologyResult = null;
+          renderModelInsightPanels();
           updateLocks();
+
+          try {
+            await loadPreviewFromUrl(body.download_url, `Repaired STL: ${body.output_file_name || "repaired.stl"}`);
+          } catch (_) {
+            // Keep the workflow usable even if preview refresh fails.
+          }
 
           const repaired = body.repaired ? "Yes" : "No";
           const perfText = performanceSummary(body.analysis);
+          const resolvedCount = Array.isArray(body.resolved_issues) ? body.resolved_issues.length : 0;
+          const remainingCount = Array.isArray(body.remaining_issues) ? body.remaining_issues.length : 0;
+          const remainingText = remainingCount
+            ? `Remaining after save/reload: ${body.remaining_issues.slice(0, 3).join(" | ")}`
+            : "Saved STL now passes the current mesh-health checks.";
           renderDownloadActions("modelDownload", [
             {
               url: body.download_url,
@@ -1542,7 +2636,11 @@
             },
           ]);
           await downloadArtifact(body.download_url, body.output_file_name || "repaired.stl");
-          setMsg("modelMsg", `Auto-fix finished. Repaired: ${repaired}. ${perfText} Download started.`.trim());
+          setMsg(
+            "modelMsg",
+            `Auto-fix finished. Repaired geometry: ${repaired}. Resolved issue types: ${resolvedCount}. ${remainingText} ${perfText} Download started.`.trim(),
+            body.fully_repaired ? "" : "warn"
+          );
         } catch (err) {
           const message = String(err && err.message ? err.message : err);
           if (message.toLowerCase().includes("timed out")) {
@@ -1555,6 +2653,101 @@
             setMsg("modelMsg", `Fix error: ${message}`, "error");
           }
         } finally {
+          stopPreviewAnalysisMode("Preview: repair workflow finished. Manual rotation is available.");
+          stopProgress();
+          updateLocks();
+        }
+      }
+
+      async function retopologizeModel() {
+        const file = ensureStlSelected();
+        if (!file) return;
+        if (!state.analysis) {
+          setMsg("modelMsg", "Run Analyze STL first so retopology uses the current detailed report.", "warn");
+          return;
+        }
+
+        const retopoBtn = document.getElementById("retopoBtn");
+        retopoBtn.disabled = true;
+        const analysisLevel = document.getElementById("analysisLevel").value || "extreme";
+        const mode = document.getElementById("retopoMode").value || "quad";
+        const targetFaces = readOptionalNumber("retopoTargetFaces");
+        const voxelSizeMm = readOptionalNumber("retopoVoxelSize");
+        const timeoutMs = analysisTimeoutMs(analysisLevel, file.size || 0) + (mode === "voxel" ? 15 : 20) * 60 * 1000;
+        const stopProgress = startStepProgress("modelMsg", RETOPO_STEPS);
+        document.getElementById("modelDownload").innerHTML = "";
+        startPreviewAnalysisMode("Preview scan: running retopology workflow.");
+
+        try {
+          const fd = new FormData();
+          fd.append("file", file);
+          fd.append("slice_height_mm", document.getElementById("sliceHeight").value || "0.01");
+          fd.append("analysis_level", analysisLevel);
+          fd.append("mode", mode);
+          if (targetFaces != null) {
+            fd.append("target_faces", String(Math.max(1, Math.round(targetFaces))));
+          }
+          if (voxelSizeMm != null) {
+            fd.append("voxel_size_mm", String(Math.max(0.001, voxelSizeMm)));
+          }
+          fd.append("preserve_sharp", "true");
+          fd.append("preserve_boundary", "true");
+
+          const body = await callApiTimed("/wizard/model/retopology", {
+            method: "POST",
+            headers: headers(false),
+            body: fd,
+          }, timeoutMs);
+
+          state.fixedAnalysis = body.retopology_analysis;
+          state.lastFixResult = null;
+          state.lastRetopologyResult = body;
+          renderModelInsightPanels();
+          updateLocks();
+
+          try {
+            await loadPreviewFromUrl(body.download_url, `Retopology STL: ${body.output_file_name || "retopology.stl"}`);
+          } catch (_) {
+            // Keep the workflow usable even if preview refresh fails.
+          }
+
+          renderDownloadActions("modelDownload", [
+            {
+              url: body.download_url,
+              label: "Download retopologized STL again",
+              fileName: body.output_file_name || "retopology.stl",
+              messageId: "modelMsg",
+            },
+          ]);
+          await downloadArtifact(body.download_url, body.output_file_name || "retopology.stl");
+
+          const outputBlocking = meshBlockingIssues(
+            (body.retopology_analysis && body.retopology_analysis.mesh_health) || null
+          );
+          const prepassText = body.preprocessing_fix
+            ? "A repair pre-pass ran before remeshing."
+            : "No repair pre-pass was required."
+          const blockingText = outputBlocking.length
+            ? `Remaining after retopology: ${outputBlocking.slice(0, 3).join(" | ")}`
+            : "Retopology output currently passes the blocking mesh checks."
+          setMsg(
+            "modelMsg",
+            `Retopology finished in ${mode} mode. ${prepassText} ${blockingText} ${performanceSummary(body.retopology_analysis)} Download started.`.trim(),
+            outputBlocking.length ? "warn" : ""
+          );
+        } catch (err) {
+          const message = String(err && err.message ? err.message : err);
+          if (message.toLowerCase().includes("timed out")) {
+            setMsg(
+              "modelMsg",
+              `Retopology error: ${message} Try quad mode first with auto target faces, or use voxel mode for a more aggressive shell rewrite.`,
+              "error"
+            );
+          } else {
+            setMsg("modelMsg", `Retopology error: ${message}`, "error");
+          }
+        } finally {
+          stopPreviewAnalysisMode("Preview: retopology workflow finished. Manual rotation is available.");
           stopProgress();
           updateLocks();
         }
@@ -1618,7 +2811,7 @@
       }
 
       async function generateSettings() {
-        const analysis = state.fixedAnalysis || state.analysis;
+        const analysis = currentAnalysisResult();
         if (!analysis) {
           setMsg("settingsMsg", "Analyze STL first.", "warn");
           return;
@@ -1703,6 +2896,9 @@
 
       async function init() {
         document.getElementById("printerSel").addEventListener("change", updateResinOptionsForPrinter);
+        document.getElementById("modelFile").addEventListener("change", onModelFileSelected);
+        renderModelInsightPanels();
+        updatePreviewModeButtons();
         await Promise.allSettled([refreshStatus(), refreshOptions()]);
       }
 

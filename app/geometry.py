@@ -12,7 +12,7 @@ from tempfile import TemporaryDirectory
 import numpy as np
 import trimesh
 
-from app.models import AnalysisLevel, Cavity, CavityConfidenceLevel, GeometryAnalysis, Island, MeshHealthReport, SliceArea, UseCase
+from app.models import AnalysisLevel, Cavity, CavityConfidenceLevel, GeometryAnalysis, Island, MeshHealthReport, MeshRepairOutcome, SliceArea, UseCase
 
 DEFAULT_BUILD_PLATE_MM = (153.36, 77.76)
 _DEFAULT_MESH_REPAIR_BACKEND = "trimesh"
@@ -179,6 +179,14 @@ def _analysis_profile_config(
             "include_islands": False,
             "include_curvature": False,
         }
+    if analysis_level == "extreme":
+        return {
+            "max_slices": max(min(max_slices, 30000), 18000),
+            "voxel_pitch_mm": min(max(voxel_pitch_mm, 0.04), 0.08),
+            "include_suction_cups": True,
+            "include_islands": True,
+            "include_curvature": True,
+        }
     if analysis_level == "deep":
         return {
             "max_slices": max(min(max_slices, 22000), 12000),
@@ -220,7 +228,12 @@ def _adaptive_profile_overrides(
         return adjusted, notes
 
     voxel_pitch = float(adjusted["voxel_pitch_mm"])
-    max_voxel_cells = 12_000_000 if analysis_level == "balanced" else 18_000_000
+    if analysis_level == "balanced":
+        max_voxel_cells = 12_000_000
+    elif analysis_level == "deep":
+        max_voxel_cells = 18_000_000
+    else:
+        max_voxel_cells = 32_000_000
     estimated_cells = _estimated_voxel_cells(mesh, voxel_pitch)
     if estimated_cells > max_voxel_cells:
         extent_volume = float(np.prod(np.maximum(np.asarray(mesh.extents, dtype=float), 1e-6)))
@@ -232,14 +245,24 @@ def _adaptive_profile_overrides(
         )
 
     if face_count >= 350_000 and requested_slices > 4000:
-        capped_slices = 4000 if analysis_level == "balanced" else 7000
+        if analysis_level == "balanced":
+            capped_slices = 4000
+        elif analysis_level == "deep":
+            capped_slices = 7000
+        else:
+            capped_slices = 12000
         if int(adjusted["max_slices"]) > capped_slices:
             adjusted["max_slices"] = capped_slices
             notes.append(
                 f"Analysis level '{analysis_level}' capped max slices at {capped_slices} for a high-complexity mesh."
             )
 
-    curvature_face_limit = 400_000 if analysis_level == "balanced" else 750_000
+    if analysis_level == "balanced":
+        curvature_face_limit = 400_000
+    elif analysis_level == "deep":
+        curvature_face_limit = 750_000
+    else:
+        curvature_face_limit = 1_250_000
     if face_count >= curvature_face_limit and bool(adjusted["include_curvature"]):
         adjusted["include_curvature"] = False
         notes.append(
@@ -276,6 +299,10 @@ def analyze_geometry(
     if mesh_health.repaired:
         notes.append("Automatic STL repair applied before geometry analysis.")
     notes.extend(mesh_health.issues)
+    if analysis_level == "extreme":
+        notes.append(
+            "Extreme analysis enabled the highest slice density, smallest voxel pitch, and full curvature estimation."
+        )
 
     profile = _analysis_profile_config(
         analysis_level=analysis_level,
@@ -410,10 +437,25 @@ def analyze_geometry(
     surface_area = float(mesh.area)
     volume_mm3 = float(abs(mesh.volume))
     triangle_count = int(len(mesh.faces))
+    vertex_count = int(len(mesh.vertices))
     detail_density = float(triangle_count / surface_area) if surface_area > 0 else 0.0
     surface_area_ratio = float(surface_area / volume_mm3) if volume_mm3 > 0 else 0.0
     build_plate_area_mm2 = float(build_plate_mm[0] * build_plate_mm[1])
     max_ratio = max_cross_section_mm2 / build_plate_area_mm2 if build_plate_area_mm2 > 0 else 0.0
+    bounding_box = np.maximum(np.asarray(mesh.extents, dtype=float), 0.0)
+    bounding_box_mm = [float(value) for value in bounding_box.tolist()]
+    bounding_box_diagonal_mm = float(np.linalg.norm(bounding_box)) if bounding_box.size else 0.0
+    center_of_mass_mm: list[float] | None = None
+    try:
+        center_of_mass = np.asarray(mesh.center_mass, dtype=float)
+        if np.all(np.isfinite(center_of_mass)):
+            center_of_mass_mm = [float(value) for value in center_of_mass.tolist()]
+    except Exception:
+        center_of_mass_mm = None
+    try:
+        euler_number = int(mesh.euler_number)
+    except Exception:
+        euler_number = None
     estimated_intent, intent_reasons = _estimate_model_intent(
         surface_area_ratio=surface_area_ratio,
         volume_mm3=volume_mm3,
@@ -462,12 +504,17 @@ def analyze_geometry(
         surface_area_mm2=surface_area,
         surface_area_ratio=surface_area_ratio,
         triangle_count=triangle_count,
+        vertex_count=vertex_count,
         detail_density=detail_density,
         curvature_proxy=curvature_proxy,
         slice_height_mm=effective_slice_height_mm,
         build_plate_area_mm2=build_plate_area_mm2,
         max_cross_section_mm2=float(max_cross_section_mm2),
         max_cross_section_ratio=float(max_ratio),
+        bounding_box_mm=bounding_box_mm,
+        bounding_box_diagonal_mm=bounding_box_diagonal_mm,
+        center_of_mass_mm=center_of_mass_mm,
+        euler_number=euler_number,
         slice_areas=slice_areas,
         suction_cups=suction_cups,
         islands=islands,
@@ -481,15 +528,61 @@ def analyze_geometry(
     )
 
 
-def repair_mesh_file(file_path: str, output_path: str) -> MeshHealthReport:
+def mesh_health_actionable_issues(health: MeshHealthReport | None) -> list[str]:
+    if health is None:
+        return []
+    issues: list[str] = []
+    if (health.boundary_edge_count or 0) > 0:
+        issues.append(f"Open boundaries detected ({health.boundary_edge_count} boundary edges).")
+    if (health.non_manifold_edge_count or 0) > 0:
+        issues.append(f"Non-manifold topology detected ({health.non_manifold_edge_count} non-manifold edges).")
+    if (health.connected_components or 1) > 1:
+        issues.append(f"Multiple disconnected shells detected ({health.connected_components} components).")
+    if health.degenerate_face_count > 0:
+        issues.append(f"Degenerate triangles detected ({health.degenerate_face_count} faces).")
+    if health.duplicate_face_count > 0:
+        issues.append(f"Duplicate triangles detected ({health.duplicate_face_count} faces).")
+    if not health.winding_consistent:
+        issues.append("Face winding is inconsistent.")
+    if not health.watertight:
+        issues.append("Mesh is not watertight.")
+    return issues
+
+
+def mesh_health_requires_fix(health: MeshHealthReport | None) -> bool:
+    if health is None:
+        return False
+    return bool(
+        (not health.watertight)
+        or (not health.winding_consistent)
+        or ((health.boundary_edge_count or 0) > 0)
+        or ((health.non_manifold_edge_count or 0) > 0)
+        or (health.degenerate_face_count > 0)
+        or (health.duplicate_face_count > 0)
+        or ((health.connected_components or 1) > 1)
+    )
+
+
+def repair_mesh_file(file_path: str, output_path: str) -> MeshRepairOutcome:
     mesh = _load_mesh(file_path)
+    before_fix = _mesh_health_report(mesh=mesh, repaired=False, repair_actions=[])
     repaired, repair_actions = _repair_mesh(mesh)
-    report = _mesh_health_report(mesh=mesh, repaired=repaired, repair_actions=repair_actions)
+    after_fix = _mesh_health_report(mesh=mesh, repaired=repaired, repair_actions=repair_actions)
 
     output = Path(output_path)
     output.parent.mkdir(parents=True, exist_ok=True)
     mesh.export(output, file_type="stl")
-    return report
+    before_issues = mesh_health_actionable_issues(before_fix)
+    after_issues = mesh_health_actionable_issues(after_fix)
+    return MeshRepairOutcome(
+        repaired=repaired,
+        fully_repaired=not mesh_health_requires_fix(after_fix),
+        before_fix=before_fix,
+        after_fix=after_fix,
+        resolved_issues=[issue for issue in before_issues if issue not in after_issues],
+        remaining_issues=after_issues,
+        repair_actions=list(repair_actions),
+    )
 
 
 def _load_mesh(file_path: str) -> trimesh.Trimesh:

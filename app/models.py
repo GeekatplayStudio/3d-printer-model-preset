@@ -6,8 +6,10 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 UseCase = Literal["miniature", "collectible", "heavy_use"]
-AnalysisLevel = Literal["minimum", "balanced", "deep"]
+AnalysisLevel = Literal["minimum", "balanced", "deep", "extreme"]
 CavityConfidenceLevel = Literal["low", "medium", "high"]
+RetopologyBackend = Literal["blender"]
+RetopologyMode = Literal["quad", "voxel"]
 
 
 class SliceArea(BaseModel):
@@ -50,18 +52,33 @@ class MeshHealthReport(BaseModel):
     repair_actions: list[str] = Field(default_factory=list)
 
 
+class MeshRepairOutcome(BaseModel):
+    repaired: bool = False
+    fully_repaired: bool = False
+    before_fix: MeshHealthReport
+    after_fix: MeshHealthReport
+    resolved_issues: list[str] = Field(default_factory=list)
+    remaining_issues: list[str] = Field(default_factory=list)
+    repair_actions: list[str] = Field(default_factory=list)
+
+
 class GeometryAnalysis(BaseModel):
     file_name: str
     mesh_volume_mm3: float
     surface_area_mm2: float
     surface_area_ratio: float
     triangle_count: int
+    vertex_count: int | None = Field(default=None, ge=0)
     detail_density: float
     curvature_proxy: float | None = None
     slice_height_mm: float
     build_plate_area_mm2: float
     max_cross_section_mm2: float
     max_cross_section_ratio: float
+    bounding_box_mm: list[float] = Field(default_factory=list)
+    bounding_box_diagonal_mm: float | None = Field(default=None, ge=0.0)
+    center_of_mass_mm: list[float] | None = None
+    euler_number: int | None = None
     slice_areas: list[SliceArea]
     suction_cups: list[Cavity]
     islands: list[Island]
@@ -666,12 +683,35 @@ class WizardModelCheckResponse(BaseModel):
     analysis: GeometryAnalysis
     has_issues: bool
     requires_fix: bool
+    fix_reasons: list[str] = Field(default_factory=list)
 
 
 class WizardModelFixResponse(BaseModel):
     analysis: GeometryAnalysis
     repaired: bool
+    fully_repaired: bool
     repair_actions: list[str] = Field(default_factory=list)
+    resolved_issues: list[str] = Field(default_factory=list)
+    remaining_issues: list[str] = Field(default_factory=list)
+    before_fix: MeshHealthReport
+    after_fix: MeshHealthReport
+    download_id: str
+    download_url: str
+    output_file_name: str
+
+
+class WizardModelRetopologyResponse(BaseModel):
+    source_analysis: GeometryAnalysis
+    retopology_analysis: GeometryAnalysis
+    mode: RetopologyMode
+    backend_requested: RetopologyBackend
+    backend_used: RetopologyBackend
+    target_faces: int | None = Field(default=None, ge=1)
+    voxel_size_mm: float | None = Field(default=None, gt=0.0)
+    preserve_sharp: bool = True
+    preserve_boundary: bool = True
+    preprocessing_fix: MeshRepairOutcome | None = None
+    notes: list[str] = Field(default_factory=list)
     download_id: str
     download_url: str
     output_file_name: str

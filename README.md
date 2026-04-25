@@ -1,6 +1,6 @@
 # Geekatplay Studio | ResinLogic AI
 
-Geekatplay Studio's agentic backend and operations console for resin 3D printing optimization across printers and resins.
+Geekatplay Studio's agentic backend and operations console for resin-first 3D printing optimization across printers, materials, and print profiles.
 
 The system combines:
 
@@ -26,7 +26,7 @@ Implemented:
 
 - FastAPI backend with modular phase pipeline.
 - STL geometry integrity report with optional auto-repair (duplicate/degenerate cleanup, hole-fill attempt, post-repair cleanup pass, topology notes).
-- Analysis depth profiles (`minimum`, `balanced`, `deep`) with per-step runtime telemetry, adaptive large-model throttling, and grouped unsupported-region reporting.
+- Analysis depth profiles (`minimum`, `balanced`, `deep`, `extreme`) with per-step runtime telemetry, adaptive large-model throttling, and grouped unsupported-region reporting.
 - Catalog CRUD for printers, resins, and profiles.
 - CSV and JSON import/export for technical database maintenance.
 - Catalog versioning and rollback snapshots.
@@ -51,7 +51,10 @@ Implemented:
   - per-stage timing visibility and in-place cancel support,
   - adaptive timeout windows for large models,
   - chunked upload staging to avoid large-file OOM failures,
-  - auth-aware repaired STL and settings downloads in shared/server mode.
+  - auth-aware repaired STL and settings downloads in shared/server mode,
+  - always-visible local 3D preview with wire/mesh/solid modes,
+  - model statistics, defect, repair, and retopology reporting panels,
+  - browser-console diagnostics for preview runtime dependency failures.
 - Geometry analysis detail improvements:
   - exact minimum-mode multiplane slicing for small meshes,
   - surface-span weighted minimum-mode fallback for larger meshes,
@@ -62,17 +65,24 @@ Implemented:
 - Geometry backend expansion:
   - APScheduler-backed sync scheduler replacing the custom polling loop,
   - optional PyMeshLab prototype repair backend with Trimesh fallback,
-  - benchmark scripts for repair backends and geometry stage timings.
+  - benchmark scripts for repair backends and geometry stage timings,
+  - Blender-backed retopology workflow with quad and voxel remesh modes,
+  - repair outcome tracking with before/after save-reload health reporting.
 - Settings provenance and trust surface:
   - `settings.provenance.data_quality` (`verified_sources`, `catalog_unverified`, `fallback_defaults`),
   - `settings.provenance.real_data_backed`,
   - `settings.provenance.confidence_score`,
   - source references with links from catalog metadata.
+- Container/runtime updates:
+  - Docker image can install Blender for headless retopology,
+  - Docker Compose passes the Blender executable path into the API container,
+  - Three.js preview runtime is vendored locally under `/static/vendor/three`.
 - Automated test suite with focused Docker regression coverage for geometry, wizard flow, catalog, jobs, scheduler, sync, and security paths.
 
 Planned next:
 
 - direct SDCP bidirectional integration with slicer/printer workflows,
+- extend the catalog and optimizer beyond resin/MSLA into filament/FDM printers and materials,
 - stronger suction-cup confidence filtering to separate peel-risk pockets from benign sealed voids,
 - dedicated React + Three.js stress-map frontend,
 - stronger data quality workflows for external community dataset sync.

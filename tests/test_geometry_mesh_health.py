@@ -68,6 +68,25 @@ def test_mesh_auto_repair_reduces_topology_noise(tmp_path):
     assert any("Automatic STL repair applied" in note for note in analysis.notes)
 
 
+def test_repair_mesh_file_reports_before_after_fix_state(tmp_path):
+    source_path = _broken_mesh_path(tmp_path)
+    repaired_path = tmp_path / "broken_fixed.stl"
+
+    outcome = geometry.repair_mesh_file(str(source_path), str(repaired_path))
+
+    assert outcome.repaired is True
+    assert outcome.before_fix.duplicate_face_count >= 1
+    assert outcome.before_fix.degenerate_face_count >= 1
+    assert outcome.after_fix.duplicate_face_count == 0
+    assert outcome.after_fix.degenerate_face_count == 0
+    assert outcome.after_fix.boundary_edge_count == 3
+    assert outcome.after_fix.connected_components == 2
+    assert outcome.fully_repaired is False
+    assert any("Duplicate triangles detected" in issue for issue in outcome.resolved_issues)
+    assert any("Mesh is not watertight." == issue for issue in outcome.remaining_issues)
+    assert repaired_path.exists()
+
+
 def test_requested_pymeshlab_backend_falls_back_to_trimesh_when_unavailable(monkeypatch):
     observed = {"trimesh_called": False}
 

@@ -2,7 +2,7 @@
 
 ## What This Project Is
 
-Geekatplay Studio's ResinLogic AI is an agentic resin-print optimization platform.
+Geekatplay Studio's ResinLogic AI is an agentic resin-first print optimization platform.
 
 It combines:
 
@@ -11,7 +11,7 @@ It combines:
 - parameter decision logic,
 - operational tooling for maintaining technical databases across all supported printers and resins.
 
-The immediate production target started around Elegoo Mars 5 Ultra behavior, but the data model and APIs are built to generalize to any printer and resin combination.
+The immediate production target started around Elegoo Mars 5 Ultra behavior. The printer catalog already carries technology metadata, but the current settings and export pipeline is still centered on resin/MSLA workflows.
 
 ## What Has Been Done
 
@@ -22,15 +22,29 @@ The immediate production target started around Elegoo Mars 5 Ultra behavior, but
   - suction cup and island heuristic detection,
   - SAR/detail density metrics,
   - adaptive balanced/deep runtime throttling,
+  - extreme analysis mode for highest-detail scans,
   - exact minimum-mode multiplane slicing for small meshes,
   - surface-span weighted minimum fallback for larger meshes,
-  - grouped unsupported-region summaries with layer spans and centroids.
+  - grouped unsupported-region summaries with layer spans and centroids,
+  - richer mesh statistics including vertex count, bounding box, center of mass, and Euler number,
+  - save/reload-aware repair outcome reporting.
 - Phase 2 optimization endpoint with:
   - use-case templates (`miniature`, `collectible`, `heavy_use`),
   - tilt-speed gates,
   - temperature scaling,
   - film-age compensation,
   - profile-aware overrides from catalog.
+- Wizard model workflow with:
+  - always-visible local 3D preview,
+  - wire/mesh/solid render modes,
+  - repair and retopology report panels,
+  - live preview scan state during long-running analysis,
+  - browser-console diagnostics for local preview runtime failures.
+- Retopology backend with:
+  - Blender headless execution,
+  - quad and voxel remesh modes,
+  - repair pre-pass before retopology when the source mesh still fails health checks,
+  - downloadable remeshed STL artifacts from the wizard.
 - Phase 3 feedback layer with:
   - community sheet ingestion (file/url),
   - YouTube transcript ingestion,
@@ -58,6 +72,7 @@ The immediate production target started around Elegoo Mars 5 Ultra behavior, but
 - Scheduled sync definitions and manual/background schedule execution via APScheduler.
 - Request metrics and Prometheus output.
 - Dockerized run path and Prometheus config.
+- Docker image and compose updates for optional Blender-backed retopology.
 - Source-attributed official seed dataset (`data/official_catalog_sync.json`) plus local import script.
 - Wizard pipeline UX hardening for large models:
   - STL-only upload constraints,
@@ -75,7 +90,7 @@ The immediate production target started around Elegoo Mars 5 Ultra behavior, but
   - confidence score passthrough where available,
   - source reference list exposed in wizard output.
 - Compatibility-aware wizard dropdown behavior (printer selection filters resin list to real profile coverage).
-- Test coverage across core modules and API behavior, including focused regressions for large-model geometry, wizard progress/cancel flow, and grouped island-region reporting.
+- Test coverage across core modules and API behavior, including focused regressions for large-model geometry, wizard progress/cancel flow, grouped island-region reporting, and local preview asset serving.
 
 ## What Still Needs To Be Done
 
@@ -84,6 +99,7 @@ The immediate production target started around Elegoo Mars 5 Ultra behavior, but
 - Implement stronger validation and curation pipelines for external data ingestion to reduce noisy profile inputs.
 - Add production-grade migration/version strategy for SQLite schemas.
 - Introduce configuration profiles per printer family (not only Mars-first defaults).
+- Extend the catalog, optimization logic, and downstream exports to support filament/FDM printers and filament materials in parallel with resin workflows.
 - Separate true suction-cup peel-risk pockets from benign sealed voids to reduce cavity false positives.
 
 ### Product and UX
@@ -105,7 +121,7 @@ The immediate production target started around Elegoo Mars 5 Ultra behavior, but
 
 ## Near-Term Milestones
 
-1. Broader Open3D corpus benchmark coverage and tuning.
-2. Data quality and validation hardening.
-3. Frontend redesign with workflow-first UX.
-4. Release candidate stabilization (security defaults, migrations, observability).
+1. FDM/filament catalog and optimizer expansion.
+2. Broader Open3D corpus benchmark coverage and tuning.
+3. Data quality and validation hardening.
+4. Frontend redesign with workflow-first UX.
