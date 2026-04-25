@@ -99,6 +99,12 @@
         padding: 14px;
       }
 
+      .target-stage {
+        background: linear-gradient(160deg, #16283b 0%, #112234 55%, #162538 100%);
+        border-color: #31516a;
+        box-shadow: 0 16px 32px rgba(3, 8, 14, 0.2);
+      }
+
       .card h2 {
         margin: 0;
         font-size: 1.08rem;
@@ -123,6 +129,214 @@
         grid-template-columns: repeat(3, minmax(0, 1fr));
       }
 
+      .target-grid {
+        margin-top: 12px;
+        display: grid;
+        gap: 12px;
+        grid-template-columns: minmax(0, 1.15fr) repeat(2, minmax(0, 1fr));
+        align-items: stretch;
+      }
+
+      .target-field {
+        display: grid;
+        gap: 8px;
+      }
+
+      .target-field label {
+        font-size: 0.78rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #9fb8ce;
+      }
+
+      .target-select {
+        min-height: 58px;
+        border-color: #35536a;
+        background: linear-gradient(180deg, #0d1825 0%, #0a121c 100%);
+        font-size: 1rem;
+        font-weight: 650;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      }
+
+      .target-readout {
+        min-height: 58px;
+        display: flex;
+        align-items: center;
+        padding: 12px 14px;
+        border-radius: 12px;
+        border: 1px solid #2f4a60;
+        background: linear-gradient(180deg, rgba(9, 18, 28, 0.96) 0%, rgba(12, 22, 35, 0.98) 100%);
+        color: #e2f0ff;
+        font-size: 0.95rem;
+        line-height: 1.35;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      }
+
+      .target-readout.target-readout-accent {
+        border-color: rgba(27, 179, 154, 0.38);
+        color: #dffcf8;
+      }
+
+      .db-stage {
+        background: linear-gradient(165deg, #142333 0%, #11202f 58%, #162538 100%);
+        border-color: #2f4b63;
+      }
+
+      .settings-stage {
+        background: linear-gradient(165deg, #142233 0%, #162538 45%, #152c3e 100%);
+        border-color: #2c4760;
+      }
+
+      .form-grid {
+        display: grid;
+        gap: 10px;
+      }
+
+      .form-grid-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .form-grid-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .form-grid-4 {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .form-field {
+        display: grid;
+        gap: 7px;
+      }
+
+      .form-field.form-field-span-2 {
+        grid-column: span 2;
+      }
+
+      .form-field.form-field-span-3 {
+        grid-column: span 3;
+      }
+
+      .form-field label {
+        font-size: 0.79rem;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        color: #a6bfd4;
+      }
+
+      .form-field input,
+      .form-field select,
+      .form-field textarea {
+        min-height: 46px;
+        border-color: #314b61;
+        background: linear-gradient(180deg, #0c1621 0%, #0a121b 100%);
+      }
+
+      .field-note {
+        color: #96aec4;
+        font-size: 0.84rem;
+        line-height: 1.45;
+      }
+
+      .db-source-grid {
+        margin-top: 10px;
+        display: grid;
+        gap: 7px 10px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-areas:
+          "source-label summary-label"
+          "source-control summary-control"
+          "source-note summary-note";
+        align-items: start;
+      }
+
+      .db-source-label {
+        font-size: 0.79rem;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        color: #a6bfd4;
+      }
+
+      .db-source-label-source {
+        grid-area: source-label;
+      }
+
+      .db-source-label-summary {
+        grid-area: summary-label;
+      }
+
+      .db-source-control {
+        min-height: 46px;
+      }
+
+      .db-source-control-source {
+        grid-area: source-control;
+      }
+
+      .db-source-control-summary {
+        grid-area: summary-control;
+      }
+
+      .db-source-note {
+        min-height: calc(1.45em * 2);
+      }
+
+      .db-source-note-source {
+        grid-area: source-note;
+      }
+
+      .db-source-note-summary {
+        grid-area: summary-note;
+      }
+
+      .settings-readout {
+        min-height: 46px;
+        display: flex;
+        align-items: center;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid #2f4960;
+        background: linear-gradient(180deg, rgba(9, 18, 28, 0.96) 0%, rgba(12, 22, 35, 0.98) 100%);
+        color: #deecfa;
+        line-height: 1.4;
+      }
+
+      .toggle-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        min-height: 46px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid #2f4960;
+        background: linear-gradient(180deg, rgba(9, 18, 28, 0.96) 0%, rgba(12, 22, 35, 0.98) 100%);
+        color: #deecfa;
+        font-size: 0.92rem;
+        line-height: 1.4;
+      }
+
+      .toggle-row input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        margin: 2px 0 0;
+        flex: 0 0 auto;
+      }
+
+      .toggle-row span {
+        flex: 1 1 auto;
+      }
+
+      .action-grid {
+        margin-top: 12px;
+        display: grid;
+        gap: 10px;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      }
+
+      .source-config-block {
+        margin-top: 10px;
+      }
+
       label {
         color: var(--muted);
         font-size: 0.84rem;
@@ -130,6 +344,7 @@
 
       input,
       select,
+      textarea,
       button {
         width: 100%;
         padding: 9px 10px;
@@ -139,6 +354,10 @@
         color: var(--text);
         font-family: inherit;
         font-size: 0.95rem;
+      }
+
+      textarea {
+        resize: vertical;
       }
 
       button {
@@ -490,9 +709,34 @@
         .auth,
         .grid-2,
         .grid-3,
+        .form-grid-2,
+        .form-grid-3,
+        .form-grid-4,
+        .db-source-grid,
+        .target-grid,
         .summary-row,
+        .action-grid,
         .analysis-grid {
           grid-template-columns: 1fr;
+        }
+
+        .form-field.form-field-span-2,
+        .form-field.form-field-span-3 {
+          grid-column: auto;
+        }
+
+        .db-source-grid {
+          grid-template-areas:
+            "source-label"
+            "source-control"
+            "source-note"
+            "summary-label"
+            "summary-control"
+            "summary-note";
+        }
+
+        .db-source-note {
+          min-height: auto;
         }
 
         #modelPreviewCanvas {
@@ -505,7 +749,7 @@
     <main class="wrap">
       <section class="hero">
         <h1>Geekatplay Studio Wizard</h1>
-        <p>Clean flow: 1) setup database, 2) upload STL + check/fix, 3) choose printer + resin and get settings.</p>
+        <p>Clean flow: 0) choose target, 1) setup database, 2) upload STL + check/fix, 3) choose printer + material and get slicer-ready settings.</p>
         <div class="hero-actions">
           <a class="hero-link secondary" href="/app">Open Advanced Mode</a>
         </div>
@@ -516,21 +760,119 @@
       </section>
 
       <section class="steps">
-        <article class="card">
+        <article class="card target-stage">
+          <h2>Step 0: Select Analyzer Target</h2>
+          <p class="sub">Choose the print process first so the wizard filters the catalog correctly and exports the right slicer profile.</p>
+          <div class="target-grid">
+            <div class="target-field">
+              <label>Target process</label>
+              <select id="targetSel" class="target-select" onchange="onTargetChanged()">
+                <option value="msla">MSLA / resin</option>
+                <option value="fdm">FDM / filament</option>
+              </select>
+            </div>
+            <div class="target-field">
+              <label>Primary slicer</label>
+              <div id="targetSlicerMsg" class="target-readout target-readout-accent">Primary slicer: Chitubox Free</div>
+            </div>
+            <div class="target-field">
+              <label>Catalog coverage</label>
+              <div id="targetCountsMsg" class="target-readout">Catalog target coverage will appear after the first refresh.</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card db-stage">
           <h2>Step 1: Setup / Update Database</h2>
-          <p class="sub">Single click import/update from your official local dataset.</p>
-          <div class="grid grid-2" style="margin-top: 10px">
-            <button id="setupBtn" onclick="setupDatabase()">Setup / Update Database</button>
-            <button class="secondary" onclick="refreshStatus()">Refresh Status</button>
+          <p class="sub">Import printers, filaments, resins, and profiles from the bundled dataset, a curated remote feed, or supported vendor web pages.</p>
+
+          <div class="db-source-grid">
+            <div class="db-source-label db-source-label-source">Catalog source</div>
+            <div class="db-source-label db-source-label-summary">Selected source summary</div>
+            <select id="dbSourceMode" class="db-source-control db-source-control-source" onchange="onDatabaseSourceChanged()">
+              <option value="official_local">Official local dataset</option>
+              <option value="github">GitHub sync feed</option>
+              <option value="web_json">Web JSON feed</option>
+              <option value="web_scrape">Supported vendor pages</option>
+            </select>
+            <div id="dbSourceSummary" class="settings-readout db-source-control db-source-control-summary">Local dataset import is selected for this setup run.</div>
+            <div id="dbSourceModeNote" class="field-note db-source-note db-source-note-source">Use the checked-in official dataset file bundled with this deployment.</div>
+            <div class="field-note db-source-note db-source-note-summary">Summary updates automatically when you change the source mode.</div>
+          </div>
+
+          <div id="dbGitHubFields" class="form-grid form-grid-4 source-config-block" style="display:none">
+            <div class="form-field">
+              <label>GitHub owner</label>
+              <input id="dbGitHubOwner" placeholder="owner" />
+            </div>
+            <div class="form-field">
+              <label>GitHub repo</label>
+              <input id="dbGitHubRepo" placeholder="repo" />
+            </div>
+            <div class="form-field">
+              <label>Sync JSON path</label>
+              <input id="dbGitHubPath" placeholder="data/sync.json" />
+            </div>
+            <div class="form-field">
+              <label>Git ref</label>
+              <input id="dbGitHubRef" value="main" placeholder="main" />
+            </div>
+          </div>
+
+          <div id="dbWebFields" class="form-grid source-config-block" style="display:none">
+            <div class="form-field">
+              <label>Remote JSON feed URL</label>
+              <input id="dbWebUrl" placeholder="https://example.com/catalog-sync.json" />
+            </div>
+          </div>
+
+          <div id="dbScrapeFields" class="form-grid source-config-block" style="display:none">
+            <div class="form-field">
+              <label>Supported vendor page URLs</label>
+              <textarea id="dbScrapeUrls" rows="5" placeholder="https://store.anycubic.com/products/photon-mono-m7-pro&#10;https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers"></textarea>
+              <div class="field-note">One URL per line. Current support focuses on Anycubic official product pages and the official Anycubic resin settings guide.</div>
+            </div>
+          </div>
+
+          <div class="form-grid form-grid-3 source-config-block">
+            <div id="dbWriteModeField" class="form-field form-field-span-3">
+              <label>Catalog write mode</label>
+              <div class="toggle-row">
+                <input id="dbReplaceExisting" type="checkbox" />
+                <span>Replace existing records when matching printer, material, or profile names already exist.</span>
+              </div>
+            </div>
+            <div id="dbAutoUpdateField" class="form-field" style="display:none">
+              <label>Remote refresh</label>
+              <div class="toggle-row">
+                <input id="dbAutoUpdate" type="checkbox" onchange="onDatabaseSourceChanged()" />
+                <span>Save this remote feed as the wizard auto-update source.</span>
+              </div>
+            </div>
+            <div id="dbAutoUpdateIntervalField" class="form-field" style="display:none">
+              <label>Auto-update interval (seconds)</label>
+              <input id="dbAutoUpdateInterval" type="number" min="300" step="300" value="86400" />
+            </div>
+          </div>
+
+          <div id="dbRemoteFeedNote" class="field-note source-config-block" style="display:none">
+            Remote sources can be either normalized JSON feeds or supported vendor pages that the scraper can translate into printer, material, and profile records.
+          </div>
+
+          <div class="action-grid">
+            <button id="setupBtn" onclick="setupDatabase()">Import / Update Catalog</button>
+            <button id="runUpdateNowBtn" class="secondary" onclick="runSavedCatalogUpdate()" disabled>Run Saved Remote Update</button>
+            <button class="secondary" onclick="Promise.all([refreshStatus(), refreshOptions()])">Refresh Status</button>
           </div>
 
           <div class="chips">
             <span class="chip" id="chipPrinters">Printers: -</span>
-            <span class="chip" id="chipResins">Resins: -</span>
+            <span class="chip" id="chipResins">Materials: -</span>
             <span class="chip" id="chipProfiles">Profiles: -</span>
             <span class="chip" id="chipCompleteness">Completeness: -</span>
           </div>
           <div id="dbMsg" class="msg">Database not checked yet.</div>
+          <div id="dbUpdateStatusMsg" class="msg">No scheduled remote updates configured yet.</div>
           <div id="dbScanPanel" class="progress-panel" style="display:none">
             <div class="progress-meta">
               <span class="progress-chip" id="dbScanState">Catalog: unknown</span>
@@ -681,19 +1023,19 @@
           </div>
         </article>
 
-        <article class="card">
-          <h2>Step 3: Select Printer + Resin, Generate Settings</h2>
-          <p class="sub">Dropdowns only. No manual typing needed.</p>
-          <div class="grid grid-3" style="margin-top: 10px">
-            <div>
+        <article class="card settings-stage">
+          <h2 id="settingsStepTitle">Step 3: Select Printer + Material, Generate Settings</h2>
+          <p class="sub" id="settingsStepSub">Dropdowns only. The target you chose above controls the compatible printer/material list and slicer export.</p>
+          <div class="form-grid form-grid-3" style="margin-top: 10px">
+            <div class="form-field">
               <label>Printer</label>
               <select id="printerSel"></select>
             </div>
-            <div>
-              <label>Resin</label>
+            <div class="form-field">
+              <label id="materialLabel">Material</label>
               <select id="resinSel"></select>
             </div>
-            <div>
+            <div class="form-field">
               <label>Use case</label>
               <select id="useCaseSel">
                 <option value="miniature">miniature</option>
@@ -703,21 +1045,19 @@
             </div>
           </div>
 
-          <div class="grid grid-2" style="margin-top: 8px">
-            <div>
+          <div class="form-grid form-grid-2" style="margin-top: 8px">
+            <div class="form-field">
               <label>Ambient temp C (optional)</label>
               <input id="ambientTemp" type="number" step="0.1" placeholder="optional" />
             </div>
-            <div>
-              <label>Film releases (optional)</label>
+            <div id="filmReleasesWrap" class="form-field">
+              <label id="filmReleasesLabel">Film releases (MSLA only)</label>
               <input id="filmReleases" type="number" value="0" />
             </div>
           </div>
 
-          <div class="grid" style="margin-top: 10px">
+          <div class="action-grid">
             <button id="settingsBtn" onclick="generateSettings()" disabled>Generate Settings</button>
-          </div>
-          <div class="grid grid-2" style="margin-top: 8px">
             <button id="catalogToggleBtn" class="secondary" onclick="toggleCatalogList()">Show Catalog List</button>
             <button class="secondary" onclick="loadCatalogList()">Refresh Catalog List</button>
           </div>
@@ -731,22 +1071,13 @@
                 <div class="catalog-list" id="catalogPrintersList"></div>
               </div>
               <div class="catalog-box">
-                <div class="tiny" id="catalogResinsCount">Resins: 0</div>
+                <div class="tiny" id="catalogResinsCount">Materials: 0</div>
                 <div class="catalog-list" id="catalogResinsList"></div>
               </div>
             </div>
           </div>
 
-          <div class="summary" id="settingsSummary" style="display:none">
-            <div class="summary-row"><div>Layer Height</div><div id="sLayer">-</div></div>
-            <div class="summary-row"><div>Exposure</div><div id="sExposure">-</div></div>
-            <div class="summary-row"><div>Bottom Exposure</div><div id="sBottomExposure">-</div></div>
-            <div class="summary-row"><div>Tilt Speed</div><div id="sTilt">-</div></div>
-            <div class="summary-row"><div>Tilt Angle</div><div id="sAngle">-</div></div>
-            <div class="summary-row"><div>Profile Used</div><div id="sProfile">-</div></div>
-            <div class="summary-row"><div>Data Quality</div><div id="sDataQuality">-</div></div>
-            <div class="summary-row"><div>Confidence</div><div id="sConfidence">-</div></div>
-          </div>
+          <div class="summary" id="settingsSummary" style="display:none"></div>
 
           <div id="settingsDownloads" class="downloads"></div>
           <div id="settingsNotes" class="tiny"></div>
@@ -768,10 +1099,18 @@
         status: null,
         databaseSetupResult: null,
         databaseGaps: null,
+        updateStatus: null,
         feedbackHistoryTotal: 0,
         catalogPrinters: [],
+        catalogPrintersByTarget: { msla: [], fdm: [] },
         catalogResins: [],
+        catalogMaterials: [],
+        catalogMaterialsByTarget: { msla: [], fdm: [] },
         compatibilityMap: {},
+        compatibilityByTarget: { msla: {}, fdm: {} },
+        catalogTargets: ["msla"],
+        slicersByTarget: { msla: "Chitubox Free", fdm: "Ultimaker Cura" },
+        selectedTarget: "msla",
         analysis: null,
         fixedAnalysis: null,
         lastCheckResult: null,
@@ -785,6 +1124,52 @@
           sourceLabel: "none",
           geometryStats: null,
           analysisScanActive: false,
+        },
+      };
+
+      const TARGET_META = {
+        msla: {
+          label: "MSLA / resin",
+          materialLabel: "Resin",
+          settingsLabel: "resin settings",
+          slicer: "Chitubox Free",
+        },
+        fdm: {
+          label: "FDM / filament",
+          materialLabel: "Filament",
+          settingsLabel: "slicer profile",
+          slicer: "Ultimaker Cura",
+        },
+      };
+
+      const DATABASE_SOURCE_META = {
+        official_local: {
+          label: "Official local dataset",
+          note: "Use the checked-in official dataset file bundled with this deployment.",
+          summary: "Local dataset import is selected for this setup run.",
+          pendingMessage: "Scanning the bundled official dataset and validating catalog coverage.",
+          remote: false,
+        },
+        github: {
+          label: "GitHub sync feed",
+          note: "Pull a normalized sync JSON file from a GitHub repository path and merge it into the catalog.",
+          summary: "GitHub feed mode is selected. Provide owner, repo, path, and ref for the sync file.",
+          pendingMessage: "Fetching the GitHub sync feed and validating printer, material, and profile coverage.",
+          remote: true,
+        },
+        web_json: {
+          label: "Web JSON feed",
+          note: "Pull a normalized catalog JSON feed from the web and merge it into the local catalog.",
+          summary: "Web JSON feed mode is selected. Provide a direct URL to the normalized sync JSON file.",
+          pendingMessage: "Fetching the remote JSON feed and validating printer, material, and profile coverage.",
+          remote: true,
+        },
+        web_scrape: {
+          label: "Supported vendor pages",
+          note: "Fetch supported vendor HTML pages and translate them into normalized catalog records before importing them.",
+          summary: "Supported vendor page mode is selected. Provide one or more supported product or settings-guide URLs.",
+          pendingMessage: "Fetching supported vendor pages and translating them into catalog records.",
+          remote: true,
         },
       };
 
@@ -834,16 +1219,16 @@
       ];
 
       const SETTINGS_STEPS = [
-        "Loading selected printer + resin profiles",
+        "Loading selected printer + material profiles",
         "Applying geometry-aware optimization logic",
-        "Applying temperature and film adjustments",
-        "Generating final settings package",
+        "Applying target-specific temperature and process adjustments",
+        "Generating final slicer package",
       ];
 
       const DB_SETUP_STEPS = [
-        "Loading official local dataset",
+        "Resolving the selected catalog source",
         "Curating printer records and provenance",
-        "Curating resin records and provenance",
+        "Curating material records and provenance",
         "Curating profile presets and confidence",
         "Refreshing smart-settings readiness",
       ];
@@ -2002,7 +2387,10 @@
 
         const summaryParts = [];
         if (setupResult) {
-          summaryParts.push(`Last import ran in ${setupResult.mode} mode from ${setupResult.source}.`);
+          summaryParts.push(`Last import ran from ${databaseSourceMeta(setupResult.mode).label} using source ${setupResult.source}.`);
+          if (setupResult.raw_url) {
+            summaryParts.push(`Remote feed: ${setupResult.raw_url}.`);
+          }
         }
         if (status.manufacturers && status.manufacturers.length) {
           summaryParts.push(`${status.manufacturers.length} manufacturers currently represented.`);
@@ -2321,26 +2709,251 @@
         };
       }
 
+      function normalizeTargetProcess(value) {
+        return String(value || "msla").trim().toLowerCase() === "fdm" ? "fdm" : "msla";
+      }
+
+      function currentTarget() {
+        return normalizeTargetProcess(document.getElementById("targetSel")?.value || state.selectedTarget);
+      }
+
+      function targetMeta(target) {
+        return TARGET_META[normalizeTargetProcess(target)] || TARGET_META.msla;
+      }
+
+      function targetSlicerName(target) {
+        const normalized = normalizeTargetProcess(target);
+        return state.slicersByTarget[normalized] || targetMeta(normalized).slicer;
+      }
+
+      function availableTargets() {
+        const rawTargets = Array.isArray(state.catalogTargets) && state.catalogTargets.length ? state.catalogTargets : ["msla"];
+        return [...new Set(rawTargets.map((target) => normalizeTargetProcess(target)))];
+      }
+
+      function printersForTarget(target) {
+        const normalized = normalizeTargetProcess(target);
+        const filtered = state.catalogPrintersByTarget[normalized];
+        return Array.isArray(filtered) && filtered.length ? filtered : state.catalogPrinters || [];
+      }
+
+      function materialsForTarget(target) {
+        const normalized = normalizeTargetProcess(target);
+        const filtered = state.catalogMaterialsByTarget[normalized];
+        if (Array.isArray(filtered) && filtered.length) {
+          return filtered;
+        }
+        return state.catalogMaterials || state.catalogResins || [];
+      }
+
+      function compatibilityForTarget(target) {
+        const normalized = normalizeTargetProcess(target);
+        return state.compatibilityByTarget[normalized] || state.compatibilityMap || {};
+      }
+
+      function databaseSourceMeta(mode) {
+        return DATABASE_SOURCE_META[String(mode || "official_local").trim().toLowerCase()] || DATABASE_SOURCE_META.official_local;
+      }
+
+      function currentDatabaseSourceMode() {
+        return String(document.getElementById("dbSourceMode")?.value || "official_local").trim().toLowerCase();
+      }
+
+      function selectedUpdateSchedule(updates = state.updateStatus) {
+        if (!updates || !Array.isArray(updates.schedules) || !updates.schedules.length) {
+          return null;
+        }
+        return updates.schedules.find((item) => item && item.enabled) || updates.schedules[0] || null;
+      }
+
+      function describeScheduleSource(schedule) {
+        if (!schedule) return "No remote update source saved.";
+        if (Array.isArray(schedule.scrape_urls) && schedule.scrape_urls.length) {
+          return `Web scrape: ${schedule.scrape_urls.length} URL(s)`;
+        }
+        if (schedule.web_url) {
+          return `Web feed: ${schedule.web_url}`;
+        }
+        if (schedule.github_owner && schedule.github_repo && schedule.github_path) {
+          return `GitHub: ${schedule.github_owner}/${schedule.github_repo}/${schedule.github_path}@${schedule.github_ref || "main"}`;
+        }
+        return `Source: ${schedule.source}`;
+      }
+
+      function onDatabaseSourceChanged() {
+        const mode = currentDatabaseSourceMode();
+        const meta = databaseSourceMeta(mode);
+        const autoUpdateEl = document.getElementById("dbAutoUpdate");
+        const autoUpdateField = document.getElementById("dbAutoUpdateField");
+        const autoUpdateIntervalField = document.getElementById("dbAutoUpdateIntervalField");
+        const autoUpdateInterval = document.getElementById("dbAutoUpdateInterval");
+        const writeModeField = document.getElementById("dbWriteModeField");
+
+        document.getElementById("dbSourceModeNote").textContent = meta.note;
+        document.getElementById("dbSourceSummary").textContent = meta.summary;
+        document.getElementById("dbGitHubFields").style.display = mode === "github" ? "grid" : "none";
+        document.getElementById("dbWebFields").style.display = mode === "web_json" ? "grid" : "none";
+        document.getElementById("dbScrapeFields").style.display = mode === "web_scrape" ? "grid" : "none";
+        document.getElementById("dbRemoteFeedNote").style.display = meta.remote ? "block" : "none";
+        autoUpdateField.style.display = meta.remote ? "grid" : "none";
+        autoUpdateIntervalField.style.display = meta.remote ? "grid" : "none";
+        writeModeField.classList.toggle("form-field-span-2", false);
+        writeModeField.classList.toggle("form-field-span-3", !meta.remote);
+        if (!meta.remote) {
+          autoUpdateEl.checked = false;
+        }
+        autoUpdateInterval.disabled = !meta.remote || !autoUpdateEl.checked;
+      }
+
+      function buildDatabaseSetupPayload() {
+        const mode = currentDatabaseSourceMode();
+        const payload = {
+          mode,
+          replace_existing: document.getElementById("dbReplaceExisting").checked,
+          auto_update: databaseSourceMeta(mode).remote && document.getElementById("dbAutoUpdate").checked,
+          auto_update_interval_seconds: Number(document.getElementById("dbAutoUpdateInterval").value || 86400) || 86400,
+          source:
+            mode === "github"
+              ? "wizard_setup_github"
+              : mode === "web_json"
+                ? "wizard_setup_web_json"
+                : mode === "web_scrape"
+                  ? "wizard_setup_web_scrape"
+                : "wizard_setup_local",
+        };
+
+        if (mode === "github") {
+          payload.owner = document.getElementById("dbGitHubOwner").value.trim();
+          payload.repo = document.getElementById("dbGitHubRepo").value.trim();
+          payload.path = document.getElementById("dbGitHubPath").value.trim();
+          payload.ref = document.getElementById("dbGitHubRef").value.trim() || "main";
+          if (!payload.owner || !payload.repo || !payload.path) {
+            throw new Error("GitHub source requires owner, repo, and sync JSON path.");
+          }
+        }
+
+        if (mode === "web_json") {
+          payload.url = document.getElementById("dbWebUrl").value.trim();
+          if (!payload.url) {
+            throw new Error("Web JSON feed requires a direct URL.");
+          }
+        }
+
+        if (mode === "web_scrape") {
+          payload.scrape_urls = String(document.getElementById("dbScrapeUrls").value || "")
+            .split(/\r?\n/)
+            .map((item) => item.trim())
+            .filter(Boolean);
+          if (!payload.scrape_urls.length) {
+            throw new Error("Supported vendor page mode requires at least one URL.");
+          }
+        }
+
+        return payload;
+      }
+
+      function renderDatabaseUpdateStatus(updates) {
+        state.updateStatus = updates;
+        const msg = document.getElementById("dbUpdateStatusMsg");
+        const runBtn = document.getElementById("runUpdateNowBtn");
+        const schedule = selectedUpdateSchedule(updates);
+
+        if (!updates || !schedule) {
+          runBtn.disabled = true;
+          msg.textContent = "No scheduled remote updates configured yet. Use GitHub, Web JSON, or Supported vendor pages mode and enable auto-update if you want background refreshes.";
+          msg.className = "msg";
+          return;
+        }
+
+        const parts = [describeScheduleSource(schedule)];
+        parts.push(`Scheduler: ${updates.scheduler_running ? "running" : "idle"}`);
+        if (schedule.last_run_at) {
+          parts.push(`Last run: ${schedule.last_run_at}`);
+        }
+        if (schedule.last_status) {
+          parts.push(`Status: ${schedule.last_status}`);
+        }
+        if (schedule.last_error) {
+          parts.push(`Error: ${schedule.last_error}`);
+        }
+        msg.textContent = parts.join(" | ");
+        msg.className = schedule.last_status === "failed" ? "msg error" : "msg";
+        runBtn.disabled = false;
+      }
+
+      async function refreshUpdateStatus() {
+        try {
+          const updates = await callApi("/wizard/updates/status", { headers: headers(false) });
+          renderDatabaseUpdateStatus(updates);
+          return updates;
+        } catch (err) {
+          renderDatabaseUpdateStatus(null);
+          document.getElementById("dbUpdateStatusMsg").textContent = `Update status error: ${err.message}`;
+          document.getElementById("dbUpdateStatusMsg").className = "msg error";
+          return null;
+        }
+      }
+
       function setOptions(id, values) {
         const select = document.getElementById(id);
         select.innerHTML = "";
-        for (const v of values) {
+        for (const item of values) {
           const option = document.createElement("option");
-          option.value = v;
-          option.textContent = v;
+          if (item && typeof item === "object") {
+            option.value = item.value;
+            option.textContent = item.label || item.value;
+          } else {
+            option.value = item;
+            option.textContent = item;
+          }
           select.appendChild(option);
         }
       }
 
+      function renderTargetContext() {
+        const target = currentTarget();
+        const meta = targetMeta(target);
+        const slicerName = targetSlicerName(target);
+        const printers = printersForTarget(target);
+        const materials = materialsForTarget(target);
+        document.getElementById("targetSlicerMsg").textContent = `Primary slicer: ${slicerName}`;
+        document.getElementById("targetCountsMsg").textContent =
+          `Catalog coverage: ${printers.length} printers, ${materials.length} ${meta.materialLabel.toLowerCase()}${materials.length === 1 ? "" : "s"}.`;
+        document.getElementById("settingsStepTitle").textContent =
+          `Step 3: Select Printer + ${meta.materialLabel}, Generate ${slicerName} ${target === "fdm" ? "Profile" : "Settings"}`;
+        document.getElementById("settingsStepSub").textContent =
+          target === "fdm"
+            ? "Dropdowns only. The FDM target filters printers and filament profiles, then exports an Ultimaker Cura profile."
+            : "Dropdowns only. The MSLA target filters resin-capable printers and exports a Chitubox Free profile.";
+        document.getElementById("materialLabel").textContent = meta.materialLabel;
+        document.getElementById("filmReleasesWrap").style.display = target === "msla" ? "block" : "none";
+      }
+
+      function onTargetChanged() {
+        state.selectedTarget = currentTarget();
+        setOptions("printerSel", printersForTarget(state.selectedTarget));
+        updateResinOptionsForPrinter();
+        renderTargetContext();
+        renderCatalogList();
+        document.getElementById("settingsSummary").style.display = "none";
+        document.getElementById("settingsSummary").innerHTML = "";
+        document.getElementById("settingsDownloads").innerHTML = "";
+        document.getElementById("settingsNotes").textContent = "";
+        document.getElementById("settingsRefs").innerHTML = "";
+        renderSettingsSmartPanel(null, null);
+        setMsg("settingsMsg", `${targetMeta(state.selectedTarget).label} selected. Analyze a model, then generate a ${targetSlicerName(state.selectedTarget)} export.`);
+        updateLocks();
+      }
+
       function updateResinOptionsForPrinter() {
         const printer = document.getElementById("printerSel").value;
-        const compatibility = state.compatibilityMap || {};
+        const compatibility = compatibilityForTarget(currentTarget());
         const allowed = Array.isArray(compatibility[printer]) ? compatibility[printer] : [];
         if (allowed.length > 0) {
           setOptions("resinSel", allowed);
           return;
         }
-        setOptions("resinSel", state.catalogResins || []);
+        setOptions("resinSel", materialsForTarget(currentTarget()));
       }
 
       function escapeHtml(value) {
@@ -2353,17 +2966,19 @@
       }
 
       function renderCatalogList() {
-        const printers = state.catalogPrinters || [];
-        const resins = state.catalogResins || [];
+        const target = currentTarget();
+        const meta = targetMeta(target);
+        const printers = printersForTarget(target);
+        const resins = materialsForTarget(target);
         document.getElementById("catalogPrintersCount").textContent = `Printers: ${printers.length}`;
-        document.getElementById("catalogResinsCount").textContent = `Resins: ${resins.length}`;
+        document.getElementById("catalogResinsCount").textContent = `${meta.materialLabel}s: ${resins.length}`;
 
         const printersHtml = printers.length
           ? `<ol>${printers.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol>`
-          : "<div class='tiny'>No printers in catalog yet.</div>";
+          : `<div class='tiny'>No ${escapeHtml(targetMeta(target).label)} printers in catalog yet.</div>`;
         const resinsHtml = resins.length
           ? `<ol>${resins.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol>`
-          : "<div class='tiny'>No resins in catalog yet.</div>";
+          : `<div class='tiny'>No ${escapeHtml(meta.materialLabel.toLowerCase())} records in catalog yet.</div>`;
 
         document.getElementById("catalogPrintersList").innerHTML = printersHtml;
         document.getElementById("catalogResinsList").innerHTML = resinsHtml;
@@ -2395,16 +3010,19 @@
         const readyForAnalyze = !!(state.status && state.status.ready_for_model_analysis);
         const hasAnalysis = !!currentAnalysisResult();
         const analysisBusy = !!(state.analysisProgress && isActiveAnalysisStatus(state.analysisProgress.status));
+        const hasCatalogSelection =
+          (document.getElementById("printerSel")?.options.length || 0) > 0 &&
+          (document.getElementById("resinSel")?.options.length || 0) > 0;
         document.getElementById("analyzeBtn").disabled = !readyForAnalyze || analysisBusy;
         document.getElementById("fixBtn").disabled = !state.analysis || analysisBusy;
         document.getElementById("retopoBtn").disabled = !state.analysis || analysisBusy;
-        document.getElementById("settingsBtn").disabled = !hasAnalysis;
+        document.getElementById("settingsBtn").disabled = !hasAnalysis || !hasCatalogSelection;
         document.getElementById("cancelAnalyzeBtn").disabled = !analysisBusy;
       }
 
       function updateStatusChips(status) {
         document.getElementById("chipPrinters").textContent = `Printers: ${status.printers_total}`;
-        document.getElementById("chipResins").textContent = `Resins: ${status.resins_total}`;
+        document.getElementById("chipResins").textContent = `Materials: ${status.resins_total}`;
         document.getElementById("chipProfiles").textContent = `Profiles: ${status.profiles_total}`;
         document.getElementById("chipCompleteness").textContent = `Completeness: ${status.completeness_percent}%`;
       }
@@ -2412,16 +3030,31 @@
       async function refreshOptions() {
         const data = await callApi("/wizard/catalog/options", { headers: headers(false) });
         state.catalogPrinters = data.printers || [];
+        state.catalogPrintersByTarget = data.printers_by_target || { msla: [], fdm: [] };
         state.catalogResins = data.resins || [];
+        state.catalogMaterials = data.materials || data.resins || [];
+        state.catalogMaterialsByTarget = data.materials_by_target || { msla: [], fdm: [] };
         state.compatibilityMap = data.compatibility || {};
-        setOptions("printerSel", state.catalogPrinters);
+        state.compatibilityByTarget = data.compatibility_by_target || { msla: {}, fdm: {} };
+        state.catalogTargets = data.targets || ["msla"];
+        state.slicersByTarget = { ...state.slicersByTarget, ...(data.slicers_by_target || {}) };
+        setOptions(
+          "targetSel",
+          availableTargets().map((target) => ({ value: target, label: targetMeta(target).label }))
+        );
+        if (!availableTargets().includes(state.selectedTarget)) {
+          state.selectedTarget = availableTargets()[0] || "msla";
+        }
+        document.getElementById("targetSel").value = state.selectedTarget;
+        setOptions("printerSel", printersForTarget(state.selectedTarget));
         updateResinOptionsForPrinter();
+        renderTargetContext();
         renderCatalogList();
       }
 
       async function refreshStatus() {
         try {
-          const [status, gaps, feedbackHistory] = await Promise.all([
+          const [status, gaps, feedbackHistory, updates] = await Promise.all([
             callApi("/wizard/database/status", { headers: headers(false) }),
             callApi("/wizard/database/gaps", { headers: headers(false) }).catch(() => null),
             callApi("/phase3/history/query", {
@@ -2429,12 +3062,15 @@
               headers: headers(true),
               body: JSON.stringify({ limit: 1, offset: 0 }),
             }).catch(() => ({ total_count: 0, records: [] })),
+            callApi("/wizard/updates/status", { headers: headers(false) }).catch(() => null),
           ]);
           state.status = status;
           state.databaseGaps = gaps;
+          state.updateStatus = updates;
           state.feedbackHistoryTotal = Number(feedbackHistory && feedbackHistory.total_count) || 0;
           updateStatusChips(status);
           renderDatabaseScanPanel(status, gaps, state.databaseSetupResult, state.feedbackHistoryTotal);
+          renderDatabaseUpdateStatus(updates);
           if (status.ready_for_model_analysis) {
             setMsg("dbMsg", "Database is ready. You can upload STL now.");
           } else {
@@ -2449,19 +3085,17 @@
       async function setupDatabase() {
         const btn = document.getElementById("setupBtn");
         btn.disabled = true;
-        setMsg("dbMsg", "Setting up / updating database...");
-        renderDatabasePendingScan("Scanning local dataset and validating source coverage...");
+        const sourceMode = currentDatabaseSourceMode();
+        const sourceMeta = databaseSourceMeta(sourceMode);
+        setMsg("dbMsg", `Setting up / updating database from ${sourceMeta.label}...`);
+        renderDatabasePendingScan(sourceMeta.pendingMessage);
         const stopProgress = startStepProgress("dbMsg", DB_SETUP_STEPS);
         try {
+          const payload = buildDatabaseSetupPayload();
           const setupResult = await callApi("/wizard/database/setup", {
             method: "POST",
             headers: headers(true),
-            body: JSON.stringify({
-              mode: "official_local",
-              replace_existing: false,
-              auto_update: false,
-              source: "wizard_setup",
-            }),
+            body: JSON.stringify(payload),
           });
           state.databaseSetupResult = setupResult;
           await Promise.all([refreshStatus(), refreshOptions()]);
@@ -2469,13 +3103,43 @@
           const notes = Array.isArray(setupResult.notes) ? setupResult.notes.slice(0, 2) : [];
           setMsg(
             "dbMsg",
-            notes.length ? `Database setup/update completed. ${notes.join(" ")}` : "Database setup/update completed."
+            notes.length
+              ? `Catalog update completed from ${sourceMeta.label}. ${notes.join(" ")}`
+              : `Catalog update completed from ${sourceMeta.label}.`
           );
         } catch (err) {
           stopProgress();
           setMsg("dbMsg", `Setup error: ${err.message}`, "error");
         } finally {
           btn.disabled = false;
+        }
+      }
+
+      async function runSavedCatalogUpdate() {
+        const schedule = selectedUpdateSchedule();
+        const btn = document.getElementById("runUpdateNowBtn");
+        if (!schedule) {
+          setMsg("dbMsg", "No saved remote update schedule is configured yet.", "warn");
+          return;
+        }
+
+        btn.disabled = true;
+        setMsg("dbMsg", `Queueing remote catalog update from ${describeScheduleSource(schedule)}...`);
+        try {
+          const body = await callApi("/wizard/updates/run-now", {
+            method: "POST",
+            headers: headers(true),
+            body: JSON.stringify({ schedule_id: schedule.id }),
+          });
+          setMsg(
+            "dbMsg",
+            `Remote catalog update queued. Job ${body.job.id} is running in the background. Refresh status after it completes to see the new coverage.`
+          );
+          await refreshUpdateStatus();
+        } catch (err) {
+          setMsg("dbMsg", `Remote update error: ${err.message}`, "error");
+        } finally {
+          btn.disabled = !selectedUpdateSchedule();
         }
       }
 
@@ -2753,14 +3417,7 @@
         }
       }
 
-      function renderSettingsSummary(settings) {
-        document.getElementById("settingsSummary").style.display = "block";
-        document.getElementById("sLayer").textContent = `${settings.layer_height_mm} mm`;
-        document.getElementById("sExposure").textContent = `${settings.exposure_s} s`;
-        document.getElementById("sBottomExposure").textContent = `${settings.bottom_exposure_s} s`;
-        document.getElementById("sTilt").textContent = `${settings.tilt_speed_mm_min} mm/min`;
-        document.getElementById("sAngle").textContent = `${settings.tilt_angle_deg} deg`;
-        document.getElementById("sProfile").textContent = settings.source_profile || "-";
+      function renderSettingsSummary(settings, exportMeta = {}) {
         const provenance = settings.provenance || {};
         const qualityMap = {
           verified_sources: "Verified Sources",
@@ -2768,9 +3425,42 @@
           fallback_defaults: "Fallback Defaults",
         };
         const qualityKey = String(provenance.data_quality || "fallback_defaults");
-        document.getElementById("sDataQuality").textContent = qualityMap[qualityKey] || qualityKey;
-        document.getElementById("sConfidence").textContent =
-          provenance.confidence_score == null ? "-" : `${Math.round(Number(provenance.confidence_score) * 100)}%`;
+        const summaryRows = [
+          { label: "Target", value: targetMeta(exportMeta.target_process || settings.process_technology).label },
+          { label: "Slicer", value: exportMeta.slicer_name || targetSlicerName(exportMeta.target_process || currentTarget()) },
+          { label: "Layer Height", value: `${settings.layer_height_mm} mm` },
+        ];
+
+        if (String(settings.process_technology || "").toUpperCase() === "FDM" && settings.fdm) {
+          summaryRows.push(
+            { label: "Nozzle Temp", value: `${settings.fdm.nozzle_temp_c} C` },
+            { label: "Bed Temp", value: settings.fdm.bed_temp_c == null ? "-" : `${settings.fdm.bed_temp_c} C` },
+            { label: "Print Speed", value: `${settings.fdm.print_speed_mm_s} mm/s` },
+            { label: "Retraction", value: settings.fdm.retraction_distance_mm == null ? "-" : `${settings.fdm.retraction_distance_mm} mm @ ${settings.fdm.retraction_speed_mm_s || 0} mm/s` },
+            { label: "Support Style", value: settings.fdm.support_style || "-" },
+            { label: "Profile Used", value: settings.source_profile || "-" }
+          );
+        } else {
+          summaryRows.push(
+            { label: "Exposure", value: settings.exposure_s == null ? "-" : `${settings.exposure_s} s` },
+            { label: "Bottom Exposure", value: settings.bottom_exposure_s == null ? "-" : `${settings.bottom_exposure_s} s` },
+            { label: "Tilt Speed", value: settings.tilt_speed_mm_min == null ? "-" : `${settings.tilt_speed_mm_min} mm/min` },
+            { label: "Tilt Angle", value: settings.tilt_angle_deg == null ? "-" : `${settings.tilt_angle_deg} deg` },
+            { label: "Profile Used", value: settings.source_profile || "-" }
+          );
+        }
+
+        summaryRows.push(
+          { label: "Data Quality", value: qualityMap[qualityKey] || qualityKey },
+          {
+            label: "Confidence",
+            value: provenance.confidence_score == null ? "-" : `${Math.round(Number(provenance.confidence_score) * 100)}%`,
+          }
+        );
+
+        const summary = document.getElementById("settingsSummary");
+        summary.style.display = "block";
+        summary.innerHTML = buildSummaryRows(summaryRows);
       }
 
       function renderSettingsReferences(provenance) {
@@ -2820,7 +3510,7 @@
         const printer = document.getElementById("printerSel").value;
         const resin = document.getElementById("resinSel").value;
         if (!printer || !resin) {
-          setMsg("settingsMsg", "Printer and resin must be selected from dropdowns.", "warn");
+          setMsg("settingsMsg", `Printer and ${targetMeta(currentTarget()).materialLabel.toLowerCase()} must be selected from dropdowns.`, "warn");
           return;
         }
 
@@ -2838,6 +3528,7 @@
             analysis,
             printer,
             resin_type: resin,
+            target_process: currentTarget(),
             use_case: document.getElementById("useCaseSel").value,
             ambient_temp_c: document.getElementById("ambientTemp").value
               ? Number(document.getElementById("ambientTemp").value)
@@ -2850,7 +3541,7 @@
             body: JSON.stringify(payload),
           });
 
-          renderSettingsSummary(body.settings);
+          renderSettingsSummary(body.settings, body);
           renderSettingsReferences(body.settings.provenance || {});
           const feedbackResult = await callApi("/phase3/history/summary", {
             method: "POST",
@@ -2862,13 +3553,20 @@
             }),
           }).catch(() => null);
           renderSettingsSmartPanel(body.settings.provenance || {}, feedbackResult);
-          setMsg("settingsMsg", "Settings generated successfully.");
+          setMsg("settingsMsg", `${body.slicer_name || targetSlicerName(currentTarget())} export generated successfully.`);
+
+          const slicerDownloadUrl = body.slicer_profile_download_url || body.cfg_download_url;
+          const slicerFileName = body.slicer_profile_file_name || (body.target_process === "fdm" ? "settings.curaprofile" : "settings.cfg");
+          const slicerLabel =
+            body.target_process === "fdm"
+              ? `Download ${body.slicer_name || "Ultimaker Cura"} Profile`
+              : `Download ${body.slicer_name || "Chitubox Free"} Profile`;
 
           renderDownloadActions("settingsDownloads", [
             {
-              url: body.cfg_download_url,
-              label: "Download Chitubox CFG",
-              fileName: "settings.cfg",
+              url: slicerDownloadUrl,
+              label: slicerLabel,
+              fileName: slicerFileName,
               messageId: "settingsMsg",
             },
             {
@@ -2880,6 +3578,7 @@
           ]);
 
           const notes = [
+            `Slicer target: ${body.slicer_name || targetSlicerName(currentTarget())}`,
             ...(body.settings.warnings || []).slice(0, 2),
             ...(body.settings.recommendations || []).slice(0, 2),
           ];
@@ -2897,6 +3596,7 @@
       async function init() {
         document.getElementById("printerSel").addEventListener("change", updateResinOptionsForPrinter);
         document.getElementById("modelFile").addEventListener("change", onModelFileSelected);
+        onDatabaseSourceChanged();
         renderModelInsightPanels();
         updatePreviewModeButtons();
         await Promise.allSettled([refreshStatus(), refreshOptions()]);

@@ -34,12 +34,19 @@ CREATE TABLE IF NOT EXISTS printers (
 CREATE TABLE IF NOT EXISTS resins (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
+    material_type TEXT NOT NULL DEFAULT 'resin',
+    material_family TEXT,
     brand TEXT,
     series TEXT,
     technical_goal TEXT,
     viscosity_cp REAL,
     shore_hardness TEXT,
     shrinkage_percent REAL,
+    density_g_cm3 REAL,
+    filament_diameter_mm REAL,
+    nozzle_temp_min_c REAL,
+    nozzle_temp_max_c REAL,
+    bed_temp_c REAL,
     notes TEXT,
     metadata_json TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -58,6 +65,19 @@ CREATE TABLE IF NOT EXISTS profiles (
     tilt_speed_reference_mm_h REAL,
     rest_time_before_print_s REAL,
     rest_time_after_retract_s REAL,
+    nozzle_temp_c REAL,
+    bed_temp_c REAL,
+    chamber_temp_c REAL,
+    print_speed_mm_s REAL,
+    first_layer_speed_mm_s REAL,
+    travel_speed_mm_s REAL,
+    retraction_distance_mm REAL,
+    retraction_speed_mm_s REAL,
+    nozzle_diameter_mm REAL,
+    fan_speed_percent INTEGER,
+    infill_percent REAL,
+    wall_count INTEGER,
+    support_style TEXT,
     is_default INTEGER NOT NULL DEFAULT 0,
     is_active INTEGER NOT NULL DEFAULT 1,
     notes TEXT,
@@ -78,6 +98,7 @@ def init_catalog_store(db_path: str | Path | None = None) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(path) as conn:
         conn.executescript(_SCHEMA_SQL)
+        _apply_schema_migrations(conn)
     return path
 
 
@@ -87,6 +108,61 @@ def _connect(db_path: str | Path | None = None) -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
+
+
+def _apply_schema_migrations(conn: sqlite3.Connection) -> None:
+    _ensure_columns(
+        conn,
+        "resins",
+        {
+            "material_type": "TEXT NOT NULL DEFAULT 'resin'",
+            "material_family": "TEXT",
+            "density_g_cm3": "REAL",
+            "filament_diameter_mm": "REAL",
+            "nozzle_temp_min_c": "REAL",
+            "nozzle_temp_max_c": "REAL",
+            "bed_temp_c": "REAL",
+        },
+    )
+    _ensure_columns(
+        conn,
+        "profiles",
+        {
+            "nozzle_temp_c": "REAL",
+            "bed_temp_c": "REAL",
+            "chamber_temp_c": "REAL",
+            "print_speed_mm_s": "REAL",
+            "first_layer_speed_mm_s": "REAL",
+            "travel_speed_mm_s": "REAL",
+            "retraction_distance_mm": "REAL",
+            "retraction_speed_mm_s": "REAL",
+            "nozzle_diameter_mm": "REAL",
+            "fan_speed_percent": "INTEGER",
+            "infill_percent": "REAL",
+            "wall_count": "INTEGER",
+            "support_style": "TEXT",
+        },
+    )
+    conn.execute(
+        "UPDATE resins SET material_type='resin' WHERE material_type IS NULL OR trim(material_type)=''"
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_printers_technology ON printers(technology)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_resins_material_type ON resins(material_type)")
+
+
+def _ensure_columns(
+    conn: sqlite3.Connection,
+    table_name: str,
+    columns: dict[str, str],
+) -> None:
+    existing = {
+        str(row[1])
+        for row in conn.execute(f"PRAGMA table_info({table_name})").fetchall()
+    }
+    for column_name, column_sql in columns.items():
+        if column_name in existing:
+            continue
+        conn.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_sql}")
 
 
 def _infer_brand_model(name: str) -> tuple[str | None, str | None]:
@@ -114,6 +190,15 @@ def _json_loads(value: str | None) -> dict[str, Any]:
         return {}
 
 
+def _normalize_material_type(value: Any) -> str:
+    normalized = str(value or "resin").strip().lower()
+    return normalized or "resin"
+
+
+def _row_value(row: sqlite3.Row, key: str) -> Any:
+    return row[key] if key in row.keys() else None
+
+
 def _row_to_printer(row: sqlite3.Row) -> dict[str, Any]:
     return {
         "id": row["id"],
@@ -136,12 +221,19 @@ def _row_to_resin(row: sqlite3.Row) -> dict[str, Any]:
     return {
         "id": row["id"],
         "name": row["name"],
+        "material_type": _row_value(row, "material_type") or "resin",
+        "material_family": _row_value(row, "material_family"),
         "brand": row["brand"],
         "series": row["series"],
         "technical_goal": row["technical_goal"],
         "viscosity_cp": row["viscosity_cp"],
         "shore_hardness": row["shore_hardness"],
         "shrinkage_percent": row["shrinkage_percent"],
+        "density_g_cm3": _row_value(row, "density_g_cm3"),
+        "filament_diameter_mm": _row_value(row, "filament_diameter_mm"),
+        "nozzle_temp_min_c": _row_value(row, "nozzle_temp_min_c"),
+        "nozzle_temp_max_c": _row_value(row, "nozzle_temp_max_c"),
+        "bed_temp_c": _row_value(row, "bed_temp_c"),
         "notes": row["notes"],
         "metadata": _json_loads(row["metadata_json"]),
     }
@@ -154,6 +246,8 @@ def _row_to_profile(row: sqlite3.Row) -> dict[str, Any]:
         "resin_id": row["resin_id"],
         "printer_name": row["printer_name"],
         "resin_name": row["resin_name"],
+        "printer_technology": _row_value(row, "printer_technology"),
+        "material_type": _row_value(row, "material_type") or "resin",
         "profile_name": row["profile_name"],
         "layer_height_mm": row["layer_height_mm"],
         "exposure_s": row["exposure_s"],
@@ -162,6 +256,19 @@ def _row_to_profile(row: sqlite3.Row) -> dict[str, Any]:
         "tilt_speed_reference_mm_h": row["tilt_speed_reference_mm_h"],
         "rest_time_before_print_s": row["rest_time_before_print_s"],
         "rest_time_after_retract_s": row["rest_time_after_retract_s"],
+        "nozzle_temp_c": _row_value(row, "nozzle_temp_c"),
+        "bed_temp_c": _row_value(row, "bed_temp_c"),
+        "chamber_temp_c": _row_value(row, "chamber_temp_c"),
+        "print_speed_mm_s": _row_value(row, "print_speed_mm_s"),
+        "first_layer_speed_mm_s": _row_value(row, "first_layer_speed_mm_s"),
+        "travel_speed_mm_s": _row_value(row, "travel_speed_mm_s"),
+        "retraction_distance_mm": _row_value(row, "retraction_distance_mm"),
+        "retraction_speed_mm_s": _row_value(row, "retraction_speed_mm_s"),
+        "nozzle_diameter_mm": _row_value(row, "nozzle_diameter_mm"),
+        "fan_speed_percent": _row_value(row, "fan_speed_percent"),
+        "infill_percent": _row_value(row, "infill_percent"),
+        "wall_count": _row_value(row, "wall_count"),
+        "support_style": _row_value(row, "support_style"),
         "is_default": bool(row["is_default"]),
         "is_active": bool(row["is_active"]),
         "notes": row["notes"],
@@ -284,6 +391,7 @@ def create_or_upsert_resin(data: dict[str, Any], db_path: str | Path | None = No
     if not name:
         raise ValueError("Resin name is required.")
     brand = data.get("brand") or _infer_brand_model(name)[0]
+    material_type = _normalize_material_type(data.get("material_type"))
     with _connect(db_path) as conn:
         row = conn.execute("SELECT id FROM resins WHERE lower(name)=lower(?)", (name,)).fetchone()
         if row:
@@ -291,19 +399,27 @@ def create_or_upsert_resin(data: dict[str, Any], db_path: str | Path | None = No
             conn.execute(
                 """
                 UPDATE resins SET
-                    name=?, brand=?, series=?, technical_goal=?, viscosity_cp=?,
-                    shore_hardness=?, shrinkage_percent=?, notes=?, metadata_json=?,
+                    name=?, material_type=?, material_family=?, brand=?, series=?, technical_goal=?, viscosity_cp=?,
+                    shore_hardness=?, shrinkage_percent=?, density_g_cm3=?, filament_diameter_mm=?,
+                    nozzle_temp_min_c=?, nozzle_temp_max_c=?, bed_temp_c=?, notes=?, metadata_json=?,
                     updated_at=CURRENT_TIMESTAMP
                 WHERE id=?
                 """,
                 (
                     name,
+                    material_type,
+                    data.get("material_family"),
                     brand,
                     data.get("series"),
                     data.get("technical_goal"),
                     data.get("viscosity_cp"),
                     data.get("shore_hardness"),
                     data.get("shrinkage_percent"),
+                    data.get("density_g_cm3"),
+                    data.get("filament_diameter_mm"),
+                    data.get("nozzle_temp_min_c"),
+                    data.get("nozzle_temp_max_c"),
+                    data.get("bed_temp_c"),
                     data.get("notes"),
                     _json_dumps(data.get("metadata") or {}),
                     resin_id,
@@ -313,18 +429,26 @@ def create_or_upsert_resin(data: dict[str, Any], db_path: str | Path | None = No
             cursor = conn.execute(
                 """
                 INSERT INTO resins (
-                    name, brand, series, technical_goal, viscosity_cp,
-                    shore_hardness, shrinkage_percent, notes, metadata_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    name, material_type, material_family, brand, series, technical_goal, viscosity_cp,
+                    shore_hardness, shrinkage_percent, density_g_cm3, filament_diameter_mm,
+                    nozzle_temp_min_c, nozzle_temp_max_c, bed_temp_c, notes, metadata_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     name,
+                    material_type,
+                    data.get("material_family"),
                     brand,
                     data.get("series"),
                     data.get("technical_goal"),
                     data.get("viscosity_cp"),
                     data.get("shore_hardness"),
                     data.get("shrinkage_percent"),
+                    data.get("density_g_cm3"),
+                    data.get("filament_diameter_mm"),
+                    data.get("nozzle_temp_min_c"),
+                    data.get("nozzle_temp_max_c"),
+                    data.get("bed_temp_c"),
                     data.get("notes"),
                     _json_dumps(data.get("metadata") or {}),
                 ),
@@ -345,15 +469,19 @@ def get_resin(resin_id: int, db_path: str | Path | None = None) -> dict[str, Any
 def list_resins(
     db_path: str | Path | None = None,
     query: str | None = None,
+    material_type: str | None = None,
     limit: int = 200,
     offset: int = 0,
 ) -> list[dict[str, Any]]:
-    sql = "SELECT * FROM resins"
+    sql = "SELECT * FROM resins WHERE 1=1"
     params: list[Any] = []
+    if material_type:
+        sql += " AND lower(material_type)=?"
+        params.append(_normalize_material_type(material_type))
     if query:
-        sql += " WHERE lower(name) LIKE ? OR lower(brand) LIKE ? OR lower(series) LIKE ?"
+        sql += " AND (lower(name) LIKE ? OR lower(brand) LIKE ? OR lower(series) LIKE ? OR lower(COALESCE(material_family, '')) LIKE ?)"
         q = f"%{query.lower()}%"
-        params.extend([q, q, q])
+        params.extend([q, q, q, q])
     sql += " ORDER BY name LIMIT ? OFFSET ?"
     params.extend([max(1, min(limit, 1000)), max(0, offset)])
     with _connect(db_path) as conn:
@@ -443,7 +571,10 @@ def create_or_upsert_profile(data: dict[str, Any], db_path: str | Path | None = 
                     printer_id=?, resin_id=?, profile_name=?, layer_height_mm=?,
                     exposure_s=?, bottom_exposure_s=?, transition_layers=?,
                     tilt_speed_reference_mm_h=?, rest_time_before_print_s=?,
-                    rest_time_after_retract_s=?, is_default=?, is_active=?, notes=?,
+                    rest_time_after_retract_s=?, nozzle_temp_c=?, bed_temp_c=?, chamber_temp_c=?,
+                    print_speed_mm_s=?, first_layer_speed_mm_s=?, travel_speed_mm_s=?,
+                    retraction_distance_mm=?, retraction_speed_mm_s=?, nozzle_diameter_mm=?,
+                    fan_speed_percent=?, infill_percent=?, wall_count=?, support_style=?, is_default=?, is_active=?, notes=?,
                     metadata_json=?, updated_at=CURRENT_TIMESTAMP
                 WHERE id=?
                 """,
@@ -458,6 +589,19 @@ def create_or_upsert_profile(data: dict[str, Any], db_path: str | Path | None = 
                     data.get("tilt_speed_reference_mm_h"),
                     data.get("rest_time_before_print_s"),
                     data.get("rest_time_after_retract_s"),
+                    data.get("nozzle_temp_c"),
+                    data.get("bed_temp_c"),
+                    data.get("chamber_temp_c"),
+                    data.get("print_speed_mm_s"),
+                    data.get("first_layer_speed_mm_s"),
+                    data.get("travel_speed_mm_s"),
+                    data.get("retraction_distance_mm"),
+                    data.get("retraction_speed_mm_s"),
+                    data.get("nozzle_diameter_mm"),
+                    data.get("fan_speed_percent"),
+                    data.get("infill_percent"),
+                    data.get("wall_count"),
+                    data.get("support_style"),
                     _bool_to_int(data.get("is_default")),
                     _bool_to_int(data.get("is_active", True)),
                     data.get("notes"),
@@ -472,9 +616,12 @@ def create_or_upsert_profile(data: dict[str, Any], db_path: str | Path | None = 
                     printer_id, resin_id, profile_name, layer_height_mm,
                     exposure_s, bottom_exposure_s, transition_layers,
                     tilt_speed_reference_mm_h, rest_time_before_print_s,
-                    rest_time_after_retract_s, is_default, is_active,
+                    rest_time_after_retract_s, nozzle_temp_c, bed_temp_c, chamber_temp_c,
+                    print_speed_mm_s, first_layer_speed_mm_s, travel_speed_mm_s,
+                    retraction_distance_mm, retraction_speed_mm_s, nozzle_diameter_mm,
+                    fan_speed_percent, infill_percent, wall_count, support_style, is_default, is_active,
                     notes, metadata_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     printer_id,
@@ -487,6 +634,19 @@ def create_or_upsert_profile(data: dict[str, Any], db_path: str | Path | None = 
                     data.get("tilt_speed_reference_mm_h"),
                     data.get("rest_time_before_print_s"),
                     data.get("rest_time_after_retract_s"),
+                    data.get("nozzle_temp_c"),
+                    data.get("bed_temp_c"),
+                    data.get("chamber_temp_c"),
+                    data.get("print_speed_mm_s"),
+                    data.get("first_layer_speed_mm_s"),
+                    data.get("travel_speed_mm_s"),
+                    data.get("retraction_distance_mm"),
+                    data.get("retraction_speed_mm_s"),
+                    data.get("nozzle_diameter_mm"),
+                    data.get("fan_speed_percent"),
+                    data.get("infill_percent"),
+                    data.get("wall_count"),
+                    data.get("support_style"),
                     _bool_to_int(data.get("is_default")),
                     _bool_to_int(data.get("is_active", True)),
                     data.get("notes"),
@@ -503,7 +663,8 @@ def get_profile(profile_id: int, db_path: str | Path | None = None) -> dict[str,
     with _connect(db_path) as conn:
         row = conn.execute(
             """
-            SELECT p.*, pr.name AS printer_name, r.name AS resin_name
+            SELECT p.*, pr.name AS printer_name, pr.technology AS printer_technology,
+                   r.name AS resin_name, COALESCE(r.material_type, 'resin') AS material_type
             FROM profiles p
             JOIN printers pr ON pr.id = p.printer_id
             JOIN resins r ON r.id = p.resin_id
@@ -526,7 +687,8 @@ def list_profiles(
     offset: int = 0,
 ) -> list[dict[str, Any]]:
     sql = """
-        SELECT p.*, pr.name AS printer_name, r.name AS resin_name
+        SELECT p.*, pr.name AS printer_name, pr.technology AS printer_technology,
+               r.name AS resin_name, COALESCE(r.material_type, 'resin') AS material_type
         FROM profiles p
         JOIN printers pr ON pr.id = p.printer_id
         JOIN resins r ON r.id = p.resin_id
@@ -578,6 +740,10 @@ def find_profile_by_names(
     with _connect(db_path) as conn:
         sql = """
             SELECT p.*, pr.name AS printer_name, r.name AS resin_name,
+                     pr.technology AS printer_technology,
+                     COALESCE(r.material_type, 'resin') AS material_type,
+                     r.material_family, r.density_g_cm3, r.filament_diameter_mm,
+                     r.nozzle_temp_min_c, r.nozzle_temp_max_c, r.bed_temp_c AS material_bed_temp_c,
                    pr.metadata_json AS printer_metadata_json,
                    r.metadata_json AS resin_metadata_json,
                    r.brand AS resin_brand, r.series AS resin_series,
@@ -603,12 +769,21 @@ def find_profile_by_names(
             "name": out["profile_name"],
             "printer": out["printer_name"],
             "resin_type": out["resin_name"],
+            "material_name": out["resin_name"],
+            "process_technology": row["printer_technology"] or "MSLA",
+            "material_type": row["material_type"] or "resin",
+            "material_family": row["material_family"],
             "brand": row["resin_brand"],
             "series": row["resin_series"],
             "technical_goal": row["technical_goal"],
             "viscosity_cp": row["viscosity_cp"],
             "shore_hardness": row["shore_hardness"],
             "shrinkage_percent": row["shrinkage_percent"],
+            "density_g_cm3": row["density_g_cm3"],
+            "filament_diameter_mm": row["filament_diameter_mm"],
+            "nozzle_temp_min_c": row["nozzle_temp_min_c"],
+            "nozzle_temp_max_c": row["nozzle_temp_max_c"],
+            "material_bed_temp_c": row["material_bed_temp_c"],
             "notes": out["notes"] or row["resin_notes"] or row["printer_notes"],
             "printer_metadata": _json_loads(row["printer_metadata_json"]),
             "resin_metadata": _json_loads(row["resin_metadata_json"]),
@@ -619,20 +794,23 @@ def find_profile_by_names(
 
 def list_resin_names_for_printer(
     printer_name: str,
+    material_type: str | None = None,
     db_path: str | Path | None = None,
 ) -> list[str]:
+    sql = """
+        SELECT DISTINCT r.name
+        FROM profiles p
+        JOIN printers pr ON pr.id = p.printer_id
+        JOIN resins r ON r.id = p.resin_id
+        WHERE lower(pr.name)=lower(?) AND p.is_active=1
+    """
+    params: list[Any] = [printer_name]
+    if material_type:
+        sql += " AND lower(COALESCE(r.material_type, 'resin'))=?"
+        params.append(_normalize_material_type(material_type))
+    sql += " ORDER BY r.name"
     with _connect(db_path) as conn:
-        rows = conn.execute(
-            """
-            SELECT DISTINCT r.name
-            FROM profiles p
-            JOIN printers pr ON pr.id = p.printer_id
-            JOIN resins r ON r.id = p.resin_id
-            WHERE lower(pr.name)=lower(?) AND p.is_active=1
-            ORDER BY r.name
-            """,
-            (printer_name,),
-        ).fetchall()
+        rows = conn.execute(sql, params).fetchall()
     return [str(row["name"]) for row in rows]
 
 
@@ -642,7 +820,8 @@ def export_catalog(db_path: str | Path | None = None) -> dict[str, Any]:
         resin_rows = conn.execute("SELECT * FROM resins ORDER BY name").fetchall()
         profile_rows = conn.execute(
             """
-            SELECT p.*, pr.name AS printer_name, r.name AS resin_name
+            SELECT p.*, pr.name AS printer_name, pr.technology AS printer_technology,
+                   r.name AS resin_name, COALESCE(r.material_type, 'resin') AS material_type
             FROM profiles p
             JOIN printers pr ON pr.id=p.printer_id
             JOIN resins r ON r.id=p.resin_id
@@ -732,6 +911,7 @@ def seed_catalog_from_legacy_json(
         }
         resin_payload = {
             "name": resin_name,
+            "material_type": "resin",
             "brand": profile.get("brand") or _infer_brand_model(resin_name)[0],
             "series": profile.get("series"),
             "technical_goal": profile.get("technical_goal"),
@@ -789,7 +969,7 @@ def list_legacy_profile_view(
         FROM profiles p
         JOIN printers pr ON pr.id = p.printer_id
         JOIN resins r ON r.id = p.resin_id
-        WHERE p.is_active=1
+         WHERE p.is_active=1 AND lower(COALESCE(r.material_type, 'resin'))='resin'
     """
     params: list[Any] = []
     if resin_name:
@@ -901,12 +1081,19 @@ def _normalize_csv_row(entity: str, row: dict[str, Any]) -> dict[str, Any]:
     if entity == "resins":
         return {
             "name": clean.get("name"),
+            "material_type": _normalize_material_type(clean.get("material_type")),
+            "material_family": clean.get("material_family"),
             "brand": clean.get("brand"),
             "series": clean.get("series"),
             "technical_goal": clean.get("technical_goal"),
             "viscosity_cp": _to_float(clean.get("viscosity_cp")),
             "shore_hardness": clean.get("shore_hardness"),
             "shrinkage_percent": _to_float(clean.get("shrinkage_percent")),
+            "density_g_cm3": _to_float(clean.get("density_g_cm3")),
+            "filament_diameter_mm": _to_float(clean.get("filament_diameter_mm")),
+            "nozzle_temp_min_c": _to_float(clean.get("nozzle_temp_min_c")),
+            "nozzle_temp_max_c": _to_float(clean.get("nozzle_temp_max_c")),
+            "bed_temp_c": _to_float(clean.get("bed_temp_c")),
             "notes": clean.get("notes"),
             "metadata": _to_json_dict(clean.get("metadata")),
         }
@@ -924,6 +1111,19 @@ def _normalize_csv_row(entity: str, row: dict[str, Any]) -> dict[str, Any]:
         "tilt_speed_reference_mm_h": _to_float(clean.get("tilt_speed_reference_mm_h")),
         "rest_time_before_print_s": _to_float(clean.get("rest_time_before_print_s")),
         "rest_time_after_retract_s": _to_float(clean.get("rest_time_after_retract_s")),
+        "nozzle_temp_c": _to_float(clean.get("nozzle_temp_c")),
+        "bed_temp_c": _to_float(clean.get("bed_temp_c")),
+        "chamber_temp_c": _to_float(clean.get("chamber_temp_c")),
+        "print_speed_mm_s": _to_float(clean.get("print_speed_mm_s")),
+        "first_layer_speed_mm_s": _to_float(clean.get("first_layer_speed_mm_s")),
+        "travel_speed_mm_s": _to_float(clean.get("travel_speed_mm_s")),
+        "retraction_distance_mm": _to_float(clean.get("retraction_distance_mm")),
+        "retraction_speed_mm_s": _to_float(clean.get("retraction_speed_mm_s")),
+        "nozzle_diameter_mm": _to_float(clean.get("nozzle_diameter_mm")),
+        "fan_speed_percent": _to_int(clean.get("fan_speed_percent")),
+        "infill_percent": _to_float(clean.get("infill_percent")),
+        "wall_count": _to_int(clean.get("wall_count")),
+        "support_style": clean.get("support_style"),
         "is_default": _to_bool(clean.get("is_default")) if clean.get("is_default") is not None else False,
         "is_active": _to_bool(clean.get("is_active")) if clean.get("is_active") is not None else True,
         "notes": clean.get("notes"),

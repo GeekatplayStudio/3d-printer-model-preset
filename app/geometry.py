@@ -470,6 +470,15 @@ def analyze_geometry(
         island_count=len(islands),
         detail_density=detail_density,
     )
+    downskin_area_ratio, fdm_support_risk_score = _fdm_surface_support_metrics(mesh)
+    if downskin_area_ratio is not None and downskin_area_ratio >= 0.10:
+        notes.append(
+            f"FDM heuristic: {round(downskin_area_ratio * 100.0, 1)}% of surface area is down-facing and may need support."
+        )
+    if fdm_support_risk_score is not None and fdm_support_risk_score >= 30.0:
+        notes.append(
+            f"FDM heuristic: support risk score {round(fdm_support_risk_score, 1)}/100 based on overhang-facing surface area."
+        )
     notes.extend(
         _analysis_detail_notes(
             slice_areas=slice_areas,
@@ -511,6 +520,8 @@ def analyze_geometry(
         build_plate_area_mm2=build_plate_area_mm2,
         max_cross_section_mm2=float(max_cross_section_mm2),
         max_cross_section_ratio=float(max_ratio),
+        downskin_area_ratio=downskin_area_ratio,
+        fdm_support_risk_score=fdm_support_risk_score,
         bounding_box_mm=bounding_box_mm,
         bounding_box_diagonal_mm=bounding_box_diagonal_mm,
         center_of_mass_mm=center_of_mass_mm,
@@ -2007,6 +2018,41 @@ def _structural_risk(
         + 0.10 * detail_term
     )
     return float(round(score, 2))
+
+
+def _fdm_surface_support_metrics(mesh: trimesh.Trimesh) -> tuple[float | None, float | None]:
+    try:
+        face_normals = np.asarray(mesh.face_normals, dtype=float)
+        face_areas = np.asarray(mesh.area_faces, dtype=float)
+    except Exception:
+        return None, None
+
+    if face_normals.ndim != 2 or face_normals.shape[1] != 3:
+        return None, None
+    if face_areas.ndim != 1 or face_areas.shape[0] != face_normals.shape[0]:
+        return None, None
+
+    valid = np.isfinite(face_normals).all(axis=1) & np.isfinite(face_areas) & (face_areas > 0.0)
+    if not np.any(valid):
+        return None, None
+
+    normals = face_normals[valid]
+    areas = face_areas[valid]
+    total_area = float(np.sum(areas))
+    if total_area <= 0.0:
+        return None, None
+
+    # Faces pointing downward below roughly a 45 degree self-support threshold are treated as support-sensitive.
+    downskin_mask = normals[:, 2] < -0.35
+    severe_overhang_mask = normals[:, 2] < -0.75
+
+    downskin_area = float(np.sum(areas[downskin_mask]))
+    severe_overhang_area = float(np.sum(areas[severe_overhang_mask]))
+    downskin_ratio = max(0.0, min(1.0, downskin_area / total_area))
+    severe_ratio = max(0.0, min(1.0, severe_overhang_area / total_area))
+    risk_score = 100.0 * min(1.0, downskin_ratio * 0.65 + severe_ratio * 0.75)
+
+    return round(downskin_ratio, 4), round(risk_score, 2)
 
 
 def _curvature_proxy(mesh: trimesh.Trimesh, cancel_check: AnalysisCancelCheck | None = None) -> float | None:

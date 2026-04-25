@@ -121,6 +121,16 @@ def test_wizard_ui_and_status_route(tmp_path, monkeypatch):
     ui = client.get("/wizard")
     assert ui.status_code == 200
     assert "Geekatplay Studio Wizard" in ui.text
+    assert "Step 0: Select Analyzer Target" in ui.text
+    assert "targetSel" in ui.text
+    assert "Ultimaker Cura" in ui.text
+    assert "dbSourceMode" in ui.text
+    assert "GitHub sync feed" in ui.text
+    assert "Web JSON feed" in ui.text
+    assert "Supported vendor pages" in ui.text
+    assert "dbScrapeUrls" in ui.text
+    assert "runUpdateNowBtn" in ui.text
+    assert "dbUpdateStatusMsg" in ui.text
     assert "Open Advanced Mode" in ui.text
     assert "downloadArtifact(" in ui.text
     assert "Show Catalog List" in ui.text
@@ -200,7 +210,16 @@ def test_wizard_setup_local_dataset_and_catalog_options(tmp_path, monkeypatch):
     options_body = options.json()
     assert len(options_body["printers"]) >= 1
     assert len(options_body["resins"]) >= 1
+    assert "materials" in options_body
     assert "compatibility" in options_body
+    assert "targets" in options_body
+    assert "msla" in options_body["targets"]
+    assert "fdm" in options_body["targets"]
+    assert options_body["slicers_by_target"]["msla"] == "Chitubox Free"
+    assert options_body["slicers_by_target"]["fdm"] == "Ultimaker Cura"
+    assert options_body["materials_by_target"]["msla"]
+    assert options_body["printers_by_target"]["fdm"]
+    assert options_body["materials_by_target"]["fdm"]
     assert isinstance(options_body["compatibility"], dict)
 
 
@@ -288,6 +307,162 @@ def test_wizard_gap_report_and_update_controls(tmp_path, monkeypatch):
     assert "submitted" in due_body
 
 
+def test_wizard_web_json_setup_and_update_controls(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+
+    def fake_fetch(*, url: str, timeout_s: float = 20.0):
+        assert url == "https://catalog.example.com/sync.json"
+        return (
+            {
+                "printers": [{"name": "Web Printer", "technology": "FDM"}],
+                "resins": [{"name": "Web Filament", "material_type": "filament", "material_family": "PLA"}],
+                "profiles": [
+                    {
+                        "printer_name": "Web Printer",
+                        "resin_name": "Web Filament",
+                        "profile_name": "Web PLA Profile",
+                        "layer_height_mm": 0.2,
+                        "nozzle_temp_c": 210.0,
+                        "bed_temp_c": 60.0,
+                        "print_speed_mm_s": 55.0,
+                        "is_default": True,
+                        "is_active": True,
+                    }
+                ],
+            },
+            "https://catalog.example.com/sync.json",
+        )
+
+    monkeypatch.setattr(main, "fetch_technical_sync_from_url", fake_fetch)
+
+    setup = client.post(
+        "/wizard/database/setup",
+        json={
+            "mode": "web_json",
+            "url": "https://catalog.example.com/sync.json",
+            "replace_existing": True,
+            "auto_update": True,
+            "auto_update_interval_seconds": 900,
+            "source": "wizard_web_test",
+        },
+    )
+    assert setup.status_code == 200
+    setup_body = setup.json()
+    assert setup_body["mode"] == "web_json"
+    assert setup_body["raw_url"] == "https://catalog.example.com/sync.json"
+    assert setup_body["auto_update_schedule_id"] is not None
+    schedule_id = setup_body["auto_update_schedule_id"]
+
+    status = client.get("/wizard/database/status")
+    assert status.status_code == 200
+    status_body = status.json()
+    assert status_body["ready_for_model_analysis"] is True
+    assert status_body["ready_for_settings"] is True
+
+    updates = client.get("/wizard/updates/status")
+    assert updates.status_code == 200
+    updates_body = updates.json()
+    assert updates_body["wizard_auto_update_present"] is True
+    schedule = next(item for item in updates_body["schedules"] if item["id"] == schedule_id)
+    assert schedule["web_url"] == "https://catalog.example.com/sync.json"
+
+    run_now = client.post("/wizard/updates/run-now", json={"schedule_id": schedule_id})
+    assert run_now.status_code == 200
+    run_now_body = run_now.json()
+    assert run_now_body["job"]["type"] == "sync_schedule"
+    job_id = run_now_body["job"]["id"]
+
+    final = {}
+    for _ in range(80):
+        poll = client.get(f"/jobs/{job_id}")
+        assert poll.status_code == 200
+        final = poll.json()
+        if final["status"] in {"succeeded", "failed"}:
+            break
+        time.sleep(0.02)
+    assert final["status"] == "succeeded"
+
+
+
+def test_wizard_web_scrape_setup_and_update_controls(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+
+    def fake_scrape(*, urls: list[str], timeout_s: float = 20.0, fetch_html=None):
+        assert urls == [
+            "https://store.anycubic.com/products/photon-mono-m7-pro",
+            "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers",
+        ]
+        assert timeout_s == 20.0
+        return (
+            {
+                "printers": [{"name": "Anycubic Photon Mono M7 Pro", "technology": "MSLA"}],
+                "resins": [{"name": "Standard Resin", "material_type": "resin"}],
+                "profiles": [
+                    {
+                        "printer_name": "Anycubic Photon Mono M7 Pro",
+                        "resin_name": "Standard Resin",
+                        "profile_name": "Official Settings",
+                        "layer_height_mm": 0.05,
+                        "exposure_s": 2.0,
+                        "bottom_exposure_s": 25.0,
+                        "is_default": True,
+                        "is_active": True,
+                    }
+                ],
+            },
+            {
+                "normalized_urls": urls,
+                "scraped_urls": urls,
+                "unsupported_urls": [],
+                "notes": [],
+            },
+        )
+
+    monkeypatch.setattr(main, "scrape_supported_catalog_pages", fake_scrape)
+
+    setup = client.post(
+        "/wizard/database/setup",
+        json={
+            "mode": "web_scrape",
+            "scrape_urls": [
+                "https://store.anycubic.com/products/photon-mono-m7-pro",
+                "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers",
+            ],
+            "replace_existing": True,
+            "auto_update": True,
+            "auto_update_interval_seconds": 1200,
+            "source": "wizard_scrape_test",
+        },
+    )
+    assert setup.status_code == 200
+    setup_body = setup.json()
+    assert setup_body["mode"] == "web_scrape"
+    assert setup_body["auto_update_schedule_id"] is not None
+    schedule_id = setup_body["auto_update_schedule_id"]
+
+    updates = client.get("/wizard/updates/status")
+    assert updates.status_code == 200
+    schedule = next(item for item in updates.json()["schedules"] if item["id"] == schedule_id)
+    assert schedule["scrape_urls"] == [
+        "https://store.anycubic.com/products/photon-mono-m7-pro",
+        "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers",
+    ]
+
+    run_now = client.post("/wizard/updates/run-now", json={"schedule_id": schedule_id})
+    assert run_now.status_code == 200
+    job_id = run_now.json()["job"]["id"]
+
+    final = {}
+    for _ in range(80):
+        poll = client.get(f"/jobs/{job_id}")
+        assert poll.status_code == 200
+        final = poll.json()
+        if final["status"] in {"succeeded", "failed"}:
+            break
+        time.sleep(0.02)
+    assert final["status"] == "succeeded"
+
+
 def test_wizard_model_fix_and_settings_downloads(tmp_path, monkeypatch):
     client = _client(tmp_path, monkeypatch)
 
@@ -335,9 +510,9 @@ def test_wizard_model_fix_and_settings_downloads(tmp_path, monkeypatch):
     options = client.get("/wizard/catalog/options")
     assert options.status_code == 200
     options_body = options.json()
-    printer = options_body["printers"][0]
-    compatibility = options_body.get("compatibility") or {}
-    compatible_resins = compatibility.get(printer) or options_body["resins"]
+    printer = options_body["printers_by_target"]["msla"][0]
+    compatibility = options_body.get("compatibility_by_target") or {}
+    compatible_resins = compatibility.get("msla", {}).get(printer) or options_body["materials_by_target"]["msla"]
     resin = compatible_resins[0]
 
     settings = client.post(
@@ -355,6 +530,10 @@ def test_wizard_model_fix_and_settings_downloads(tmp_path, monkeypatch):
     settings_body = settings.json()
     assert settings_body["cfg_download_url"].startswith("/wizard/download/")
     assert settings_body["settings_download_url"].startswith("/wizard/download/")
+    assert settings_body["target_process"] == "msla"
+    assert settings_body["slicer_name"] == "Chitubox Free"
+    assert settings_body["slicer_profile_download_url"] == settings_body["cfg_download_url"]
+    assert settings_body["slicer_profile_file_name"].endswith(".cfg")
     assert settings_body["settings"]["provenance"]["data_quality"] == "verified_sources"
     assert settings_body["settings"]["provenance"]["source_count"] >= 1
 
@@ -367,6 +546,90 @@ def test_wizard_model_fix_and_settings_downloads(tmp_path, monkeypatch):
     # Ensure artifacts survive a short delay and remain downloadable.
     time.sleep(0.01)
     assert client.get(settings_body["cfg_download_url"]).status_code == 200
+
+
+def test_wizard_settings_recommend_returns_cura_profile_for_fdm(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+
+    imported = client.post(
+        "/catalog/import",
+        json={
+            "replace_existing": True,
+            "printers": [
+                {
+                    "name": "Prusa MK4S",
+                    "technology": "FDM",
+                    "xy_resolution_um": 50,
+                }
+            ],
+            "resins": [
+                {
+                    "name": "Prusament PLA Galaxy Black",
+                    "material_type": "filament",
+                    "material_family": "PLA",
+                    "nozzle_temp_min_c": 205.0,
+                    "nozzle_temp_max_c": 215.0,
+                    "bed_temp_c": 60.0,
+                }
+            ],
+            "profiles": [
+                {
+                    "printer_name": "Prusa MK4S",
+                    "resin_name": "Prusament PLA Galaxy Black",
+                    "profile_name": "PLA Quality",
+                    "layer_height_mm": 0.2,
+                    "nozzle_temp_c": 210.0,
+                    "bed_temp_c": 60.0,
+                    "print_speed_mm_s": 55.0,
+                    "first_layer_speed_mm_s": 20.0,
+                    "travel_speed_mm_s": 180.0,
+                    "retraction_distance_mm": 0.8,
+                    "retraction_speed_mm_s": 35.0,
+                    "nozzle_diameter_mm": 0.4,
+                    "fan_speed_percent": 100,
+                    "infill_percent": 15.0,
+                    "wall_count": 2,
+                    "support_style": "tree",
+                    "is_default": True,
+                    "is_active": True,
+                }
+            ],
+        },
+    )
+    assert imported.status_code == 200
+
+    options = client.get("/wizard/catalog/options")
+    assert options.status_code == 200
+    options_body = options.json()
+    assert "fdm" in options_body["targets"]
+    assert options_body["slicers_by_target"]["fdm"] == "Ultimaker Cura"
+    assert "Prusa MK4S" in options_body["printers_by_target"]["fdm"]
+
+    settings = client.post(
+        "/wizard/settings/recommend",
+        json={
+            "analysis": _analysis_payload(),
+            "printer": "Prusa MK4S",
+            "resin_type": "Prusament PLA Galaxy Black",
+            "target_process": "fdm",
+            "use_case": "collectible",
+            "ambient_temp_c": 17.0,
+            "film_releases": 0,
+        },
+    )
+    assert settings.status_code == 200
+    settings_body = settings.json()
+    assert settings_body["target_process"] == "fdm"
+    assert settings_body["slicer_name"] == "Ultimaker Cura"
+    assert settings_body["slicer_profile_download_url"].startswith("/wizard/download/")
+    assert settings_body["slicer_profile_file_name"].endswith(".curaprofile")
+    assert settings_body["cfg_download_url"] == settings_body["slicer_profile_download_url"]
+    assert settings_body["chitubox_cfg"] is None
+
+    profile_download = client.get(settings_body["slicer_profile_download_url"])
+    assert profile_download.status_code == 200
+    assert "[values]" in profile_download.text
+    assert "material_print_temperature" in profile_download.text
 
 
 def test_wizard_model_retopology_runs_repair_prepass_and_downloads(tmp_path, monkeypatch):

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
+from ipaddress import ip_address
 import re
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 from urllib.request import Request, urlopen
 
 from app.catalog_store import import_catalog
@@ -13,6 +14,7 @@ from app.catalog_store import import_catalog
 _VALID_REPO_TOKEN = re.compile(r"^[A-Za-z0-9._-]+$")
 _VALID_REF = re.compile(r"^[A-Za-z0-9._/-]+$")
 _CURATION_NOTES_LIMIT = 120
+_LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
 
 
 def apply_technical_sync(
@@ -58,6 +60,25 @@ def fetch_technical_sync_from_github(
     return parse_technical_sync_json(body), raw_url
 
 
+def fetch_technical_sync_from_url(
+    *,
+    url: str,
+    timeout_s: float = 20.0,
+) -> tuple[dict[str, Any], str]:
+    normalized_url = _normalize_remote_json_url(url)
+    request = Request(
+        normalized_url,
+        headers={
+            "User-Agent": "ResinLogic-AI/0.1",
+            "Accept": "application/json,text/plain;q=0.9,*/*;q=0.1",
+        },
+    )
+    with urlopen(request, timeout=timeout_s) as response:  # noqa: S310
+        charset = response.headers.get_content_charset() or "utf-8"
+        body = response.read().decode(charset, errors="replace")
+    return parse_technical_sync_json(body), normalized_url
+
+
 def build_github_raw_url(*, owner: str, repo: str, path: str, ref: str = "main") -> str:
     normalized_owner = owner.strip()
     normalized_repo = repo.strip()
@@ -74,6 +95,40 @@ def build_github_raw_url(*, owner: str, repo: str, path: str, ref: str = "main")
     encoded_segments = [quote(segment, safe="-._~") for segment in normalized_path.split("/")]
     encoded_path = "/".join(encoded_segments)
     return f"https://raw.githubusercontent.com/{normalized_owner}/{normalized_repo}/{normalized_ref}/{encoded_path}"
+
+
+def _normalize_remote_json_url(url: str) -> str:
+    normalized = str(url or "").strip()
+    if not normalized:
+        raise ValueError("Remote JSON URL is required.")
+
+    parsed = urlparse(normalized)
+    if parsed.scheme not in {"http", "https"}:
+        raise ValueError("Remote JSON URL must use http or https.")
+    if parsed.username or parsed.password:
+        raise ValueError("Remote JSON URL must not include embedded credentials.")
+
+    hostname = (parsed.hostname or "").strip().lower()
+    if not hostname:
+        raise ValueError("Remote JSON URL must include a hostname.")
+    if hostname in _LOCAL_HOSTS or hostname.endswith(".local"):
+        raise ValueError("Remote JSON URL must not point to localhost.")
+
+    try:
+        parsed_ip = ip_address(hostname)
+    except ValueError:
+        parsed_ip = None
+    if parsed_ip and (
+        parsed_ip.is_private
+        or parsed_ip.is_loopback
+        or parsed_ip.is_link_local
+        or parsed_ip.is_multicast
+        or parsed_ip.is_reserved
+        or parsed_ip.is_unspecified
+    ):
+        raise ValueError("Remote JSON URL must not point to a private or local IP address.")
+
+    return parsed._replace(fragment="").geturl()
 
 
 def normalize_technical_sync_payload(
@@ -266,8 +321,11 @@ def _curate_resins(rows: list[Any], report: dict[str, Any]) -> list[dict[str, An
             continue
 
         brand = _clean_text(row.get("brand")) or _infer_brand_model(name)[0]
+        material_type = (_clean_text(row.get("material_type")) or "resin").lower()
         resin = {
             "name": name,
+            "material_type": material_type,
+            "material_family": _clean_text(row.get("material_family")),
             "brand": brand,
             "series": _clean_text(row.get("series")),
             "technical_goal": _clean_text(row.get("technical_goal")),
@@ -284,6 +342,41 @@ def _curate_resins(rows: list[Any], report: dict[str, Any]) -> list[dict[str, An
                 minimum=0.0,
                 maximum=20.0,
                 field_name=f"resin '{name}' shrinkage_percent",
+                report=report,
+            ),
+            "density_g_cm3": _clamp_float(
+                _as_float(row.get("density_g_cm3")),
+                minimum=0.1,
+                maximum=20.0,
+                field_name=f"resin '{name}' density_g_cm3",
+                report=report,
+            ),
+            "filament_diameter_mm": _clamp_float(
+                _as_float(row.get("filament_diameter_mm")),
+                minimum=0.5,
+                maximum=5.0,
+                field_name=f"resin '{name}' filament_diameter_mm",
+                report=report,
+            ),
+            "nozzle_temp_min_c": _clamp_float(
+                _as_float(row.get("nozzle_temp_min_c")),
+                minimum=50.0,
+                maximum=450.0,
+                field_name=f"resin '{name}' nozzle_temp_min_c",
+                report=report,
+            ),
+            "nozzle_temp_max_c": _clamp_float(
+                _as_float(row.get("nozzle_temp_max_c")),
+                minimum=50.0,
+                maximum=450.0,
+                field_name=f"resin '{name}' nozzle_temp_max_c",
+                report=report,
+            ),
+            "bed_temp_c": _clamp_float(
+                _as_float(row.get("bed_temp_c")),
+                minimum=0.0,
+                maximum=200.0,
+                field_name=f"resin '{name}' bed_temp_c",
                 report=report,
             ),
             "notes": _clean_text(row.get("notes")),
@@ -377,17 +470,137 @@ def _curate_profiles(
             field_name=f"profile '{profile_name}' rest_time_after_retract_s",
             report=report,
         )
+        nozzle_temp = _clamp_float(
+            _as_float(row.get("nozzle_temp_c")),
+            minimum=50.0,
+            maximum=450.0,
+            field_name=f"profile '{profile_name}' nozzle_temp_c",
+            report=report,
+        )
+        bed_temp = _clamp_float(
+            _as_float(row.get("bed_temp_c")),
+            minimum=0.0,
+            maximum=200.0,
+            field_name=f"profile '{profile_name}' bed_temp_c",
+            report=report,
+        )
+        chamber_temp = _clamp_float(
+            _as_float(row.get("chamber_temp_c")),
+            minimum=0.0,
+            maximum=120.0,
+            field_name=f"profile '{profile_name}' chamber_temp_c",
+            report=report,
+        )
+        print_speed = _clamp_float(
+            _as_float(row.get("print_speed_mm_s")),
+            minimum=1.0,
+            maximum=1000.0,
+            field_name=f"profile '{profile_name}' print_speed_mm_s",
+            report=report,
+        )
+        first_layer_speed = _clamp_float(
+            _as_float(row.get("first_layer_speed_mm_s")),
+            minimum=1.0,
+            maximum=1000.0,
+            field_name=f"profile '{profile_name}' first_layer_speed_mm_s",
+            report=report,
+        )
+        travel_speed = _clamp_float(
+            _as_float(row.get("travel_speed_mm_s")),
+            minimum=1.0,
+            maximum=1000.0,
+            field_name=f"profile '{profile_name}' travel_speed_mm_s",
+            report=report,
+        )
+        retraction_distance = _clamp_float(
+            _as_float(row.get("retraction_distance_mm")),
+            minimum=0.0,
+            maximum=20.0,
+            field_name=f"profile '{profile_name}' retraction_distance_mm",
+            report=report,
+        )
+        retraction_speed = _clamp_float(
+            _as_float(row.get("retraction_speed_mm_s")),
+            minimum=0.0,
+            maximum=200.0,
+            field_name=f"profile '{profile_name}' retraction_speed_mm_s",
+            report=report,
+        )
+        nozzle_diameter = _clamp_float(
+            _as_float(row.get("nozzle_diameter_mm")),
+            minimum=0.1,
+            maximum=5.0,
+            field_name=f"profile '{profile_name}' nozzle_diameter_mm",
+            report=report,
+        )
+        fan_speed = _clamp_int(
+            _as_int(row.get("fan_speed_percent")),
+            minimum=0,
+            maximum=100,
+            field_name=f"profile '{profile_name}' fan_speed_percent",
+            report=report,
+        )
+        infill = _clamp_float(
+            _as_float(row.get("infill_percent")),
+            minimum=0.0,
+            maximum=100.0,
+            field_name=f"profile '{profile_name}' infill_percent",
+            report=report,
+        )
+        wall_count = _clamp_int(
+            _as_int(row.get("wall_count")),
+            minimum=0,
+            maximum=50,
+            field_name=f"profile '{profile_name}' wall_count",
+            report=report,
+        )
+        support_style = _clean_text(row.get("support_style"))
 
-        populated_core_fields = sum(value is not None for value in (layer_height, exposure, bottom_exposure, tilt_speed))
-        if populated_core_fields == 0:
+        msla_core_fields = sum(value is not None for value in (layer_height, exposure, bottom_exposure, tilt_speed))
+        fdm_core_fields = sum(
+            value is not None
+            for value in (
+                layer_height,
+                nozzle_temp,
+                bed_temp,
+                print_speed,
+                retraction_distance,
+                retraction_speed,
+                nozzle_diameter,
+            )
+        )
+        uses_fdm_fields = any(
+            value is not None
+            for value in (
+                nozzle_temp,
+                bed_temp,
+                chamber_temp,
+                print_speed,
+                first_layer_speed,
+                travel_speed,
+                retraction_distance,
+                retraction_speed,
+                nozzle_diameter,
+                fan_speed,
+                infill,
+                wall_count,
+                support_style,
+            )
+        )
+        if msla_core_fields == 0 and fdm_core_fields == 0:
             _add_curation_note(
                 report,
                 f"Profile row {idx} ('{profile_name}') dropped: no core setting values were provided.",
             )
             continue
 
+        profile_process = "fdm" if uses_fdm_fields and fdm_core_fields >= msla_core_fields else "msla"
+        populated_core_fields = fdm_core_fields if profile_process == "fdm" else msla_core_fields
+        expected_core_fields = 7 if profile_process == "fdm" else 4
+
         quality = _profile_quality_score(
             populated_core_fields=populated_core_fields,
+            expected_core_fields=expected_core_fields,
             is_default=_as_bool(row.get("is_default"), default=False),
             has_rest_timing=(rest_before is not None and rest_after is not None),
         )
@@ -407,11 +620,25 @@ def _curate_profiles(
             "tilt_speed_reference_mm_h": tilt_speed,
             "rest_time_before_print_s": rest_before,
             "rest_time_after_retract_s": rest_after,
+            "nozzle_temp_c": nozzle_temp,
+            "bed_temp_c": bed_temp,
+            "chamber_temp_c": chamber_temp,
+            "print_speed_mm_s": print_speed,
+            "first_layer_speed_mm_s": first_layer_speed,
+            "travel_speed_mm_s": travel_speed,
+            "retraction_distance_mm": retraction_distance,
+            "retraction_speed_mm_s": retraction_speed,
+            "nozzle_diameter_mm": nozzle_diameter,
+            "fan_speed_percent": fan_speed,
+            "infill_percent": infill,
+            "wall_count": wall_count,
+            "support_style": support_style,
             "is_default": _as_bool(row.get("is_default"), default=False),
             "is_active": _as_bool(row.get("is_active"), default=True),
             "notes": _clean_text(row.get("notes")),
             "metadata": {
                 **_as_dict(row.get("metadata")),
+                "profile_process": profile_process,
                 "sync_quality_score": quality,
                 "sync_confidence_score": confidence,
                 "source_reliability": source_reliability,
@@ -638,10 +865,11 @@ def _clamp_int(
 def _profile_quality_score(
     *,
     populated_core_fields: int,
+    expected_core_fields: int,
     is_default: bool,
     has_rest_timing: bool,
 ) -> float:
-    core = min(1.0, max(0.0, populated_core_fields / 4.0))
+    core = min(1.0, max(0.0, populated_core_fields / max(1.0, float(expected_core_fields))))
     bonus = 0.0
     if is_default:
         bonus += 0.05
@@ -716,6 +944,8 @@ def _estimate_source_reliability(
 
     if "github" in source_key:
         reliability = 0.78
+    elif "scrape" in source_key:
+        reliability = 0.74
     elif source_key in {"manual", "file_upload"} or source_key.startswith("unit_test"):
         reliability = 0.72
     elif "community" in source_key:
@@ -734,6 +964,13 @@ def _estimate_source_reliability(
             else:
                 reliability += 0.03
             if meta.get("owner") and meta.get("repo") and meta.get("path"):
+                reliability += 0.02
+        if kind == "web_scrape":
+            reliability = max(reliability, 0.76)
+            if _as_bool(meta.get("supported_scraper"), default=False):
+                reliability += 0.04
+            source_urls = meta.get("source_urls")
+            if isinstance(source_urls, list) and source_urls:
                 reliability += 0.02
         if _as_bool(meta.get("verified"), default=False):
             reliability += 0.08

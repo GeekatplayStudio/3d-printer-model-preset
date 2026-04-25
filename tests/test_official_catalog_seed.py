@@ -51,3 +51,6 @@ def test_official_seed_imports_with_sync_pipeline(tmp_path: Path) -> None:
     assert len(resins) >= len(payload["resins"])
     assert len(profiles) >= 18
     assert any(isinstance(item.get("metadata"), dict) and item["metadata"].get("source_urls") for item in profiles)
+    assert any(str(item.get("technology", "")).upper() == "FDM" for item in printers)
+    assert any(str(item.get("material_type", "")).lower() == "filament" for item in resins)
+    assert any(item.get("nozzle_temp_c") is not None for item in profiles)

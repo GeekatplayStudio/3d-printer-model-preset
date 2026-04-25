@@ -1,6 +1,6 @@
 {
   "schema_version": "sync-1.2-official",
-  "updated_at": "2026-04-21",
+  "updated_at": "2026-04-24",
   "replace_existing": false,
   "printers": [
     {
@@ -349,6 +349,50 @@
         "retrieved_at": "2026-04-21",
         "data_completeness": "profile_table_only"
       }
+    },
+    {
+      "name": "Anycubic Kobra 3",
+      "brand": "Anycubic",
+      "model": "Kobra 3",
+      "technology": "FDM",
+      "xy_resolution_um": null,
+      "build_volume_x_mm": null,
+      "build_volume_y_mm": null,
+      "build_volume_z_mm": null,
+      "tilt_release_supported": false,
+      "wifi_supported": true,
+      "notes": "Baseline FDM seed row for bundled local setup. Detailed nozzle and motion tuning is carried by the linked filament profiles.",
+      "metadata": {
+        "manufacturer": "Anycubic",
+        "source_urls": [
+          "https://store.anycubic.com/products/kobra-3-combo"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-24",
+        "data_completeness": "baseline_fdm_seed"
+      }
+    },
+    {
+      "name": "Prusa MK4S",
+      "brand": "Prusa Research",
+      "model": "MK4S",
+      "technology": "FDM",
+      "xy_resolution_um": null,
+      "build_volume_x_mm": null,
+      "build_volume_y_mm": null,
+      "build_volume_z_mm": null,
+      "tilt_release_supported": false,
+      "wifi_supported": false,
+      "notes": "Baseline FDM seed row for bundled local setup. Detailed nozzle and motion tuning is carried by the linked filament profiles.",
+      "metadata": {
+        "manufacturer": "Prusa Research",
+        "source_urls": [
+          "https://www.prusa3d.com/product/original-prusa-mk4s-3d-printer/"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-24",
+        "data_completeness": "baseline_fdm_seed"
+      }
     }
   ],
   "resins": [
@@ -530,6 +574,90 @@
         ],
         "source_type": "manufacturer_tech_specs",
         "retrieved_at": "2026-04-21"
+      }
+    },
+    {
+      "name": "Anycubic High Speed PLA",
+      "brand": "Anycubic",
+      "series": "High Speed PLA",
+      "material_type": "filament",
+      "material_family": "PLA",
+      "filament_diameter_mm": 1.75,
+      "technical_goal": "High-throughput general FDM",
+      "nozzle_temp_min_c": 200.0,
+      "nozzle_temp_max_c": 230.0,
+      "bed_temp_c": 60.0,
+      "notes": "Official Anycubic high-speed PLA filament listing used as a bundled FDM baseline.",
+      "metadata": {
+        "manufacturer": "Anycubic",
+        "source_urls": [
+          "https://store.anycubic.com/products/high-speed-pla-filament"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-24"
+      }
+    },
+    {
+      "name": "Anycubic PETG Filament",
+      "brand": "Anycubic",
+      "series": "PETG Filament",
+      "material_type": "filament",
+      "material_family": "PETG",
+      "filament_diameter_mm": 1.75,
+      "technical_goal": "Tougher functional FDM parts",
+      "nozzle_temp_min_c": 230.0,
+      "nozzle_temp_max_c": 250.0,
+      "bed_temp_c": 75.0,
+      "notes": "Official Anycubic PETG filament listing used as a bundled FDM baseline.",
+      "metadata": {
+        "manufacturer": "Anycubic",
+        "source_urls": [
+          "https://store.anycubic.com/products/petg-filament"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-24"
+      }
+    },
+    {
+      "name": "Prusament PLA Galaxy Black",
+      "brand": "Prusa Research",
+      "series": "Prusament PLA",
+      "material_type": "filament",
+      "material_family": "PLA",
+      "filament_diameter_mm": 1.75,
+      "technical_goal": "General-purpose quality FDM",
+      "nozzle_temp_min_c": 205.0,
+      "nozzle_temp_max_c": 215.0,
+      "bed_temp_c": 60.0,
+      "notes": "Official Prusament PLA listing used as a bundled FDM baseline.",
+      "metadata": {
+        "manufacturer": "Prusa Research",
+        "source_urls": [
+          "https://www.prusa3d.com/product/prusament-pla-galaxy-black-1kg/"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-24"
+      }
+    },
+    {
+      "name": "Prusament PETG Urban Grey",
+      "brand": "Prusa Research",
+      "series": "Prusament PETG",
+      "material_type": "filament",
+      "material_family": "PETG",
+      "filament_diameter_mm": 1.75,
+      "technical_goal": "Durable PETG production parts",
+      "nozzle_temp_min_c": 240.0,
+      "nozzle_temp_max_c": 250.0,
+      "bed_temp_c": 80.0,
+      "notes": "Official Prusament PETG listing used as a bundled FDM baseline.",
+      "metadata": {
+        "manufacturer": "Prusa Research",
+        "source_urls": [
+          "https://www.prusa3d.com/product/prusament-petg-urban-grey-1kg/"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-24"
       }
     }
   ],
@@ -1142,6 +1270,126 @@
             35.0
           ]
         }
+      }
+    },
+    {
+      "printer_name": "Anycubic Kobra 3",
+      "resin_name": "Anycubic High Speed PLA",
+      "profile_name": "Baseline PLA Draft",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 220.0,
+      "bed_temp_c": 60.0,
+      "print_speed_mm_s": 80.0,
+      "first_layer_speed_mm_s": 25.0,
+      "travel_speed_mm_s": 180.0,
+      "retraction_distance_mm": 0.8,
+      "retraction_speed_mm_s": 35.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 100,
+      "infill_percent": 15.0,
+      "wall_count": 2,
+      "support_style": "tree",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Bundled baseline PLA profile for local FDM coverage.",
+      "metadata": {
+        "source_urls": [
+          "https://store.anycubic.com/products/kobra-3-combo",
+          "https://store.anycubic.com/products/high-speed-pla-filament"
+        ],
+        "source_type": "manufacturer_product_page",
+        "source_mode": "Anycubic Kobra 3 + High Speed PLA",
+        "retrieved_at": "2026-04-24"
+      }
+    },
+    {
+      "printer_name": "Anycubic Kobra 3",
+      "resin_name": "Anycubic PETG Filament",
+      "profile_name": "Baseline PETG Balanced",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 240.0,
+      "bed_temp_c": 75.0,
+      "print_speed_mm_s": 45.0,
+      "first_layer_speed_mm_s": 20.0,
+      "travel_speed_mm_s": 150.0,
+      "retraction_distance_mm": 0.8,
+      "retraction_speed_mm_s": 30.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 45,
+      "infill_percent": 20.0,
+      "wall_count": 3,
+      "support_style": "normal",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Bundled baseline PETG profile for local FDM coverage.",
+      "metadata": {
+        "source_urls": [
+          "https://store.anycubic.com/products/kobra-3-combo",
+          "https://store.anycubic.com/products/petg-filament"
+        ],
+        "source_type": "manufacturer_product_page",
+        "source_mode": "Anycubic Kobra 3 + PETG",
+        "retrieved_at": "2026-04-24"
+      }
+    },
+    {
+      "printer_name": "Prusa MK4S",
+      "resin_name": "Prusament PLA Galaxy Black",
+      "profile_name": "PLA Quality",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 210.0,
+      "bed_temp_c": 60.0,
+      "print_speed_mm_s": 55.0,
+      "first_layer_speed_mm_s": 20.0,
+      "travel_speed_mm_s": 180.0,
+      "retraction_distance_mm": 0.8,
+      "retraction_speed_mm_s": 35.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 100,
+      "infill_percent": 15.0,
+      "wall_count": 2,
+      "support_style": "tree",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Bundled PLA baseline mirroring the FDM fixture used across wizard and optimizer coverage.",
+      "metadata": {
+        "source_urls": [
+          "https://www.prusa3d.com/product/original-prusa-mk4s-3d-printer/",
+          "https://www.prusa3d.com/product/prusament-pla-galaxy-black-1kg/"
+        ],
+        "source_type": "manufacturer_product_page",
+        "source_mode": "Prusa MK4S + Prusament PLA",
+        "retrieved_at": "2026-04-24"
+      }
+    },
+    {
+      "printer_name": "Prusa MK4S",
+      "resin_name": "Prusament PETG Urban Grey",
+      "profile_name": "PETG Structural",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 245.0,
+      "bed_temp_c": 80.0,
+      "print_speed_mm_s": 40.0,
+      "first_layer_speed_mm_s": 20.0,
+      "travel_speed_mm_s": 170.0,
+      "retraction_distance_mm": 0.8,
+      "retraction_speed_mm_s": 30.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 35,
+      "infill_percent": 20.0,
+      "wall_count": 3,
+      "support_style": "normal",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Bundled PETG baseline for local FDM coverage.",
+      "metadata": {
+        "source_urls": [
+          "https://www.prusa3d.com/product/original-prusa-mk4s-3d-printer/",
+          "https://www.prusa3d.com/product/prusament-petg-urban-grey-1kg/"
+        ],
+        "source_type": "manufacturer_product_page",
+        "source_mode": "Prusa MK4S + Prusament PETG",
+        "retrieved_at": "2026-04-24"
       }
     }
   ]

@@ -228,3 +228,102 @@ def test_apply_technical_sync_returns_curation_summary(tmp_path):
     assert result["profiles_upserted"] == 1
     assert "curation" in result
     assert result["curation"]["kept_counts"]["profiles"] == 1
+
+
+def test_curate_sync_payload_keeps_fdm_materials_and_profiles():
+    payload = {
+        "replace_existing": False,
+        "printers": [{"name": "Kobra 3", "technology": "FDM"}],
+        "resins": [
+            {
+                "name": "High Speed PLA",
+                "material_type": "filament",
+                "material_family": "PLA",
+                "filament_diameter_mm": 1.75,
+                "nozzle_temp_min_c": 200.0,
+                "nozzle_temp_max_c": 220.0,
+                "bed_temp_c": 60.0,
+            }
+        ],
+        "profiles": [
+            {
+                "printer_name": "Kobra 3",
+                "resin_name": "High Speed PLA",
+                "profile_name": "Draft PLA",
+                "layer_height_mm": 0.2,
+                "nozzle_temp_c": 210.0,
+                "bed_temp_c": 60.0,
+                "print_speed_mm_s": 55.0,
+                "retraction_distance_mm": 0.8,
+                "retraction_speed_mm_s": 35.0,
+                "nozzle_diameter_mm": 0.4,
+                "fan_speed_percent": 100,
+                "is_default": True,
+            }
+        ],
+    }
+
+    curated, report = curate_technical_sync_payload(
+        payload,
+        source="web_scrape",
+        source_metadata={
+            "kind": "web_scrape",
+            "supported_scraper": True,
+            "source_urls": ["https://store.anycubic.com/products/high-speed-pla"],
+        },
+    )
+
+    assert len(curated["resins"]) == 1
+    assert curated["resins"][0]["material_type"] == "filament"
+    assert curated["resins"][0]["material_family"] == "PLA"
+    assert curated["resins"][0]["filament_diameter_mm"] == 1.75
+    assert len(curated["profiles"]) == 1
+    assert curated["profiles"][0]["nozzle_temp_c"] == 210.0
+    assert curated["profiles"][0]["print_speed_mm_s"] == 55.0
+    assert curated["profiles"][0]["metadata"]["profile_process"] == "fdm"
+    assert report["kept_counts"]["profiles"] == 1
+    assert report["source_reliability"] >= 0.76
+
+
+def test_apply_technical_sync_preserves_fdm_fields(tmp_path):
+    db_path = tmp_path / "catalog.db"
+    result = apply_technical_sync(
+        payload={
+            "printers": [{"name": "Kobra 3", "technology": "FDM"}],
+            "resins": [
+                {
+                    "name": "PETG Filament",
+                    "material_type": "filament",
+                    "material_family": "PETG",
+                    "filament_diameter_mm": 1.75,
+                    "nozzle_temp_min_c": 230.0,
+                    "nozzle_temp_max_c": 250.0,
+                    "bed_temp_c": 75.0,
+                }
+            ],
+            "profiles": [
+                {
+                    "printer_name": "Kobra 3",
+                    "resin_name": "PETG Filament",
+                    "profile_name": "PETG Default",
+                    "layer_height_mm": 0.2,
+                    "nozzle_temp_c": 240.0,
+                    "bed_temp_c": 75.0,
+                    "print_speed_mm_s": 45.0,
+                    "retraction_distance_mm": 0.7,
+                    "retraction_speed_mm_s": 30.0,
+                    "is_default": True,
+                }
+            ],
+        },
+        db_path=db_path,
+    )
+
+    assert result["resins_upserted"] == 1
+    assert result["profiles_upserted"] == 1
+    resin = list_resins(db_path=db_path)[0]
+    profile = list_profiles(db_path=db_path)[0]
+    assert resin["material_type"] == "filament"
+    assert resin["material_family"] == "PETG"
+    assert profile["nozzle_temp_c"] == 240.0
+    assert profile["print_speed_mm_s"] == 45.0

@@ -171,5 +171,9 @@ class ModularAgenticPipeline:
             film_releases=film_releases,
             catalog_db_path=catalog_db_path,
         )
+        if str(settings.process_technology).upper() in {"FDM", "FFF"}:
+            raise ValueError(
+                "Full pipeline export currently supports only resin/MSLA profiles. Use phase 1 plus /phase2/optimize for FDM settings."
+            )
         cfg_text = render_chitubox_cfg(settings)
         return PipelineResponse(analysis=analysis, settings=settings, chitubox_cfg=cfg_text)

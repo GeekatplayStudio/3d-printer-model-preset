@@ -190,3 +190,65 @@ def test_settings_provenance_fallback_defaults():
 
     assert settings.provenance.data_quality == "fallback_defaults"
     assert settings.provenance.real_data_backed is False
+
+
+def test_fdm_printer_profile_lookup_returns_fdm_settings(tmp_path):
+    db_path = tmp_path / "catalog.db"
+    printer = create_or_upsert_printer(
+        {
+            "name": "Prusa MK4S",
+            "technology": "FDM",
+            "xy_resolution_um": 50,
+        },
+        db_path=db_path,
+    )
+    filament = create_or_upsert_resin(
+        {
+            "name": "Prusament PLA Galaxy Black",
+            "material_type": "filament",
+            "material_family": "PLA",
+            "nozzle_temp_min_c": 205.0,
+            "nozzle_temp_max_c": 215.0,
+            "bed_temp_c": 60.0,
+        },
+        db_path=db_path,
+    )
+    create_or_upsert_profile(
+        {
+            "printer_id": printer["id"],
+            "resin_id": filament["id"],
+            "profile_name": "PLA Quality",
+            "layer_height_mm": 0.2,
+            "nozzle_temp_c": 210.0,
+            "bed_temp_c": 60.0,
+            "print_speed_mm_s": 55.0,
+            "first_layer_speed_mm_s": 20.0,
+            "travel_speed_mm_s": 180.0,
+            "retraction_distance_mm": 0.8,
+            "retraction_speed_mm_s": 35.0,
+            "nozzle_diameter_mm": 0.4,
+            "fan_speed_percent": 100,
+            "infill_percent": 15.0,
+            "wall_count": 2,
+            "support_style": "tree",
+            "is_default": True,
+        },
+        db_path=db_path,
+    )
+
+    settings = get_optimal_settings(
+        analysis_data=_analysis_stub(max_ratio=0.12, detail_density=2.4),
+        resin_type="Prusament PLA Galaxy Black",
+        use_case="collectible",
+        printer="Prusa MK4S",
+        ambient_temp_c=17.0,
+        catalog_db_path=db_path,
+    )
+
+    assert settings.process_technology == "FDM"
+    assert settings.fdm is not None
+    assert settings.exposure_s is None
+    assert settings.fdm.nozzle_temp_c >= 215.0
+    assert settings.fdm.bed_temp_c == 65.0
+    assert settings.fdm.wall_count >= 3
+    assert settings.source_profile == "PLA Quality"

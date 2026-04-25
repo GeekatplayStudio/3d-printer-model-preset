@@ -1,141 +1,171 @@
-# Geekatplay Studio | ResinLogic AI
+# Geekatplay Studio 3D Print Ops
 
-Geekatplay Studio's agentic backend and operations console for resin-first 3D printing optimization across printers, materials, and print profiles.
+Geekatplay Studio 3D Print Ops is a local-first FastAPI backend and browser toolkit for analyzing printable geometry, maintaining a source-attributed printer and material catalog, and generating slicer-ready exports for MSLA/resin and first-pass FDM/filament workflows.
 
-The system combines:
+Legacy compatibility note: internal package names, environment variables, SQLite file names, and some route parameters still use `resinlogic` or `resin` identifiers. The external product/documentation surface is branded as Geekatplay Studio.
 
-- geometry analysis from STL/OBJ files,
-- rule-based and profile-based parameter optimization,
-- technical catalog management for printers/resins/profiles,
-- feedback ingestion and history-aware tuning,
-- operational tooling (local storage, jobs, audit, metrics, schedules).
+## What Ships Today
 
-## Project Idea
+- Guided `/wizard` flow with Step 0 target selection: `MSLA / resin` or `FDM / filament`.
+- Step 1 catalog setup/update from four source modes:
+  - bundled official dataset,
+  - GitHub-hosted sync JSON,
+  - direct web JSON feed,
+  - supported vendor HTML pages.
+- STL analysis, repair, retopology, live progress polling, cooperative cancel, and local 3D preview.
+- Settings generation with provenance, confidence, and downloadable slicer artifacts.
+- Chitubox Free export for MSLA and Ultimaker Cura profile export for FDM.
+- Catalog CRUD, CSV/JSON import/export, version snapshots, audit logs, jobs, schedules, and Prometheus metrics.
+- Source-attributed official seed data updated through `2026-04-24`, including baseline FDM printers, filament materials, and FDM profiles.
 
-Geekatplay Studio's ResinLogic AI is designed to let an agentic workflow take a high-level print goal and execute it through modular phases:
+## End-To-End Workflow
 
-1. analyze geometry risk and print intent,
-2. derive printer-resin settings with Mars 5 Ultra specific logic and catalog overrides,
-3. ingest real-world feedback and adapt future recommendations.
+1. Open `/wizard` and choose the analyzer target.
+2. Seed or update the local catalog from the official dataset or a remote source.
+3. Upload an STL, run geometry analysis, and optionally repair or retopologize the mesh.
+4. Choose a compatible printer and material for the selected target.
+5. Generate slicer-ready settings, review provenance, and download the exported profile.
 
-Beyond Mars 5 Ultra, the catalog architecture supports all printers and all resins by storing normalized technical data and compatibility profiles.
+Supporting UIs:
 
-## Current Status
+- `/wizard`: guided operator flow.
+- `/app`: broader operations console for jobs, sync, metrics, and data readiness.
+- `/catalog/admin`: direct printer/material/profile maintenance UI.
 
-Implemented:
+## Catalog Source Modes
 
-- FastAPI backend with modular phase pipeline.
-- STL geometry integrity report with optional auto-repair (duplicate/degenerate cleanup, hole-fill attempt, post-repair cleanup pass, topology notes).
-- Analysis depth profiles (`minimum`, `balanced`, `deep`, `extreme`) with per-step runtime telemetry, adaptive large-model throttling, and grouped unsupported-region reporting.
-- Catalog CRUD for printers, resins, and profiles.
-- CSV and JSON import/export for technical database maintenance.
-- Catalog versioning and rollback snapshots.
-- Audit logging for operational mutations.
-- Async job queue with persistence, cancellation, and retention cleanup.
-- Sync engine with schedule store and optional background scheduler.
-- GitHub technical sync endpoint and schedule support for pulling a repo-hosted data file.
-- Feedback ingestion (files, URLs, YouTube transcripts) and history storage.
-- History-aware optimization endpoint.
-- Camera log analyzer endpoint for failure-driven adjustments.
-- Standalone local mode by default (per-user SQLite directory, no central server required).
-- Optional role-based API access when standalone mode is disabled.
-- Metrics endpoint and Prometheus export.
-- Two browser UIs:
-  - `/wizard` for the guided step-by-step end-user workflow.
-  - `/app` for full operations console (dark mode).
-  - `/catalog/admin` for catalog maintenance with search and row-level edit/delete.
-- Wizard STL UX and runtime improvements:
-  - STL-only upload enforcement,
-  - printer -> compatible resin dropdown flow,
-  - live progress/status polling during analyze,
-  - per-stage timing visibility and in-place cancel support,
-  - adaptive timeout windows for large models,
-  - chunked upload staging to avoid large-file OOM failures,
-  - auth-aware repaired STL and settings downloads in shared/server mode,
-  - always-visible local 3D preview with wire/mesh/solid modes,
-  - model statistics, defect, repair, and retopology reporting panels,
-  - browser-console diagnostics for preview runtime dependency failures.
-- Geometry analysis detail improvements:
-  - exact minimum-mode multiplane slicing for small meshes,
-  - surface-span weighted minimum-mode fallback for larger meshes,
-  - voxel reuse between cross-section fallback and cavity/island detection,
-  - opt-in Open3D voxel backend routed through the shared voxelization boundary,
-  - grouped island regions with layer spans and centroids,
-  - richer analysis notes for peak cross-section, cavity totals, island severity, and curvature summary.
-- Geometry backend expansion:
-  - APScheduler-backed sync scheduler replacing the custom polling loop,
-  - optional PyMeshLab prototype repair backend with Trimesh fallback,
-  - benchmark scripts for repair backends and geometry stage timings,
-  - Blender-backed retopology workflow with quad and voxel remesh modes,
-  - repair outcome tracking with before/after save-reload health reporting.
-- Settings provenance and trust surface:
-  - `settings.provenance.data_quality` (`verified_sources`, `catalog_unverified`, `fallback_defaults`),
-  - `settings.provenance.real_data_backed`,
-  - `settings.provenance.confidence_score`,
-  - source references with links from catalog metadata.
-- Container/runtime updates:
-  - Docker image can install Blender for headless retopology,
-  - Docker Compose passes the Blender executable path into the API container,
-  - Three.js preview runtime is vendored locally under `/static/vendor/three`.
-- Automated test suite with focused Docker regression coverage for geometry, wizard flow, catalog, jobs, scheduler, sync, and security paths.
+| Mode | What it does | When to use it |
+| --- | --- | --- |
+| `official_local` | Imports `data/official_catalog_sync.json` bundled with the repo or Docker image. | Best default for local setup and reproducible baseline data. |
+| `github` | Pulls a normalized sync JSON file from a GitHub repo/path/ref. | Best when your team curates catalog data in GitHub. |
+| `web_json` | Pulls a normalized sync JSON file from a direct HTTP/HTTPS URL. | Best for published feeds outside GitHub. |
+| `web_scrape` | Scrapes supported vendor pages into normalized printer/material/profile rows. | Best when a vendor only publishes specs/settings in HTML. |
 
-Planned next:
+Remote modes can also be saved as wizard auto-update schedules. The scheduler state is persisted in `sync_schedules.db`, surfaced through `/wizard/updates/status`, and can be triggered manually with `/wizard/updates/run-now`.
 
-- direct SDCP bidirectional integration with slicer/printer workflows,
-- extend the catalog and optimizer beyond resin/MSLA into filament/FDM printers and materials,
-- stronger suction-cup confidence filtering to separate peel-risk pockets from benign sealed voids,
-- dedicated React + Three.js stress-map frontend,
-- stronger data quality workflows for external community dataset sync.
+Supported vendor pages are intentionally narrow today. The current supported scraper targets:
+
+- Anycubic official product pages.
+- The official Anycubic resin settings guide.
+
+## GitHub and Remote Catalog Updates
+
+### GitHub One-Shot Import
+
+```bash
+curl -X POST http://127.0.0.1:8000/sync/technical/github \
+  -H "Content-Type: application/json" \
+  -d '{
+    "owner": "your-org",
+    "repo": "your-repo",
+    "path": "data/catalog-sync.json",
+    "ref": "main",
+    "replace_existing": false
+  }'
+```
+
+### Supported Vendor Page Import
+
+```bash
+curl -X POST http://127.0.0.1:8000/sync/technical/scrape \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source": "web_scrape",
+    "replace_existing": false,
+    "urls": [
+      "https://store.anycubic.com/products/photon-mono-m7-pro",
+      "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers"
+    ]
+  }'
+```
+
+### Wizard-Managed Remote Setup
+
+Use `POST /wizard/database/setup` when you want the same flow the UI uses, including optional saved auto-update schedules.
+
+Example GitHub-backed wizard setup:
+
+```bash
+curl -X POST http://127.0.0.1:8000/wizard/database/setup \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mode": "github",
+    "owner": "your-org",
+    "repo": "your-repo",
+    "path": "data/catalog-sync.json",
+    "ref": "main",
+    "replace_existing": false,
+    "auto_update": true,
+    "auto_update_interval_seconds": 86400,
+    "source": "wizard_setup_github"
+  }'
+```
+
+Every sync response includes a `curation` summary so you can inspect how many rows were kept, dropped, deduplicated, or clamped, plus an aggregate source reliability and profile confidence view.
+
+## How The Backend Works
+
+At runtime, `app/main.py` initializes local SQLite-backed stores and serves the three browser surfaces. The main processing path is phase-oriented:
+
+1. `app/geometry.py` loads STL/OBJ meshes, repairs obvious topology issues, computes cross-sections, voxelizes when needed, and emits cavity/island/detail/support-risk metrics.
+2. `app/logic.py` combines geometry metrics, the selected printer/material profile, and rule-based heuristics to produce print settings.
+3. `app/chitubox.py` renders MSLA exports and `app/cura.py` renders FDM Cura profiles.
+4. `app/sync_service.py` applies normalized sync payloads and `app/web_catalog_scraper.py` translates supported vendor pages into those normalized rows.
+5. Feedback modules ingest field signals, summarize operational history, and optionally adapt future recommendations.
+
+The wizard uses in-memory progress tracking plus persisted artifacts so long-running analysis remains interactive without buffering full uploads in memory.
+
+## Library Stack
+
+The direct dependencies declared in `pyproject.toml` are:
+
+- `fastapi`: HTTP API, dependency injection, and static UI serving.
+- `uvicorn`: ASGI server for local and containerized runtime.
+- `apscheduler`: persistent scheduled catalog refresh execution.
+- `numpy`: vectorized geometry math and heuristic scoring.
+- `pandas`: catalog import/export transforms and feedback ingestion helpers.
+- `python-multipart`: STL, CSV, and upload form handling.
+- `trimesh[easy]`: primary mesh loading, repair helpers, slicing, voxelization, and geometry calculations.
+- `pyvista`: richer geometry/detail probes in deeper analysis paths.
+
+Optional extras:
+
+- `httpx` and `pytest`: API testing and regression coverage.
+- `pymeshlab`: optional prototype mesh-repair backend.
+- `open3d`: optional voxel-backend experimentation and benchmarking.
+- `youtube-transcript-api`: transcript ingestion for feedback signals.
+
+Notable indirect/runtime packages used by the geometry stack include `pydantic`, `starlette`, `vtk`, `scipy`, `rtree`, `networkx`, `jsonschema`, `lxml`, `pycollada`, `mapbox_earcut`, `manifold3d`, `embreex`, and `vhacdx`.
+
+See `docs/LIBRARIES.md` for the fuller dependency breakdown and where each dependency is used.
 
 ## Documentation Map
 
-- Architecture and end-to-end process flow: `docs/ARCHITECTURE.md`
+- Architecture and runtime flow: `docs/ARCHITECTURE.md`
+- Library and tooling breakdown: `docs/LIBRARIES.md`
+- Official seed provenance and source list: `docs/OFFICIAL_DATASET.md`
 - Product requirements: `docs/PRD.md`
 - Technical requirements: `docs/TRD.md`
-- Agentic task roadmap: `docs/TASK.md`
-- Project status and next milestones: `docs/PROJECT_STATUS.md`
+- Project status and near-term milestones: `docs/PROJECT_STATUS.md`
+- Execution tracker / roadmap: `docs/TASK.md`
 - Gemini prompt-to-implementation mapping: `docs/REFERENCE_MAPPING.md`
-- Official seed provenance and source list: `docs/OFFICIAL_DATASET.md`
-
-## How It Works
-
-At runtime the app starts from `app/main.py`, initializes local SQLite-backed stores, and exposes three browser entry points: the guided `/wizard`, the broader `/app` operations console, and `/catalog/admin` for technical data maintenance.
-
-The processing path is phase-oriented:
-
-1. `app/geometry.py` loads and inspects the STL, repairs obvious mesh issues, computes cross-sections, voxelizes when needed, and derives cavity/island/intent/risk output.
-2. `app/logic.py` combines geometry metrics with printer-resin catalog data and rule-based heuristics to produce print settings and provenance.
-3. feedback modules ingest operator history, community sheets, and optional YouTube transcript signals so future recommendations can be adapted.
-
-The main runtime libraries are FastAPI, Pydantic, Uvicorn, NumPy, Pandas, Trimesh, PyVista, and APScheduler. Optional extras add PyMeshLab for prototype repair experiments and Open3D for voxel backend benchmarking. A fuller breakdown of modules, libraries, and request flow is in `docs/ARCHITECTURE.md`.
 
 ## Installation
 
 ### Prerequisites
 
-Before you start, install the following tools:
-
-- Python 3.12 or newer
-- `pip`
+- Python 3.12+
 - Git
-- Docker Desktop (optional, for the containerized setup)
+- `pip`
+- Docker Desktop if you want the containerized path
 
-### Option 1: Local Python setup
-
-1. Clone the repository.
+### Local Python Setup
 
 ```bash
 git clone https://github.com/GeekatplayStudio/3d-printer-model-preset.git
 cd 3d-printer-model-preset
-```
-
-2. Create a virtual environment.
-
-```bash
 python -m venv .venv
 ```
-
-3. Activate the virtual environment.
 
 macOS / Linux:
 
@@ -149,13 +179,13 @@ Windows PowerShell:
 .\.venv\Scripts\Activate.ps1
 ```
 
-4. Install the application.
+Install the app:
 
 ```bash
 pip install -e .
 ```
 
-Optional extras:
+Useful extras:
 
 ```bash
 pip install -e .[dev]
@@ -163,52 +193,9 @@ pip install -e .[dev,mesh-repair]
 pip install -e .[dev,open3d-spike]
 ```
 
-5. Start the API server.
+Run the API:
 
 ```bash
-uvicorn app.main:app --reload
-```
-
-6. Open the application in your browser.
-
-- `http://127.0.0.1:8000/wizard`
-- `http://127.0.0.1:8000/app`
-- `http://127.0.0.1:8000/catalog/admin`
-
-### Option 2: Docker Compose setup
-
-1. Clone the repository.
-
-```bash
-git clone https://github.com/GeekatplayStudio/3d-printer-model-preset.git
-cd 3d-printer-model-preset
-```
-
-2. Build and start the containers.
-
-```bash
-docker compose up --build -d
-```
-
-3. Open the running services.
-
-- App UI: `http://127.0.0.1:8000/app`
-- Wizard UI: `http://127.0.0.1:8000/wizard`
-- Catalog admin: `http://127.0.0.1:8000/catalog/admin`
-- Prometheus: `http://127.0.0.1:9090`
-
-4. Stop the stack when you are done.
-
-```bash
-docker compose down
-```
-
-## Quick Start
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .
 uvicorn app.main:app --reload
 ```
 
@@ -218,121 +205,94 @@ Open:
 - `http://127.0.0.1:8000/app`
 - `http://127.0.0.1:8000/catalog/admin`
 
-## Test
+### Docker Compose Setup
 
-Local environment:
+```bash
+git clone https://github.com/GeekatplayStudio/3d-printer-model-preset.git
+cd 3d-printer-model-preset
+docker compose up --build -d
+```
+
+Services:
+
+- Wizard: `http://127.0.0.1:8000/wizard`
+- Ops console: `http://127.0.0.1:8000/app`
+- Catalog admin: `http://127.0.0.1:8000/catalog/admin`
+- Prometheus: `http://127.0.0.1:9090`
+
+Stop the stack:
+
+```bash
+docker compose down
+```
+
+Docker persistence note: `docker-compose.yml` mounts `./local-data` into `/app/local-data`. Rebuilding the image does not replace the persisted catalog database. If you change `data/official_catalog_sync.json` or update a remote source definition, rerun the Step 1 catalog import/update so the live DB picks up the new data.
+
+## Tests
+
+Local:
 
 ```bash
 python -m pytest -q
 ```
 
-Docker environment:
+Docker:
 
 ```bash
 docker compose run --rm -v "${PWD}:/app" api sh -lc "python -m pip install -e .[dev] && python -m pytest -q"
 ```
 
-The runtime image stays slim and does not bundle `pytest`, so Docker test runs install it transiently.
+The runtime image intentionally stays slimmer than the development environment, so `pytest` is installed transiently for Docker test runs.
 
-## Wizard Download Behavior
+## Wizard Artifact Downloads
 
-In standalone mode, the wizard downloads repaired STLs and settings artifacts directly.
+In standalone mode, the wizard downloads repaired STL files and generated slicer artifacts directly.
 
-In shared/server mode with auth enabled, keep the `Authorization token` and `Actor` fields populated in the wizard before clicking repair or download actions. The wizard now fetches repaired STL, CFG, and JSON artifacts through the same authenticated request path as the API calls, so file downloads keep working even when direct browser links would be rejected.
+In shared/server mode with auth enabled, keep `Authorization` and `Actor` populated in the wizard before clicking repair or download actions. The wizard fetches files through the same authenticated request path as the API calls, so downloads continue to work when direct browser links would otherwise be rejected.
 
 ## Official Catalog Seed
 
-Source-attributed baseline data is shipped in:
+The bundled baseline dataset lives in `data/official_catalog_sync.json`.
 
-- `data/official_catalog_sync.json`
+It contains source-attributed printer, material, and profile rows, including a baseline FDM set added in the `2026-04-24` update. Every row includes `metadata.source_urls` and `metadata.retrieved_at` so the wizard can surface provenance references back to the operator.
 
-It includes official printer specs, resin entries, and profile defaults with `metadata.source_urls` on every record.
-
-Import into your local standalone database:
+Import the bundled dataset into the local DB:
 
 ```bash
-python3 scripts/import_official_catalog.py --replace-existing
+python scripts/import_official_catalog.py --replace-existing
 ```
 
-See `docs/OFFICIAL_DATASET.md` for provenance details and source list.
-
-## GitHub Smart Update (Phase 1)
-
-Manual one-shot pull from repo file:
-
-```bash
-curl -X POST http://127.0.0.1:8000/sync/technical/github \
-  -H "Content-Type: application/json" \
-  -d '{
-    "owner": "your-org",
-    "repo": "your-repo",
-    "path": "data/resin_sync.json",
-    "ref": "main",
-    "replace_existing": false
-  }'
-```
-
-Scheduled pull (stored in `sync_schedules.db`) via `payload.github`:
-
-```json
-{
-  "name": "github-hourly-sync",
-  "source": "github_repo",
-  "interval_seconds": 3600,
-  "enabled": true,
-  "replace_existing": false,
-  "payload": {
-    "github": {
-      "owner": "your-org",
-      "repo": "your-repo",
-      "path": "data/resin_sync.json",
-      "ref": "main",
-      "retry_attempts": 3,
-      "retry_backoff_seconds": 1.0
-    }
-  }
-}
-```
-
-Sync responses now include a `curation` summary (`source_reliability`, `average_profile_quality`, `average_profile_confidence`, `confidence_distribution`, `input_counts`, `kept_counts`, `dropped_counts`, `notes`) so you can see what was clamped, deduped, dropped, and how confident the imported profile set is.
-
-Wizard settings responses now include provenance metadata so each recommendation can be traced to source URLs and confidence scoring.
+For more detail, see `docs/OFFICIAL_DATASET.md`.
 
 ## Core Storage
 
-- `~/.resinlogic/tech_catalog.db`: printers, resins, compatibility profiles
-- `~/.resinlogic/feedback_history.db`: ingested feedback history
-- `~/.resinlogic/audit_log.db`: audit events + catalog snapshots
-- `~/.resinlogic/jobs.db`: async job records
-- `~/.resinlogic/sync_schedules.db`: scheduled sync definitions
-- `data/resin_profiles.json`: embedded baseline profile dataset
-- `data/official_catalog_sync.json`: source-attributed official catalog seed payload
+- `~/.resinlogic/tech_catalog.db`: printers, materials, and compatibility profiles.
+- `~/.resinlogic/feedback_history.db`: ingested feedback history.
+- `~/.resinlogic/audit_log.db`: audit events and catalog snapshots.
+- `~/.resinlogic/jobs.db`: async job records.
+- `~/.resinlogic/sync_schedules.db`: saved remote update schedules.
+- `data/official_catalog_sync.json`: bundled official seed payload.
+- `data/resin_profiles.json`: legacy baseline profile data still used for compatibility.
+
+Under Docker Compose, these databases live under `./local-data` because `RESINLOGIC_DATA_DIR=/app/local-data`.
 
 ## Key Environment Variables
 
-- `RESINLOGIC_STANDALONE_MODE`: local standalone mode, defaults to `1`
-- `RESINLOGIC_DATA_DIR`: override storage directory (defaults to `~/.resinlogic`)
-- `RESINLOGIC_ENFORCE_AUTH`: enable token auth only when standalone mode is `0`
-- `RESINLOGIC_ENABLE_DEFAULT_KEYS`: enable built-in dev keys
-- `RESINLOGIC_ADMIN_API_KEY`: admin role key
-- `RESINLOGIC_OPERATOR_API_KEY`: operator role key
-- `RESINLOGIC_VIEWER_API_KEY`: viewer role key
-- `RESINLOGIC_ENABLE_SCHEDULER`: start background schedule runner when `1`
-- `RESINLOGIC_SCHEDULER_POLL_SECONDS`: scheduler polling interval
+- `RESINLOGIC_STANDALONE_MODE`: defaults to `1`; when enabled, local operator actions run as admin.
+- `RESINLOGIC_DATA_DIR`: override storage directory.
+- `RESINLOGIC_ENFORCE_AUTH`: enable token auth when standalone mode is `0`.
+- `RESINLOGIC_ENABLE_DEFAULT_KEYS`: enable built-in development keys.
+- `RESINLOGIC_ADMIN_API_KEY`: admin role key.
+- `RESINLOGIC_OPERATOR_API_KEY`: operator role key.
+- `RESINLOGIC_VIEWER_API_KEY`: viewer role key.
+- `RESINLOGIC_ENABLE_SCHEDULER`: run the APScheduler-backed sync scheduler when `1`.
+- `RESINLOGIC_SCHEDULER_POLL_SECONDS`: scheduler polling interval.
+- `RESINLOGIC_BLENDER_EXECUTABLE`: path to the Blender binary used for headless retopology.
 
-Auth headers (only needed when standalone mode is disabled):
+Auth headers in shared/server mode:
 
-- `Authorization: Bearer <token>` (or `Authorization: token <token>`)
-- `Actor: <username-or-service-name>` (optional audit identity)
-
-## Deployment
-
-```bash
-docker compose up --build
-```
-
-Prometheus scrapes `/ops/metrics/prometheus` via `ops/prometheus.yml`.
-Default compose runs in standalone mode and persists to `./local-data`.
+- `Authorization: Bearer <token>` or `Authorization: token <token>`
+- `Actor: <username-or-service-name>`
 
 ## License
 

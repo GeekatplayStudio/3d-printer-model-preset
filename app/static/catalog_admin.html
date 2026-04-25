@@ -88,7 +88,7 @@
   </head>
   <body>
     <h1>Geekatplay Studio Catalog Admin</h1>
-    <div class="muted">Maintain printers, resins, and compatibility profiles in <code>tech_catalog.db</code>.</div>
+    <div class="muted">Maintain printers, printable materials, and compatibility profiles in <code>tech_catalog.db</code>.</div>
 
     <div class="grid" style="margin-top:12px">
       <section class="card">
@@ -121,6 +121,7 @@
         <div class="row">
           <input id="pBrand" placeholder="Brand" />
           <input id="pModel" placeholder="Model" />
+          <input id="pTech" placeholder="Technology (MSLA/FDM)" />
           <input id="pXy" placeholder="XY um" />
         </div>
         <div class="row">
@@ -130,15 +131,25 @@
       </section>
 
       <section class="card">
-        <h3>Create Resin</h3>
+        <h3>Create Material</h3>
         <div class="row"><input id="rName" placeholder="Name (required)" style="flex:1" /></div>
         <div class="row">
+          <select id="rType">
+            <option value="resin">Resin</option>
+            <option value="filament">Filament</option>
+          </select>
           <input id="rBrand" placeholder="Brand" />
           <input id="rSeries" placeholder="Series" />
-          <input id="rVisc" placeholder="Viscosity cP" />
+          <input id="rFamily" placeholder="Family (PLA/PETG/ABS)" />
         </div>
         <div class="row">
-          <button class="primary" onclick="createResin()">Save Resin</button>
+          <input id="rVisc" placeholder="Viscosity cP" />
+          <input id="rTempMin" placeholder="Nozzle min C" />
+          <input id="rTempMax" placeholder="Nozzle max C" />
+          <input id="rBed" placeholder="Bed C" />
+        </div>
+        <div class="row">
+          <button class="primary" onclick="createResin()">Save Material</button>
           <button onclick="loadResins()">Refresh List</button>
         </div>
       </section>
@@ -159,6 +170,12 @@
           <input id="prExp" placeholder="Exposure s" />
           <input id="prBottom" placeholder="Bottom exp s" />
           <input id="prTilt" placeholder="Tilt ref mm/h" />
+        </div>
+        <div class="row">
+          <input id="prNozzle" placeholder="Nozzle C" />
+          <input id="prBed" placeholder="Bed C" />
+          <input id="prSpeed" placeholder="Print speed mm/s" />
+          <input id="prNozzleDia" placeholder="Nozzle dia mm" />
         </div>
         <div class="row">
           <button class="primary" onclick="createProfile()">Save Profile</button>
@@ -252,6 +269,7 @@
           name: document.getElementById("pName").value.trim(),
           brand: document.getElementById("pBrand").value.trim() || null,
           model: document.getElementById("pModel").value.trim() || null,
+          technology: document.getElementById("pTech").value.trim() || null,
           xy_resolution_um: toNum(document.getElementById("pXy").value),
         };
         await api("/catalog/printers", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
@@ -261,9 +279,14 @@
       async function createResin() {
         const payload = {
           name: document.getElementById("rName").value.trim(),
+          material_type: document.getElementById("rType").value,
           brand: document.getElementById("rBrand").value.trim() || null,
           series: document.getElementById("rSeries").value.trim() || null,
+          material_family: document.getElementById("rFamily").value.trim() || null,
           viscosity_cp: toNum(document.getElementById("rVisc").value),
+          nozzle_temp_min_c: toNum(document.getElementById("rTempMin").value),
+          nozzle_temp_max_c: toNum(document.getElementById("rTempMax").value),
+          bed_temp_c: toNum(document.getElementById("rBed").value),
         };
         await api("/catalog/resins", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
         await loadResins();
@@ -278,6 +301,10 @@
           exposure_s: toNum(document.getElementById("prExp").value),
           bottom_exposure_s: toNum(document.getElementById("prBottom").value),
           tilt_speed_reference_mm_h: toNum(document.getElementById("prTilt").value),
+          nozzle_temp_c: toNum(document.getElementById("prNozzle").value),
+          bed_temp_c: toNum(document.getElementById("prBed").value),
+          print_speed_mm_s: toNum(document.getElementById("prSpeed").value),
+          nozzle_diameter_mm: toNum(document.getElementById("prNozzleDia").value),
           is_default: true,
           is_active: true,
         };
@@ -404,7 +431,7 @@
         printersCache = rows;
         renderTable(
           "printersTable",
-          ["id", "name", "brand", "model", "xy_resolution_um"],
+          ["id", "name", "technology", "brand", "model", "xy_resolution_um"],
           rows,
           (row) =>
             `<button class="small" onclick="editPrinter(${row.id})">Edit</button>` +
@@ -419,7 +446,7 @@
         resinsCache = rows;
         renderTable(
           "resinsTable",
-          ["id", "name", "brand", "series", "viscosity_cp", "shore_hardness", "shrinkage_percent"],
+          ["id", "name", "material_type", "material_family", "brand", "series", "viscosity_cp", "bed_temp_c"],
           rows,
           (row) =>
             `<button class="small" onclick="editResin(${row.id})">Edit</button>` +
@@ -441,10 +468,13 @@
             "id",
             "printer_name",
             "resin_name",
+            "material_type",
             "profile_name",
             "layer_height_mm",
             "exposure_s",
+            "nozzle_temp_c",
             "bottom_exposure_s",
+            "print_speed_mm_s",
             "tilt_speed_reference_mm_h",
             "is_default",
             "is_active",

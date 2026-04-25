@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "mars5-agentic-slicer"
 version = "0.1.0"
-description = "Modular agentic backend for Mars 5 Ultra resin print analysis and parameter generation."
+description = "Geekatplay Studio local-first backend for 3D print analysis, catalog sync, and slicer profile generation."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

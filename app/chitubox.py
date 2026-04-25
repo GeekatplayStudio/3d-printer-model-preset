@@ -5,10 +5,27 @@ from pathlib import Path
 from app.models import GeometryAnalysis, OptimalSettings
 
 
+def _ensure_msla_settings(settings: OptimalSettings) -> None:
+    if str(settings.process_technology).upper() in {"FDM", "FFF"}:
+        raise ValueError(
+            "Chitubox export currently supports only resin/MSLA profiles. Use /phase2/optimize for FDM JSON settings."
+        )
+    required_fields = [
+        settings.exposure_s,
+        settings.bottom_exposure_s,
+        settings.tilt_speed_mm_min,
+        settings.tilt_angle_deg,
+        settings.multi_parameter,
+    ]
+    if any(field is None for field in required_fields):
+        raise ValueError("Incomplete resin/MSLA settings were provided for Chitubox export.")
+
+
 def build_sdcp_payload(
     settings: OptimalSettings,
     analysis: GeometryAnalysis | None = None,
 ) -> dict:
+    _ensure_msla_settings(settings)
     payload = {
         "protocol": "SDCP",
         "printer": settings.printer,
@@ -43,6 +60,7 @@ def build_sdcp_payload(
 
 
 def render_chitubox_cfg(settings: OptimalSettings) -> str:
+    _ensure_msla_settings(settings)
     lines = [
         "[General]",
         f"Printer={settings.printer}",

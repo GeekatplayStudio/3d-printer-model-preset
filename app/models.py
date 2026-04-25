@@ -10,6 +10,7 @@ AnalysisLevel = Literal["minimum", "balanced", "deep", "extreme"]
 CavityConfidenceLevel = Literal["low", "medium", "high"]
 RetopologyBackend = Literal["blender"]
 RetopologyMode = Literal["quad", "voxel"]
+WizardTargetProcess = Literal["msla", "fdm"]
 
 
 class SliceArea(BaseModel):
@@ -75,6 +76,8 @@ class GeometryAnalysis(BaseModel):
     build_plate_area_mm2: float
     max_cross_section_mm2: float
     max_cross_section_ratio: float
+    downskin_area_ratio: float | None = Field(default=None, ge=0.0, le=1.0)
+    fdm_support_risk_score: float | None = Field(default=None, ge=0.0, le=100.0)
     bounding_box_mm: list[float] = Field(default_factory=list)
     bounding_box_diagonal_mm: float | None = Field(default=None, ge=0.0)
     center_of_mass_mm: list[float] | None = None
@@ -95,6 +98,22 @@ class MultiParameterSettings(BaseModel):
     model_exposure_s: float
     support_exposure_s: float
     delicate_feature_exposure_s: float
+
+
+class FdmSettings(BaseModel):
+    nozzle_temp_c: float
+    bed_temp_c: float | None = None
+    chamber_temp_c: float | None = None
+    print_speed_mm_s: float
+    first_layer_speed_mm_s: float | None = None
+    travel_speed_mm_s: float | None = None
+    retraction_distance_mm: float | None = None
+    retraction_speed_mm_s: float | None = None
+    nozzle_diameter_mm: float | None = None
+    fan_speed_percent: int | None = Field(default=None, ge=0, le=100)
+    infill_percent: float | None = Field(default=None, ge=0.0, le=100.0)
+    wall_count: int | None = Field(default=None, ge=0)
+    support_style: str | None = None
 
 
 SettingsDataQuality = Literal["verified_sources", "catalog_unverified", "fallback_defaults"]
@@ -123,24 +142,27 @@ class SettingsProvenance(BaseModel):
 class OptimalSettings(BaseModel):
     printer: str = "Elegoo Mars 5 Ultra"
     resin_type: str
+    material_name: str | None = None
+    process_technology: str = "MSLA"
     use_case: UseCase
     intent_used: UseCase | None = None
     layer_height_mm: float
-    exposure_s: float
-    bottom_exposure_s: float
-    tilt_speed_mm_min: float
+    exposure_s: float | None = None
+    bottom_exposure_s: float | None = None
+    tilt_speed_mm_min: float | None = None
     tilt_speed_mm_h: float | None = None
-    tilt_angle_deg: float
-    rest_time_before_print_s: float = 2.0
-    rest_time_after_retract_s: float = 0.5
-    transition_layers: int = 6
-    scale_compensation_percent: float = 100.0
+    tilt_angle_deg: float | None = None
+    rest_time_before_print_s: float | None = 2.0
+    rest_time_after_retract_s: float | None = 0.5
+    transition_layers: int | None = 6
+    scale_compensation_percent: float | None = 100.0
     heater_required: bool = False
     anti_aliasing: int | None = None
     grayscale_level: int | None = None
     xy_resolution_um: int | None = None
     detail_tier: str
-    multi_parameter: MultiParameterSettings
+    multi_parameter: MultiParameterSettings | None = None
+    fdm: FdmSettings | None = None
     warnings: list[str] = Field(default_factory=list)
     recommendations: list[str] = Field(default_factory=list)
     source_profile: str | None = None
@@ -316,12 +338,19 @@ class CatalogPrinter(CatalogPrinterBase):
 
 class CatalogResinBase(BaseModel):
     name: str
+    material_type: str = "resin"
+    material_family: str | None = None
     brand: str | None = None
     series: str | None = None
     technical_goal: str | None = None
     viscosity_cp: float | None = None
     shore_hardness: str | None = None
     shrinkage_percent: float | None = None
+    density_g_cm3: float | None = None
+    filament_diameter_mm: float | None = None
+    nozzle_temp_min_c: float | None = None
+    nozzle_temp_max_c: float | None = None
+    bed_temp_c: float | None = None
     notes: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -332,12 +361,19 @@ class CatalogResinCreate(CatalogResinBase):
 
 class CatalogResinUpdate(BaseModel):
     name: str | None = None
+    material_type: str | None = None
+    material_family: str | None = None
     brand: str | None = None
     series: str | None = None
     technical_goal: str | None = None
     viscosity_cp: float | None = None
     shore_hardness: str | None = None
     shrinkage_percent: float | None = None
+    density_g_cm3: float | None = None
+    filament_diameter_mm: float | None = None
+    nozzle_temp_min_c: float | None = None
+    nozzle_temp_max_c: float | None = None
+    bed_temp_c: float | None = None
     notes: str | None = None
     metadata: dict[str, Any] | None = None
 
@@ -359,6 +395,19 @@ class CatalogProfileBase(BaseModel):
     tilt_speed_reference_mm_h: float | None = None
     rest_time_before_print_s: float | None = None
     rest_time_after_retract_s: float | None = None
+    nozzle_temp_c: float | None = None
+    bed_temp_c: float | None = None
+    chamber_temp_c: float | None = None
+    print_speed_mm_s: float | None = None
+    first_layer_speed_mm_s: float | None = None
+    travel_speed_mm_s: float | None = None
+    retraction_distance_mm: float | None = None
+    retraction_speed_mm_s: float | None = None
+    nozzle_diameter_mm: float | None = None
+    fan_speed_percent: int | None = Field(default=None, ge=0, le=100)
+    infill_percent: float | None = Field(default=None, ge=0.0, le=100.0)
+    wall_count: int | None = None
+    support_style: str | None = None
     is_default: bool = False
     is_active: bool = True
     notes: str | None = None
@@ -380,6 +429,19 @@ class CatalogProfileUpdate(BaseModel):
     tilt_speed_reference_mm_h: float | None = None
     rest_time_before_print_s: float | None = None
     rest_time_after_retract_s: float | None = None
+    nozzle_temp_c: float | None = None
+    bed_temp_c: float | None = None
+    chamber_temp_c: float | None = None
+    print_speed_mm_s: float | None = None
+    first_layer_speed_mm_s: float | None = None
+    travel_speed_mm_s: float | None = None
+    retraction_distance_mm: float | None = None
+    retraction_speed_mm_s: float | None = None
+    nozzle_diameter_mm: float | None = None
+    fan_speed_percent: int | None = Field(default=None, ge=0, le=100)
+    infill_percent: float | None = Field(default=None, ge=0.0, le=100.0)
+    wall_count: int | None = None
+    support_style: str | None = None
     is_default: bool | None = None
     is_active: bool | None = None
     notes: str | None = None
@@ -390,6 +452,8 @@ class CatalogProfile(CatalogProfileBase):
     id: int
     printer_name: str
     resin_name: str
+    printer_technology: str | None = None
+    material_type: str | None = None
 
 
 class CatalogImportPayload(BaseModel):
@@ -517,6 +581,19 @@ class GitHubTechnicalSyncResponse(TechnicalSyncResponse):
     raw_url: str
 
 
+class WebScrapeTechnicalSyncRequest(BaseModel):
+    urls: list[str] = Field(default_factory=list)
+    source: str = "web_scrape"
+    replace_existing: bool = False
+    timeout_s: float = Field(default=20.0, ge=1.0, le=120.0)
+
+
+class WebScrapeTechnicalSyncResponse(TechnicalSyncResponse):
+    urls: list[str] = Field(default_factory=list)
+    scraped_urls: list[str] = Field(default_factory=list)
+    unsupported_urls: list[str] = Field(default_factory=list)
+
+
 class MetricsResponse(BaseModel):
     uptime_s: float
     requests_total: int
@@ -572,11 +649,13 @@ class SyncSchedulerHealth(BaseModel):
 
 
 class WizardDatabaseSetupRequest(BaseModel):
-    mode: Literal["official_local", "github"] = "official_local"
+    mode: Literal["official_local", "github", "web_json", "web_scrape"] = "official_local"
     replace_existing: bool = False
     owner: str | None = None
     repo: str | None = None
     path: str | None = None
+    url: str | None = None
+    scrape_urls: list[str] = Field(default_factory=list)
     ref: str = "main"
     auto_update: bool = False
     auto_update_interval_seconds: int = Field(default=86400, ge=300, le=604800)
@@ -584,7 +663,7 @@ class WizardDatabaseSetupRequest(BaseModel):
 
 
 class WizardDatabaseSetupResponse(BaseModel):
-    mode: Literal["official_local", "github"]
+    mode: Literal["official_local", "github", "web_json", "web_scrape"]
     source: str
     raw_url: str | None = None
     printers_upserted: int
@@ -644,6 +723,8 @@ class WizardUpdateScheduleStatus(BaseModel):
     github_repo: str | None = None
     github_path: str | None = None
     github_ref: str | None = None
+    web_url: str | None = None
+    scrape_urls: list[str] = Field(default_factory=list)
 
 
 class WizardUpdateStatusResponse(BaseModel):
@@ -662,7 +743,13 @@ class WizardRunUpdateNowRequest(BaseModel):
 class WizardCatalogOptionsResponse(BaseModel):
     printers: list[str] = Field(default_factory=list)
     resins: list[str] = Field(default_factory=list)
+    materials: list[str] = Field(default_factory=list)
     compatibility: dict[str, list[str]] = Field(default_factory=dict)
+    targets: list[WizardTargetProcess] = Field(default_factory=list)
+    printers_by_target: dict[str, list[str]] = Field(default_factory=dict)
+    materials_by_target: dict[str, list[str]] = Field(default_factory=dict)
+    compatibility_by_target: dict[str, dict[str, list[str]]] = Field(default_factory=dict)
+    slicers_by_target: dict[str, str] = Field(default_factory=dict)
 
 
 class WizardAnalysisProgressResponse(BaseModel):
@@ -721,6 +808,7 @@ class WizardSettingsRequest(BaseModel):
     analysis: GeometryAnalysis
     resin_type: str
     printer: str
+    target_process: WizardTargetProcess | None = None
     use_case: UseCase = "miniature"
     ambient_temp_c: float | None = None
     film_releases: int = 0
@@ -728,7 +816,13 @@ class WizardSettingsRequest(BaseModel):
 
 class WizardSettingsResponse(BaseModel):
     settings: OptimalSettings
-    chitubox_cfg: str
+    target_process: WizardTargetProcess
+    slicer_name: str
+    slicer_profile_text: str
+    slicer_profile_file_name: str
+    slicer_profile_download_id: str
+    slicer_profile_download_url: str
+    chitubox_cfg: str | None = None
     settings_download_id: str
     settings_download_url: str
     cfg_download_id: str

@@ -68,6 +68,18 @@ def test_mesh_auto_repair_reduces_topology_noise(tmp_path):
     assert any("Automatic STL repair applied" in note for note in analysis.notes)
 
 
+def test_analysis_reports_fdm_support_metrics_for_box_mesh(tmp_path):
+    path = _box_mesh_path(tmp_path)
+
+    analysis = analyze_geometry(str(path), slice_height_mm=0.25, auto_repair=False)
+
+    assert analysis.downskin_area_ratio is not None
+    assert 0.10 <= analysis.downskin_area_ratio <= 0.13
+    assert analysis.fdm_support_risk_score is not None
+    assert analysis.fdm_support_risk_score > 0.0
+    assert any("FDM heuristic" in note for note in analysis.notes)
+
+
 def test_repair_mesh_file_reports_before_after_fix_state(tmp_path):
     source_path = _broken_mesh_path(tmp_path)
     repaired_path = tmp_path / "broken_fixed.stl"

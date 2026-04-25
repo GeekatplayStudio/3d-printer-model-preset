@@ -238,6 +238,74 @@ def test_phase2_optimize_uses_selected_printer_profile(tmp_path, monkeypatch):
     assert body["tilt_speed_mm_min"] == 70.0
 
 
+def test_phase2_optimize_returns_fdm_settings_for_filament_profile(tmp_path, monkeypatch):
+    client = _build_client_with_temp_catalog(tmp_path, monkeypatch)
+    seed_payload = {
+        "replace_existing": True,
+        "printers": [
+            {
+                "name": "Prusa MK4S",
+                "technology": "FDM",
+                "xy_resolution_um": 50,
+            }
+        ],
+        "resins": [
+            {
+                "name": "Prusament PLA Galaxy Black",
+                "material_type": "filament",
+                "material_family": "PLA",
+                "nozzle_temp_min_c": 205.0,
+                "nozzle_temp_max_c": 215.0,
+                "bed_temp_c": 60.0,
+            }
+        ],
+        "profiles": [
+            {
+                "printer_name": "Prusa MK4S",
+                "resin_name": "Prusament PLA Galaxy Black",
+                "profile_name": "PLA Quality",
+                "layer_height_mm": 0.2,
+                "nozzle_temp_c": 210.0,
+                "bed_temp_c": 60.0,
+                "print_speed_mm_s": 55.0,
+                "first_layer_speed_mm_s": 20.0,
+                "travel_speed_mm_s": 180.0,
+                "retraction_distance_mm": 0.8,
+                "retraction_speed_mm_s": 35.0,
+                "nozzle_diameter_mm": 0.4,
+                "fan_speed_percent": 100,
+                "infill_percent": 15.0,
+                "wall_count": 2,
+                "support_style": "tree",
+                "is_default": True,
+                "is_active": True,
+            }
+        ],
+    }
+    imported = client.post("/catalog/import", json=seed_payload)
+    assert imported.status_code == 200
+
+    response = client.post(
+        "/phase2/optimize",
+        json={
+            "analysis": _analysis_payload(),
+            "resin_type": "Prusament PLA Galaxy Black",
+            "use_case": "collectible",
+            "printer": "Prusa MK4S",
+            "ambient_temp_c": 17.0,
+            "film_releases": 0,
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+
+    assert body["process_technology"] == "FDM"
+    assert body["fdm"]["nozzle_temp_c"] >= 215.0
+    assert body["fdm"]["bed_temp_c"] == 65.0
+    assert body["exposure_s"] is None
+    assert body["source_profile"] == "PLA Quality"
+
+
 def test_pipeline_endpoint_passes_printer_to_run_full_pipeline(tmp_path, monkeypatch):
     client = _build_client_with_temp_catalog(tmp_path, monkeypatch)
     calls: dict = {}

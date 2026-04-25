@@ -35,7 +35,11 @@ Primary module: `app/geometry.py`
 - `[x]` Chitubox cfg text export and SDCP payload structure
 - `[x]` history-aware optimization endpoint
 - `[x]` settings provenance classification and source-reference output
-- `[ ]` FDM/filament optimization branch alongside resin/MSLA settings
+- `[x]` initial FDM/filament optimization branch alongside resin/MSLA settings
+- `[x]` wizard target selector plus Cura export for the first FDM workflow
+- `[x]` wizard source selection for local, GitHub, and curated web JSON catalog updates
+- `[x]` supported vendor HTML scraping path for Anycubic product pages and settings guide
+- `[~]` broader FDM wizard guidance and extra slicer/export targets
 - `[ ]` direct SDCP bidirectional runtime integration
 
 Primary modules: `app/logic.py`, `app/chitubox.py`
@@ -60,7 +64,7 @@ Primary modules: `app/feedback_sources.py`, `app/feedback_store.py`, `app/camera
 - `[x]` audit trail for catalog mutations
 - `[x]` admin UI with search and row-level edit/delete
 - `[x]` compatibility mapping for wizard printer->resin constrained selection
-- `[ ]` material typing and FDM/filament profile support without breaking resin compatibility
+- `[x]` material typing and FDM/filament profile support without breaking resin compatibility
 - `[ ]` migration/version policy for schema changes
 - `[ ]` stricter data validation and dedupe rules for bulk ingestion
 
@@ -83,7 +87,8 @@ Primary modules: `app/auth.py`, `app/job_queue.py`, `app/scheduler.py`, `app/mon
 
 ## Immediate Next Sprint
 
-1. Add FDM/filament catalog, profile, and optimizer support.
+1. Broaden FDM wizard guidance, filament family coverage, and additional slicer/export targets.
 2. Harden suction-cup confidence with benchmark corpus and cavity classification checks.
 3. Add stricter trust gating policies (optional block on non-verified settings in wizard).
 4. Define schema migration strategy and release policy.
+5. Broaden source-specific HTML scrapers for more vendors/community sites when a normalized JSON feed is not available.

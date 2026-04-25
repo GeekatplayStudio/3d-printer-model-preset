@@ -2,16 +2,16 @@
 
 ## What This Project Is
 
-Geekatplay Studio's ResinLogic AI is an agentic resin-first print optimization platform.
+Geekatplay Studio 3D Print Ops is an agentic print optimization platform with the most mature workflow still centered on resin/MSLA.
 
 It combines:
 
 - mesh geometry analysis,
-- printer-resin profile intelligence,
+- printer-material profile intelligence,
 - parameter decision logic,
-- operational tooling for maintaining technical databases across all supported printers and resins.
+- operational tooling for maintaining technical databases across supported printers, resins, and filament materials.
 
-The immediate production target started around Elegoo Mars 5 Ultra behavior. The printer catalog already carries technology metadata, but the current settings and export pipeline is still centered on resin/MSLA workflows.
+The immediate production target started around Elegoo Mars 5 Ultra behavior. The catalog and optimization layers now include an initial FDM/filament branch, but the wizard/export surface is still centered on resin/MSLA workflows.
 
 ## What Has Been Done
 
@@ -55,11 +55,29 @@ The immediate production target started around Elegoo Mars 5 Ultra behavior. The
 
 - SQLite catalog store with normalized entities:
   - printers,
-  - resins,
+  - materials (currently stored through the existing `resins` entity name for API compatibility),
   - compatibility profiles.
 - Full CRUD + search APIs.
 - Bulk import/export in JSON and CSV.
 - Admin UI for hands-on maintenance, including row-level edit/delete.
+- Material typing and first-pass FDM profile support:
+  - filament vs resin material typing,
+  - FDM profile fields for nozzle/bed/speed/retraction settings,
+  - initial FDM optimizer branch with family-aware defaults,
+  - geometry output now includes down-facing surface ratio and an FDM support-risk score.
+- Wizard target routing and export support:
+  - users can now choose `MSLA / resin` vs `FDM / filament` at the start of the wizard,
+  - wizard catalog dropdowns are filtered by the selected target,
+  - resin/MSLA exports still use Chitubox Free,
+  - FDM exports now generate an Ultimaker Cura profile instead of stopping at JSON-only settings.
+- Wizard catalog refresh and remote update support:
+  - Step 1 now exposes explicit catalog source selection,
+  - local setup can still seed from the bundled official dataset,
+  - remote setup can now pull normalized sync JSON from GitHub or a direct web URL,
+  - Step 1 can also scrape supported vendor web pages into normalized printer/material/profile records,
+  - supported page scraping currently targets Anycubic official product pages and the official Anycubic resin settings guide,
+  - remote sources can be saved as wizard auto-update schedules and triggered manually from the wizard.
+- Bundled official seed dataset refreshed through `2026-04-24` and now includes baseline FDM printers, filament materials, and FDM profiles for local target coverage.
 - Version snapshots and restore.
 - Audit logs for all key catalog mutations.
 
@@ -99,7 +117,7 @@ The immediate production target started around Elegoo Mars 5 Ultra behavior. The
 - Implement stronger validation and curation pipelines for external data ingestion to reduce noisy profile inputs.
 - Add production-grade migration/version strategy for SQLite schemas.
 - Introduce configuration profiles per printer family (not only Mars-first defaults).
-- Extend the catalog, optimization logic, and downstream exports to support filament/FDM printers and filament materials in parallel with resin workflows.
+- Broaden FDM wizard guidance, filament-family coverage, and additional slicer/export targets beyond Cura.
 - Separate true suction-cup peel-risk pockets from benign sealed voids to reduce cavity false positives.
 
 ### Product and UX
@@ -121,7 +139,7 @@ The immediate production target started around Elegoo Mars 5 Ultra behavior. The
 
 ## Near-Term Milestones
 
-1. FDM/filament catalog and optimizer expansion.
+1. FDM wizard/export completion and broader filament-family coverage.
 2. Broader Open3D corpus benchmark coverage and tuning.
 3. Data quality and validation hardening.
 4. Frontend redesign with workflow-first UX.

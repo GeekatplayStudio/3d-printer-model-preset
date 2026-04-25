@@ -17,6 +17,12 @@ def adapt_settings_from_feedback(
     min_history_records: int = 3,
 ) -> AdaptationResult:
     adjustments: list[str] = []
+    if str(settings.process_technology).upper() in {"FDM", "FFF"}:
+        adjustments.append(
+            "History-aware adaptation is currently resin-only; returned the FDM baseline settings unchanged."
+        )
+        return AdaptationResult(settings=settings, adjustments=adjustments)
+
     record_count = max(0, summary.record_count)
     if record_count < min_history_records:
         adjustments.append(

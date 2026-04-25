@@ -285,6 +285,64 @@ def test_sync_technical_github_endpoint(tmp_path, monkeypatch):
     assert printers.status_code == 200
     assert any(item["name"] == "GitHub Printer" for item in printers.json())
 
+def test_sync_technical_scrape_endpoint(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+
+    def fake_scrape(*, urls: list[str], timeout_s: float = 20.0, fetch_html=None):
+        assert urls == [
+            "https://store.anycubic.com/products/photon-mono-m7-pro",
+            "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers",
+        ]
+        assert timeout_s == 15.0
+        return (
+            {
+                "printers": [{"name": "Anycubic Photon Mono M7 Pro", "technology": "MSLA"}],
+                "resins": [{"name": "Standard Resin", "material_type": "resin"}],
+                "profiles": [
+                    {
+                        "printer_name": "Anycubic Photon Mono M7 Pro",
+                        "resin_name": "Standard Resin",
+                        "profile_name": "Official Settings",
+                        "layer_height_mm": 0.05,
+                        "exposure_s": 2.0,
+                        "bottom_exposure_s": 25.0,
+                        "is_default": True,
+                        "is_active": True,
+                    }
+                ],
+            },
+            {
+                "normalized_urls": urls,
+                "scraped_urls": urls,
+                "unsupported_urls": [],
+                "notes": [],
+            },
+        )
+
+    monkeypatch.setattr(main, "scrape_supported_catalog_pages", fake_scrape)
+
+    response = client.post(
+        "/sync/technical/scrape",
+        json={
+            "urls": [
+                "https://store.anycubic.com/products/photon-mono-m7-pro",
+                "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers",
+            ],
+            "source": "web_scrape",
+            "replace_existing": False,
+            "timeout_s": 15.0,
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["profiles_upserted"] == 1
+    assert body["scraped_urls"] == [
+        "https://store.anycubic.com/products/photon-mono-m7-pro",
+        "https://store.anycubic.com/blogs/news/resin-settings-for-anycubic-3d-printers",
+    ]
+    assert body["unsupported_urls"] == []
+
 
 def test_sync_schedule_crud_and_tick(tmp_path, monkeypatch):
     client = _client(tmp_path, monkeypatch)

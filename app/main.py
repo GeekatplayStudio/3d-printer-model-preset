@@ -50,6 +50,7 @@ from app.catalog_store import (
     update_profile,
     update_resin,
 )
+from app.cura import render_cura_profile
 from app.feedback import summarize_feedback
 from app.feedback_adaptation import adapt_settings_from_feedback
 from app.feedback_sources import (
@@ -118,6 +119,8 @@ from app.models import (
     TechnicalSyncRequest,
     TechnicalSyncResponse,
     UseCase,
+    WebScrapeTechnicalSyncRequest,
+    WebScrapeTechnicalSyncResponse,
     WizardCatalogOptionsResponse,
     WizardAnalysisProgressResponse,
     WizardDatabaseGapSummary,
@@ -142,8 +145,10 @@ from app.scheduler import TechnicalSyncScheduler
 from app.sync_service import (
     apply_technical_sync,
     fetch_technical_sync_from_github,
+    fetch_technical_sync_from_url,
     parse_technical_sync_json,
 )
+from app.web_catalog_scraper import scrape_supported_catalog_pages
 from app.sync_schedule_store import (
     create_or_upsert_sync_schedule,
     delete_sync_schedule,
@@ -198,6 +203,10 @@ WIZARD_ARTIFACTS_DIR = DATA_DIR / "wizard_artifacts"
 WIZARD_ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
 WIZARD_ARTIFACT_TTL_SECONDS = 7 * 86400
 WIZARD_ARTIFACTS: dict[str, dict[str, object]] = {}
+WIZARD_SLICERS_BY_TARGET = {
+    "msla": "Chitubox Free",
+    "fdm": "Ultimaker Cura",
+}
 WIZARD_ANALYSIS_PROGRESS_TTL_SECONDS = 3600
 WIZARD_ANALYSIS_PROGRESS: dict[str, dict[str, object]] = {}
 WIZARD_ANALYSIS_PROGRESS_LOCK = threading.Lock()
@@ -260,6 +269,27 @@ def _wizard_artifact(artifact_id: str) -> dict[str, object]:
 
 def _wizard_download_url(artifact_id: str) -> str:
     return f"/wizard/download/{artifact_id}"
+
+
+def _normalize_wizard_target(value: str | None) -> str:
+    normalized = str(value or "msla").strip().lower()
+    return "fdm" if normalized == "fdm" else "msla"
+
+
+def _wizard_target_from_catalog_item(item: dict[str, object] | None) -> str:
+    if not item:
+        return "msla"
+    printer_technology = str(item.get("printer_technology") or item.get("technology") or "").strip().upper()
+    material_type = str(item.get("material_type") or "").strip().lower()
+    if material_type == "filament" or printer_technology in {"FDM", "FFF"}:
+        return "fdm"
+    return "msla"
+
+
+def _wizard_target_from_settings(settings: OptimalSettings) -> str:
+    if str(settings.process_technology).strip().upper() in {"FDM", "FFF"}:
+        return "fdm"
+    return "msla"
 
 
 def _default_retopology_target_faces(analysis: GeometryAnalysis) -> int:
@@ -536,6 +566,8 @@ def _wizard_schedule_status(schedule: dict) -> WizardUpdateScheduleStatus:
     github_repo: str | None = None
     github_path: str | None = None
     github_ref: str | None = None
+    web_url: str | None = None
+    scrape_urls: list[str] = []
     try:
         github = _github_schedule_config(schedule)
         if github:
@@ -548,6 +580,20 @@ def _wizard_schedule_status(schedule: dict) -> WizardUpdateScheduleStatus:
         github_repo = None
         github_path = None
         github_ref = None
+
+    try:
+        web = _web_schedule_config(schedule)
+        if web:
+            web_url = str(web.get("url") or "") or None
+    except Exception:
+        web_url = None
+
+    try:
+        scrape = _scrape_schedule_config(schedule)
+        if scrape:
+            scrape_urls = [str(item).strip() for item in scrape.get("urls", []) if str(item).strip()]
+    except Exception:
+        scrape_urls = []
 
     return WizardUpdateScheduleStatus(
         id=int(schedule["id"]),
@@ -563,6 +609,8 @@ def _wizard_schedule_status(schedule: dict) -> WizardUpdateScheduleStatus:
         github_repo=github_repo,
         github_path=github_path,
         github_ref=github_ref,
+        web_url=web_url,
+        scrape_urls=scrape_urls,
     )
 
 
@@ -622,7 +670,7 @@ def _wizard_gap_summary() -> WizardDatabaseGapSummary:
 
     recommendations: list[str] = []
     if missing_printer_sources or missing_resin_sources or missing_profile_sources:
-        recommendations.append("Run database setup/update from official or GitHub source to improve provenance coverage.")
+        recommendations.append("Run database setup/update from the official dataset, GitHub, or a curated web JSON feed to improve provenance coverage.")
     if printers_without_profiles or resins_without_profiles:
         recommendations.append("Add or sync profile presets for uncovered printer/resin combinations.")
     if not recommendations:
@@ -713,6 +761,86 @@ def _github_schedule_config(schedule: dict) -> dict | None:
     }
 
 
+def _web_schedule_config(schedule: dict) -> dict | None:
+    payload = schedule.get("payload")
+    if not isinstance(payload, dict):
+        return None
+
+    config_obj: object | None = payload.get("web_json")
+    if not isinstance(config_obj, dict):
+        has_flat = "url" in payload and "github" not in payload
+        has_native_sync_shape = any(key in payload for key in ("printers", "resins", "profiles"))
+        if not has_flat or has_native_sync_shape:
+            return None
+        config_obj = payload
+
+    config = dict(config_obj)
+    url = str(config.get("url", "")).strip()
+    if not url:
+        raise ValueError("Web schedule payload must include a URL.")
+
+    return {
+        "url": url,
+        "timeout_s": _to_float(
+            config.get("timeout_s", os.getenv("RESINLOGIC_WEB_SYNC_TIMEOUT_SECONDS", 20.0)),
+            default=20.0,
+            minimum=1.0,
+            maximum=120.0,
+        ),
+        "retry_attempts": _to_int(
+            config.get("retry_attempts", os.getenv("RESINLOGIC_WEB_SYNC_RETRY_ATTEMPTS", 3)),
+            default=3,
+            minimum=1,
+            maximum=10,
+        ),
+        "retry_backoff_seconds": _to_float(
+            config.get("retry_backoff_seconds", os.getenv("RESINLOGIC_WEB_SYNC_RETRY_BACKOFF_SECONDS", 1.0)),
+            default=1.0,
+            minimum=0.0,
+            maximum=60.0,
+        ),
+        "replace_existing": bool(config.get("replace_existing", schedule.get("replace_existing", False))),
+    }
+
+
+def _scrape_schedule_config(schedule: dict) -> dict | None:
+    payload = schedule.get("payload")
+    if not isinstance(payload, dict):
+        return None
+
+    config_obj: object | None = payload.get("web_scrape")
+    if not isinstance(config_obj, dict):
+        return None
+
+    config = dict(config_obj)
+    urls = [str(item).strip() for item in config.get("urls", []) if str(item).strip()]
+    if not urls:
+        raise ValueError("Web scrape schedule payload must include one or more URLs.")
+
+    return {
+        "urls": urls,
+        "timeout_s": _to_float(
+            config.get("timeout_s", os.getenv("RESINLOGIC_WEB_SCRAPE_TIMEOUT_SECONDS", 20.0)),
+            default=20.0,
+            minimum=1.0,
+            maximum=120.0,
+        ),
+        "retry_attempts": _to_int(
+            config.get("retry_attempts", os.getenv("RESINLOGIC_WEB_SCRAPE_RETRY_ATTEMPTS", 3)),
+            default=3,
+            minimum=1,
+            maximum=10,
+        ),
+        "retry_backoff_seconds": _to_float(
+            config.get("retry_backoff_seconds", os.getenv("RESINLOGIC_WEB_SCRAPE_RETRY_BACKOFF_SECONDS", 1.0)),
+            default=1.0,
+            minimum=0.0,
+            maximum=60.0,
+        ),
+        "replace_existing": bool(config.get("replace_existing", schedule.get("replace_existing", False))),
+    }
+
+
 def _fetch_github_schedule_payload(config: dict) -> tuple[dict, str, int]:
     attempts = int(config["retry_attempts"])
     backoff = float(config["retry_backoff_seconds"])
@@ -743,14 +871,70 @@ def _fetch_github_schedule_payload(config: dict) -> tuple[dict, str, int]:
     raise RuntimeError("GitHub sync failed without error details.")
 
 
+def _fetch_web_schedule_payload(config: dict) -> tuple[dict, str, int]:
+    attempts = int(config["retry_attempts"])
+    backoff = float(config["retry_backoff_seconds"])
+    last_error: Exception | None = None
+
+    for attempt in range(1, attempts + 1):
+        try:
+            payload, normalized_url = fetch_technical_sync_from_url(
+                url=str(config["url"]),
+                timeout_s=float(config["timeout_s"]),
+            )
+            return payload, normalized_url, attempt
+        except ValueError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            last_error = exc
+            if attempt >= attempts:
+                break
+            sleep_seconds = backoff * (2 ** (attempt - 1))
+            if sleep_seconds > 0:
+                time.sleep(sleep_seconds)
+
+    if last_error is not None:
+        raise RuntimeError(f"Web sync failed after {attempts} attempts: {last_error}") from last_error
+    raise RuntimeError("Web sync failed without error details.")
+
+
+def _fetch_scrape_schedule_payload(config: dict) -> tuple[dict, dict, int]:
+    attempts = int(config["retry_attempts"])
+    backoff = float(config["retry_backoff_seconds"])
+    last_error: Exception | None = None
+
+    for attempt in range(1, attempts + 1):
+        try:
+            payload, summary = scrape_supported_catalog_pages(
+                urls=list(config["urls"]),
+                timeout_s=float(config["timeout_s"]),
+            )
+            return payload, summary, attempt
+        except ValueError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            last_error = exc
+            if attempt >= attempts:
+                break
+            sleep_seconds = backoff * (2 ** (attempt - 1))
+            if sleep_seconds > 0:
+                time.sleep(sleep_seconds)
+
+    if last_error is not None:
+        raise RuntimeError(f"Web scrape sync failed after {attempts} attempts: {last_error}") from last_error
+    raise RuntimeError("Web scrape sync failed without error details.")
+
+
 def _submit_sync_schedule_job(schedule: dict, actor: str = "scheduler") -> dict:
     schedule_id = int(schedule["id"])
 
     def _work() -> dict:
         try:
             github_config = _github_schedule_config(schedule)
+            scrape_config = None if github_config is not None else _scrape_schedule_config(schedule)
+            web_config = None if github_config is not None or scrape_config is not None else _web_schedule_config(schedule)
             source = str(schedule["source"])
-            if github_config is None:
+            if github_config is None and scrape_config is None and web_config is None:
                 result = apply_technical_sync(
                     payload=schedule["payload"],
                     source=source,
@@ -765,6 +949,54 @@ def _submit_sync_schedule_job(schedule: dict, actor: str = "scheduler") -> dict:
                     "profiles_upserted": result["profiles_upserted"],
                     "curation": result.get("curation") or {},
                     "notes": result.get("notes") or [],
+                }
+            elif scrape_config is not None:
+                payload, summary, attempts_used = _fetch_scrape_schedule_payload(scrape_config)
+                result = apply_technical_sync(
+                    payload=payload,
+                    source=source,
+                    db_path=CATALOG_PATH,
+                    replace_existing=bool(scrape_config["replace_existing"]),
+                    source_metadata={
+                        "kind": "web_scrape",
+                        "supported_scraper": True,
+                        "source_urls": summary.get("scraped_urls") or summary.get("normalized_urls") or [],
+                    },
+                )
+                output = {
+                    "source": source,
+                    "schedule_id": schedule_id,
+                    "printers_upserted": result["printers_upserted"],
+                    "resins_upserted": result["resins_upserted"],
+                    "profiles_upserted": result["profiles_upserted"],
+                    "curation": result.get("curation") or {},
+                    "notes": [*(result.get("notes") or []), *(summary.get("notes") or [])],
+                    "scrape_urls": summary.get("scraped_urls") or [],
+                    "unsupported_urls": summary.get("unsupported_urls") or [],
+                    "scrape_attempts_used": attempts_used,
+                }
+            elif web_config is not None:
+                payload, raw_url, attempts_used = _fetch_web_schedule_payload(web_config)
+                result = apply_technical_sync(
+                    payload=payload,
+                    source=source,
+                    db_path=CATALOG_PATH,
+                    replace_existing=bool(web_config["replace_existing"]),
+                    source_metadata={
+                        "kind": "web_json",
+                        "url": raw_url,
+                    },
+                )
+                output = {
+                    "source": source,
+                    "schedule_id": schedule_id,
+                    "printers_upserted": result["printers_upserted"],
+                    "resins_upserted": result["resins_upserted"],
+                    "profiles_upserted": result["profiles_upserted"],
+                    "curation": result.get("curation") or {},
+                    "notes": result.get("notes") or [],
+                    "web_raw_url": raw_url,
+                    "web_attempts_used": attempts_used,
                 }
             else:
                 payload, raw_url, attempts_used = _fetch_github_schedule_payload(github_config)
@@ -965,35 +1197,73 @@ def wizard_catalog_options(auth: AuthContext = Depends(require_role("viewer"))) 
     profiles = list_profiles(db_path=CATALOG_PATH, active_only=True, limit=5000)
 
     compatibility_sets: dict[str, set[str]] = {}
+    compatibility_by_target_sets: dict[str, dict[str, set[str]]] = {"msla": {}, "fdm": {}}
     for item in profiles:
         printer = str(item.get("printer_name", "")).strip()
         resin = str(item.get("resin_name", "")).strip()
         if not printer or not resin:
             continue
         compatibility_sets.setdefault(printer, set()).add(resin)
+        target = _wizard_target_from_catalog_item(item)
+        compatibility_by_target_sets.setdefault(target, {}).setdefault(printer, set()).add(resin)
 
     compatibility = {key: sorted(values) for key, values in compatibility_sets.items()}
-    printers = sorted(compatibility.keys())
-    resins = sorted({resin for values in compatibility.values() for resin in values})
+    compatibility_by_target = {
+        target: {key: sorted(values) for key, values in printer_map.items()}
+        for target, printer_map in compatibility_by_target_sets.items()
+    }
+    printers_by_target: dict[str, list[str]] = {
+        target: sorted(printer_map.keys())
+        for target, printer_map in compatibility_by_target.items()
+    }
+    materials_by_target: dict[str, list[str]] = {
+        target: sorted({material for values in printer_map.values() for material in values})
+        for target, printer_map in compatibility_by_target.items()
+    }
+
+    printers = sorted({printer for values in printers_by_target.values() for printer in values})
+    resins = sorted({material for values in materials_by_target.values() for material in values})
 
     if not printers:
-        # Fallback for empty/new catalogs before profile ingestion.
-        printers = sorted(
-            {
-                str(item.get("name", "")).strip()
-                for item in list_printers(db_path=CATALOG_PATH, limit=2000)
-                if item.get("name")
-            }
-        )
+        printer_rows = list_printers(db_path=CATALOG_PATH, limit=2000)
+        printer_groups: dict[str, set[str]] = {"msla": set(), "fdm": set()}
+        for item in printer_rows:
+            name = str(item.get("name", "")).strip()
+            if not name:
+                continue
+            printer_groups.setdefault(_wizard_target_from_catalog_item(item), set()).add(name)
+        printers_by_target = {key: sorted(values) for key, values in printer_groups.items()}
+        printers = sorted({name for values in printer_groups.values() for name in values})
     if not resins:
-        resins = sorted(
-            {
-                str(item.get("name", "")).strip()
-                for item in list_catalog_resins(db_path=CATALOG_PATH, limit=3000)
-                if item.get("name")
-            }
-        )
-    return WizardCatalogOptionsResponse(printers=printers, resins=resins, compatibility=compatibility)
+        material_rows = list_catalog_resins(db_path=CATALOG_PATH, limit=3000)
+        material_groups: dict[str, set[str]] = {"msla": set(), "fdm": set()}
+        for item in material_rows:
+            name = str(item.get("name", "")).strip()
+            if not name:
+                continue
+            material_groups.setdefault(_wizard_target_from_catalog_item(item), set()).add(name)
+        materials_by_target = {key: sorted(values) for key, values in material_groups.items()}
+        resins = sorted({name for values in material_groups.values() for name in values})
+
+    targets = [
+        target
+        for target in ("msla", "fdm")
+        if printers_by_target.get(target) or materials_by_target.get(target) or compatibility_by_target.get(target)
+    ]
+    if not targets:
+        targets = ["msla"]
+
+    return WizardCatalogOptionsResponse(
+        printers=printers,
+        resins=resins,
+        materials=resins,
+        compatibility=compatibility,
+        targets=targets,
+        printers_by_target=printers_by_target,
+        materials_by_target=materials_by_target,
+        compatibility_by_target=compatibility_by_target,
+        slicers_by_target={target: WIZARD_SLICERS_BY_TARGET[target] for target in targets},
+    )
 
 
 @app.get("/wizard/database/status", response_model=WizardDatabaseStatus)
@@ -1151,6 +1421,8 @@ def wizard_database_setup(
     owner = (request.owner or "").strip()
     repo = (request.repo or "").strip()
     path = (request.path or "").strip()
+    url = (request.url or "").strip()
+    scrape_urls = [str(item).strip() for item in request.scrape_urls if str(item).strip()]
     ref = (request.ref or "main").strip() or "main"
 
     try:
@@ -1164,7 +1436,7 @@ def wizard_database_setup(
                 "source_file": str(OFFICIAL_SYNC_PATH),
                 "retrieved_at": _iso_timestamp(),
             }
-        else:
+        elif mode == "github":
             if not owner or not repo or not path:
                 raise HTTPException(
                     status_code=400,
@@ -1186,6 +1458,35 @@ def wizard_database_setup(
                 "raw_url": raw_url,
                 "retrieved_at": _iso_timestamp(),
             }
+        elif mode == "web_json":
+            if not url:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Web JSON mode requires a URL.",
+                )
+            payload, raw_url = fetch_technical_sync_from_url(url=url)
+            source = source or f"web_json:{raw_url}"
+            source_metadata = {
+                "kind": "web_json",
+                "url": raw_url,
+                "retrieved_at": _iso_timestamp(),
+            }
+        else:
+            if not scrape_urls:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Supported web scrape mode requires one or more URLs.",
+                )
+            payload, scrape_summary = scrape_supported_catalog_pages(urls=scrape_urls)
+            raw_url = ", ".join(scrape_summary.get("scraped_urls") or scrape_summary.get("normalized_urls") or []) or None
+            source = source or "wizard_setup_web_scrape"
+            source_metadata = {
+                "kind": "web_scrape",
+                "supported_scraper": True,
+                "source_urls": scrape_summary.get("scraped_urls") or scrape_summary.get("normalized_urls") or [],
+                "retrieved_at": _iso_timestamp(),
+            }
+            notes.extend(scrape_summary.get("notes") or [])
 
         result = apply_technical_sync(
             payload=payload,
@@ -1197,7 +1498,7 @@ def wizard_database_setup(
 
         auto_update_schedule_id: int | None = None
         if request.auto_update:
-            if owner and repo and path:
+            if mode == "github" and owner and repo and path:
                 schedule = create_or_upsert_sync_schedule(
                     {
                         "name": "wizard_auto_update",
@@ -1221,8 +1522,50 @@ def wizard_database_setup(
                 notes.append(
                     f"Auto-update schedule enabled (every {request.auto_update_interval_seconds} seconds)."
                 )
+            elif mode == "web_json" and raw_url:
+                schedule = create_or_upsert_sync_schedule(
+                    {
+                        "name": "wizard_auto_update",
+                        "source": "wizard_auto_update",
+                        "interval_seconds": request.auto_update_interval_seconds,
+                        "enabled": True,
+                        "replace_existing": request.replace_existing,
+                        "payload": {
+                            "web_json": {
+                                "url": raw_url,
+                                "replace_existing": request.replace_existing,
+                            }
+                        },
+                    },
+                    db_path=SCHEDULES_PATH,
+                )
+                auto_update_schedule_id = int(schedule["id"])
+                notes.append(
+                    f"Auto-update schedule enabled (every {request.auto_update_interval_seconds} seconds)."
+                )
+            elif mode == "web_scrape" and scrape_urls:
+                schedule = create_or_upsert_sync_schedule(
+                    {
+                        "name": "wizard_auto_update",
+                        "source": "wizard_auto_update",
+                        "interval_seconds": request.auto_update_interval_seconds,
+                        "enabled": True,
+                        "replace_existing": request.replace_existing,
+                        "payload": {
+                            "web_scrape": {
+                                "urls": scrape_urls,
+                                "replace_existing": request.replace_existing,
+                            }
+                        },
+                    },
+                    db_path=SCHEDULES_PATH,
+                )
+                auto_update_schedule_id = int(schedule["id"])
+                notes.append(
+                    f"Auto-update schedule enabled (every {request.auto_update_interval_seconds} seconds)."
+                )
             else:
-                notes.append("Auto-update skipped: provide GitHub owner/repo/path for scheduled updates.")
+                notes.append("Auto-update skipped: use GitHub, Web JSON, or supported web scrape mode for scheduled remote updates.")
 
         _audit(
             auth=auth,
@@ -1787,6 +2130,62 @@ def sync_technical_github(
                 "path": request.path,
                 "ref": request.ref,
             },
+        )
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/sync/technical/scrape", response_model=WebScrapeTechnicalSyncResponse)
+def sync_technical_scrape(
+    request: WebScrapeTechnicalSyncRequest,
+    auth: AuthContext = Depends(require_role("operator")),
+) -> WebScrapeTechnicalSyncResponse:
+    try:
+        payload, summary = scrape_supported_catalog_pages(
+            urls=request.urls,
+            timeout_s=request.timeout_s,
+        )
+        result = apply_technical_sync(
+            payload=payload,
+            source=request.source,
+            db_path=CATALOG_PATH,
+            replace_existing=request.replace_existing,
+            source_metadata={
+                "kind": "web_scrape",
+                "supported_scraper": True,
+                "source_urls": summary.get("scraped_urls") or summary.get("normalized_urls") or [],
+            },
+        )
+        notes = [*(result.get("notes") or []), *(summary.get("notes") or [])]
+        _audit(
+            auth=auth,
+            action="sync.technical.scrape",
+            resource_type="catalog",
+            details={
+                "source": request.source,
+                "urls": request.urls,
+                "scraped_urls": summary.get("scraped_urls") or [],
+                "unsupported_urls": summary.get("unsupported_urls") or [],
+                **result,
+            },
+        )
+        _snapshot_catalog(auth, "sync.technical.scrape", note=request.source)
+        return WebScrapeTechnicalSyncResponse(
+            source=request.source,
+            printers_upserted=result["printers_upserted"],
+            resins_upserted=result["resins_upserted"],
+            profiles_upserted=result["profiles_upserted"],
+            curation=result.get("curation") or {},
+            notes=notes,
+            urls=summary.get("normalized_urls") or [],
+            scraped_urls=summary.get("scraped_urls") or [],
+            unsupported_urls=summary.get("unsupported_urls") or [],
+        )
+    except Exception as exc:
+        _audit(
+            auth=auth,
+            action="sync.technical.scrape",
+            status="failed",
+            details={"error": str(exc), "urls": request.urls},
         )
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -2408,31 +2807,53 @@ def wizard_settings_recommend(
             film_releases=request.film_releases,
             catalog_db_path=CATALOG_PATH,
         )
-        cfg_text = render_chitubox_cfg(settings)
+        target_process = _wizard_target_from_settings(settings)
+        requested_target = _normalize_wizard_target(request.target_process)
+        if request.target_process is not None and requested_target != target_process:
+            raise ValueError(
+                f"Selected target '{requested_target}' does not match the chosen printer/material profile ({target_process})."
+            )
+
+        slicer_name = WIZARD_SLICERS_BY_TARGET[target_process]
+        if target_process == "fdm":
+            slicer_profile_text = render_cura_profile(settings)
+            slicer_profile_suffix = ".curaprofile"
+            chitubox_cfg = None
+        else:
+            slicer_profile_text = render_chitubox_cfg(settings)
+            slicer_profile_suffix = ".cfg"
+            chitubox_cfg = slicer_profile_text
 
         stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        prefix = f"{_safe_slug(request.printer, 'printer')}_{_safe_slug(request.resin_type, 'resin')}_{stamp}"
+        prefix = (
+            f"{_safe_slug(target_process, 'target')}_"
+            f"{_safe_slug(request.printer, 'printer')}_"
+            f"{_safe_slug(request.resin_type, 'material')}_{stamp}"
+        )
         settings_path = WIZARD_ARTIFACTS_DIR / f"{prefix}_settings.json"
-        cfg_path = WIZARD_ARTIFACTS_DIR / f"{prefix}.cfg"
+        slicer_profile_path = WIZARD_ARTIFACTS_DIR / f"{prefix}{slicer_profile_suffix}"
+        slicer_profile_name = f"{prefix}{slicer_profile_suffix}"
 
         settings_payload = {
             "generated_at": _iso_timestamp(),
             "printer": request.printer,
             "resin_type": request.resin_type,
+            "target_process": target_process,
+            "slicer_name": slicer_name,
             "use_case": request.use_case,
             "settings": settings.model_dump(),
         }
         settings_path.write_text(json.dumps(settings_payload, ensure_ascii=True, indent=2), encoding="utf-8")
-        cfg_path.write_text(cfg_text, encoding="utf-8")
+        slicer_profile_path.write_text(slicer_profile_text, encoding="utf-8")
 
         settings_artifact_id = _register_wizard_artifact(
             settings_path,
             download_name=f"{prefix}_settings.json",
             media_type="application/json",
         )
-        cfg_artifact_id = _register_wizard_artifact(
-            cfg_path,
-            download_name=f"{prefix}.cfg",
+        slicer_profile_artifact_id = _register_wizard_artifact(
+            slicer_profile_path,
+            download_name=slicer_profile_name,
             media_type="text/plain",
         )
 
@@ -2443,19 +2864,27 @@ def wizard_settings_recommend(
             details={
                 "printer": request.printer,
                 "resin_type": request.resin_type,
+                "target_process": target_process,
+                "slicer_name": slicer_name,
                 "use_case": request.use_case,
                 "settings_artifact_id": settings_artifact_id,
-                "cfg_artifact_id": cfg_artifact_id,
+                "cfg_artifact_id": slicer_profile_artifact_id,
             },
         )
 
         return WizardSettingsResponse(
             settings=settings,
-            chitubox_cfg=cfg_text,
+            target_process=target_process,
+            slicer_name=slicer_name,
+            slicer_profile_text=slicer_profile_text,
+            slicer_profile_file_name=slicer_profile_name,
+            slicer_profile_download_id=slicer_profile_artifact_id,
+            slicer_profile_download_url=_wizard_download_url(slicer_profile_artifact_id),
+            chitubox_cfg=chitubox_cfg,
             settings_download_id=settings_artifact_id,
             settings_download_url=_wizard_download_url(settings_artifact_id),
-            cfg_download_id=cfg_artifact_id,
-            cfg_download_url=_wizard_download_url(cfg_artifact_id),
+            cfg_download_id=slicer_profile_artifact_id,
+            cfg_download_url=_wizard_download_url(slicer_profile_artifact_id),
         )
     except Exception as exc:
         _audit(
