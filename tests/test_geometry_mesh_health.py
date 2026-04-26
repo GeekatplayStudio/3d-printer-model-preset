@@ -99,6 +99,35 @@ def test_repair_mesh_file_reports_before_after_fix_state(tmp_path):
     assert repaired_path.exists()
 
 
+def test_trimesh_repair_prunes_tiny_disconnected_shells_when_main_shell_is_clean():
+    main_shell = trimesh.creation.icosphere(subdivisions=4, radius=20.0)
+    fragments = []
+    for index in range(20):
+        offset = 200.0 + (index * 5.0)
+        fragment = trimesh.Trimesh(
+            vertices=[
+                [offset, 0.0, 0.0],
+                [offset + 0.75, 0.0, 0.0],
+                [offset, 0.75, 0.0],
+            ],
+            faces=[[0, 1, 2]],
+            process=False,
+        )
+        fragments.append(fragment)
+
+    noisy_mesh = trimesh.util.concatenate([main_shell, *fragments])
+
+    repaired, actions = geometry._repair_mesh_with_trimesh(noisy_mesh)
+    health = geometry._mesh_health_report(noisy_mesh, repaired=repaired, repair_actions=actions)
+
+    assert repaired is True
+    assert health.watertight is True
+    assert health.connected_components == 1
+    assert health.boundary_edge_count == 0
+    assert health.non_manifold_edge_count == 0
+    assert any("Discarded 20 tiny disconnected shell(s)" in action for action in actions)
+
+
 def test_requested_pymeshlab_backend_falls_back_to_trimesh_when_unavailable(monkeypatch):
     observed = {"trimesh_called": False}
 
@@ -482,6 +511,98 @@ def test_deep_analysis_adapts_large_mesh_profile(monkeypatch):
     assert any("raised voxel pitch" in note for note in analysis.notes)
     assert any("capped max slices" in note for note in analysis.notes)
     assert any("skipped curvature proxy" in note for note in analysis.notes)
+
+
+def test_balanced_analysis_falls_back_to_lightweight_heuristics_for_extreme_mesh(monkeypatch):
+    class FaceCounter:
+        def __len__(self):
+            return 2_200_000
+
+    class FakeMesh:
+        def __init__(self):
+            self.faces = FaceCounter()
+            self.vertices = np.zeros((3, 3), dtype=float)
+            self.bounds = np.array([[0.0, 0.0, 0.0], [1200.0, 800.0, 2500.0]], dtype=float)
+            self.extents = np.array([1200.0, 800.0, 2500.0], dtype=float)
+            self.area = 3_000_000.0
+            self.volume = 900_000_000.0
+            self.center_mass = np.array([600.0, 400.0, 1250.0], dtype=float)
+            self.euler_number = 2
+            self.face_normals = np.array([[0.0, 0.0, 1.0]], dtype=float)
+            self.area_faces = np.array([1.0], dtype=float)
+
+    observed: dict[str, object] = {}
+    mesh = FakeMesh()
+
+    monkeypatch.setattr(
+        geometry,
+        "_load_and_prepare_mesh",
+        lambda *args, **kwargs: (
+            mesh,
+            MeshHealthReport(
+                watertight=True,
+                winding_consistent=True,
+                volume_consistent=True,
+                connected_components=1,
+                boundary_edge_count=0,
+                non_manifold_edge_count=0,
+                degenerate_face_count=0,
+                duplicate_face_count=0,
+                repaired=False,
+                issues=[],
+                repair_actions=[],
+            ),
+        ),
+    )
+
+    def _fake_fast_cross_sections(
+        mesh,
+        slice_height_mm,
+        max_slices,
+        progress_callback=None,
+        cancel_check=None,
+        mode_label="Minimum analysis",
+    ):
+        observed["mode_label"] = mode_label
+        observed["max_slices"] = max_slices
+        return geometry._CrossSectionResult(
+            slice_areas=[geometry.SliceArea(z_mm=0.0, area_mm2=42.0)],
+            max_area_mm2=42.0,
+            effective_slice_height_mm=3.2,
+            notes=[f"{mode_label}: synthetic cross-section result."],
+        )
+
+    monkeypatch.setattr(geometry, "_cross_section_areas_fast", _fake_fast_cross_sections)
+    monkeypatch.setattr(
+        geometry,
+        "_cross_section_areas",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("expected lightweight cross-section fallback")),
+    )
+    monkeypatch.setattr(
+        geometry,
+        "_voxelize_mesh",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("lightweight fallback should skip voxelization")),
+    )
+    monkeypatch.setattr(geometry, "_estimate_model_intent", lambda **kwargs: ("heavy_use", []))
+    monkeypatch.setattr(geometry, "_structural_risk", lambda **kwargs: 0.0)
+    monkeypatch.setattr(geometry, "_analysis_detail_notes", lambda **kwargs: [])
+    monkeypatch.setattr(geometry, "_fdm_surface_support_metrics", lambda mesh: (None, None))
+
+    analysis = analyze_geometry(
+        "synthetic.stl",
+        slice_height_mm=0.05,
+        auto_repair=False,
+        analysis_level="balanced",
+    )
+
+    assert observed["mode_label"] == "Large-model fallback"
+    assert observed["max_slices"] == 600
+    assert analysis.analysis_level == "balanced"
+    assert analysis.suction_cups == []
+    assert analysis.islands == []
+    assert any("fell back to minimum heuristics" in note for note in analysis.notes)
+    assert any("Large-model fallback: suction cup detection skipped" in note for note in analysis.notes)
+    assert any("Large-model fallback: curvature proxy skipped" in note for note in analysis.notes)
 
 
 def test_balanced_analysis_reuses_cross_section_voxels_and_emits_detail_notes(monkeypatch):

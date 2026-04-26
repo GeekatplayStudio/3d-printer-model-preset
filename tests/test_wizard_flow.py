@@ -17,6 +17,8 @@ from app.job_store import init_job_store
 from app.models import GeometryAnalysis
 from app.scheduler import TechnicalSyncScheduler
 from app.sync_schedule_store import init_sync_schedule_store
+from app.wizard_artifact_store import init_wizard_artifact_store
+from app.wizard_analysis_store import init_wizard_analysis_store
 
 
 def _auth_headers(token: str = "dev-operator-key", actor: str = "wizard-user") -> dict[str, str]:
@@ -31,15 +33,21 @@ def _client(tmp_path, monkeypatch) -> TestClient:
     audit_path = tmp_path / "audit.db"
     jobs_path = tmp_path / "jobs.db"
     schedules_path = tmp_path / "sync_schedules.db"
+    wizard_artifacts_path = tmp_path / "wizard_artifacts.db"
+    wizard_progress_path = tmp_path / "wizard_analysis_progress.db"
     init_catalog_store(db_path=catalog_path)
     init_audit_store(db_path=audit_path)
     init_job_store(db_path=jobs_path)
     init_sync_schedule_store(db_path=schedules_path)
+    init_wizard_artifact_store(db_path=wizard_artifacts_path)
+    init_wizard_analysis_store(db_path=wizard_progress_path)
     monkeypatch.setenv("RESINLOGIC_ENABLE_SCHEDULER", "0")
     monkeypatch.setattr(main, "CATALOG_PATH", catalog_path)
     monkeypatch.setattr(main, "AUDIT_PATH", audit_path)
     monkeypatch.setattr(main, "JOBS_PATH", jobs_path)
     monkeypatch.setattr(main, "SCHEDULES_PATH", schedules_path)
+    monkeypatch.setattr(main, "WIZARD_ARTIFACTS_PATH", wizard_artifacts_path)
+    monkeypatch.setattr(main, "WIZARD_ANALYSIS_PROGRESS_PATH", wizard_progress_path)
     monkeypatch.setattr(main, "JOB_QUEUE", InMemoryJobQueue(max_workers=1, db_path=jobs_path))
     scheduler = TechnicalSyncScheduler(
         schedule_db_path=schedules_path,
@@ -121,6 +129,9 @@ def test_wizard_ui_and_status_route(tmp_path, monkeypatch):
     ui = client.get("/wizard")
     assert ui.status_code == 200
     assert "Geekatplay Studio Wizard" in ui.text
+    assert "/static/geekatplay-mark.svg" in ui.text
+    assert "Hover any" in ui.text
+    assert "data-help-key=\"analysis_depth\"" in ui.text
     assert "Step 0: Select Analyzer Target" in ui.text
     assert "targetSel" in ui.text
     assert "Ultimaker Cura" in ui.text
@@ -139,6 +150,14 @@ def test_wizard_ui_and_status_route(tmp_path, monkeypatch):
     assert "progress_job_id" in ui.text
     assert "cancelAnalyzeBtn" in ui.text
     assert "analysisProgressPanel" in ui.text
+    assert "checkApiReachability" in ui.text
+    assert "/health" in ui.text
+    assert "The wizard controls were unlocked locally." in ui.text
+    assert "Large-model fallback is active" in ui.text
+    assert "API missed a brief health check" in ui.text
+    assert "Auto-Fix re-checked the saved repaired STL" in ui.text
+    assert "Auto-Fix saved the repaired STL and re-checked it" in ui.text
+    assert "select option," in ui.text
     assert "dbScanPanel" in ui.text
     assert "modelPreviewPanel" in ui.text
     assert "modelStatsPanel" in ui.text
@@ -159,6 +178,10 @@ def test_wizard_ui_and_status_route(tmp_path, monkeypatch):
 
 def test_wizard_static_preview_assets_are_served(tmp_path, monkeypatch):
     client = _client(tmp_path, monkeypatch)
+
+    brand_mark = client.get("/static/geekatplay-mark.svg")
+    assert brand_mark.status_code == 200
+    assert "svg" in brand_mark.text
 
     three = client.get("/static/vendor/three/build/three.module.js")
     assert three.status_code == 200
@@ -498,6 +521,8 @@ def test_wizard_model_fix_and_settings_downloads(tmp_path, monkeypatch):
     assert fix_body["download_url"].startswith("/wizard/download/")
     assert fix_body["repaired"] is True
     assert fix_body["fully_repaired"] is False
+    assert fix_body["rechecked_after_fix"] is True
+    assert "saved the repaired STL and re-checked it" in fix_body["recheck_summary"]
     assert fix_body["before_fix"]["duplicate_face_count"] >= 1
     assert fix_body["after_fix"]["duplicate_face_count"] == 0
     assert any("Mesh is not watertight." == issue for issue in fix_body["remaining_issues"])
@@ -546,6 +571,126 @@ def test_wizard_model_fix_and_settings_downloads(tmp_path, monkeypatch):
     # Ensure artifacts survive a short delay and remain downloadable.
     time.sleep(0.01)
     assert client.get(settings_body["cfg_download_url"]).status_code == 200
+
+
+def test_wizard_heavy_stl_endpoints_offload_blocking_work(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+    recorded_calls: list[str] = []
+
+    async def fake_to_thread(func, *args, **kwargs):
+        recorded_calls.append(getattr(func, "__name__", repr(func)))
+        return func(*args, **kwargs)
+
+    monkeypatch.setattr(main.asyncio, "to_thread", fake_to_thread)
+    def fake_run_full_pipeline(**kwargs):
+        return {
+            "analysis": _analysis_payload(),
+            "settings": {
+                "printer": kwargs["printer"],
+                "resin_type": kwargs["resin_type"],
+                "use_case": kwargs["use_case"],
+                "intent_used": kwargs["use_case"],
+                "layer_height_mm": 0.05,
+                "exposure_s": 2.2,
+                "bottom_exposure_s": 30.0,
+                "tilt_speed_mm_min": 90.0,
+                "tilt_speed_mm_h": 90.0,
+                "tilt_angle_deg": -1.0,
+                "rest_time_before_print_s": 2.0,
+                "rest_time_after_retract_s": 0.5,
+                "transition_layers": 5,
+                "scale_compensation_percent": 100.0,
+                "heater_required": False,
+                "anti_aliasing": None,
+                "grayscale_level": None,
+                "xy_resolution_um": 18,
+                "detail_tier": "medium_detail",
+                "multi_parameter": {
+                    "model_exposure_s": 2.1,
+                    "support_exposure_s": 2.4,
+                    "delicate_feature_exposure_s": 2.0,
+                },
+                "warnings": [],
+                "recommendations": [],
+                "source_profile": "Mock Profile",
+            },
+            "chitubox_cfg": "layer_height_mm=0.05\n",
+        }
+
+    fake_run_full_pipeline.__name__ = "run_full_pipeline"
+
+    monkeypatch.setattr(main.pipeline, "run_full_pipeline", fake_run_full_pipeline)
+
+    fix = client.post(
+        "/wizard/model/fix",
+        files={"file": ("broken.stl", _broken_mesh_bytes(), "model/stl")},
+        data={"slice_height_mm": "0.2"},
+    )
+    assert fix.status_code == 200
+    assert "_save_upload" in recorded_calls
+    assert "repair_mesh_file" in recorded_calls
+    assert "run_phase_1_geometry" in recorded_calls
+
+    recorded_calls.clear()
+
+    analyze = client.post(
+        "/phase1/analyze",
+        files={"file": ("broken.stl", _broken_mesh_bytes(), "model/stl")},
+        data={"slice_height_mm": "0.2", "auto_repair": "true", "analysis_level": "balanced"},
+    )
+    assert analyze.status_code == 200
+    assert recorded_calls.count("_save_upload") == 1
+    assert "run_phase_1_geometry" in recorded_calls
+
+    recorded_calls.clear()
+
+    pipeline_response = client.post(
+        "/pipeline",
+        files={"file": ("broken.stl", _broken_mesh_bytes(), "model/stl")},
+        data={
+            "resin_type": "Resin Mock",
+            "use_case": "miniature",
+            "printer": "Printer Mock",
+            "slice_height_mm": "0.2",
+            "analysis_level": "balanced",
+        },
+    )
+    assert pipeline_response.status_code == 200
+    assert recorded_calls.count("_save_upload") == 1
+    assert "run_full_pipeline" in recorded_calls
+
+    recorded_calls.clear()
+
+    def fake_submit(*, job_type, actor, metadata, fn):
+        return {
+            "id": "job-pipeline-001",
+            "type": job_type,
+            "status": "queued",
+            "actor": actor,
+            "metadata": metadata,
+            "created_at": "2026-04-25T00:00:00+00:00",
+            "started_at": None,
+            "completed_at": None,
+            "error": None,
+            "result": None,
+        }
+
+    monkeypatch.setattr(main.JOB_QUEUE, "submit", fake_submit)
+
+    queued_pipeline_response = client.post(
+        "/jobs/pipeline",
+        files={"file": ("broken.stl", _broken_mesh_bytes(), "model/stl")},
+        data={
+            "resin_type": "Resin Mock",
+            "use_case": "miniature",
+            "printer": "Printer Mock",
+            "slice_height_mm": "0.2",
+            "analysis_level": "balanced",
+        },
+    )
+    assert queued_pipeline_response.status_code == 200
+    assert recorded_calls.count("_save_upload") == 1
+    assert "run_full_pipeline" not in recorded_calls
 
 
 def test_wizard_settings_recommend_returns_cura_profile_for_fdm(tmp_path, monkeypatch):

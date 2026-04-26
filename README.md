@@ -12,7 +12,7 @@ Legacy compatibility note: internal package names, environment variables, SQLite
   - GitHub-hosted sync JSON,
   - direct web JSON feed,
   - supported vendor HTML pages.
-- STL analysis, repair, retopology, live progress polling, cooperative cancel, and local 3D preview.
+- STL analysis, repair, retopology, live progress polling, cooperative cancel, local 3D preview, and post-repair save/recheck verification.
 - Settings generation with provenance, confidence, and downloadable slicer artifacts.
 - Chitubox Free export for MSLA and Ultimaker Cura profile export for FDM.
 - Catalog CRUD, CSV/JSON import/export, version snapshots, audit logs, jobs, schedules, and Prometheus metrics.
@@ -22,7 +22,7 @@ Legacy compatibility note: internal package names, environment variables, SQLite
 
 1. Open `/wizard` and choose the analyzer target.
 2. Seed or update the local catalog from the official dataset or a remote source.
-3. Upload an STL, run geometry analysis, and optionally repair or retopologize the mesh.
+3. Upload an STL, run geometry analysis, and optionally repair or retopologize the mesh. Auto-Fix saves the repaired STL and re-checks that saved file before reporting the result.
 4. Choose a compatible printer and material for the selected target.
 5. Generate slicer-ready settings, review provenance, and download the exported profile.
 
@@ -113,7 +113,13 @@ At runtime, `app/main.py` initializes local SQLite-backed stores and serves the 
 4. `app/sync_service.py` applies normalized sync payloads and `app/web_catalog_scraper.py` translates supported vendor pages into those normalized rows.
 5. Feedback modules ingest field signals, summarize operational history, and optionally adapt future recommendations.
 
-The wizard uses in-memory progress tracking plus persisted artifacts so long-running analysis remains interactive without buffering full uploads in memory.
+The wizard persists both analysis progress and downloadable artifact metadata in local SQLite files so long-running analysis and follow-up downloads stay available across worker hops.
+
+For a live Docker multi-worker smoke check, start the API with more than one worker and run:
+
+```bash
+python scripts/smoke_test_multiworker.py --base-url http://127.0.0.1:8000 --cancel-model-path /absolute/path/to/large-model.stl
+```
 
 ## Library Stack
 
@@ -247,6 +253,8 @@ The runtime image intentionally stays slimmer than the development environment, 
 ## Wizard Artifact Downloads
 
 In standalone mode, the wizard downloads repaired STL files and generated slicer artifacts directly.
+
+Auto-Fix reports against the saved repaired STL, not just the in-memory mesh. After each repair, the wizard writes the STL artifact, re-runs mesh-health checks on that saved file, and then reports whether any blocking issues still remain.
 
 In shared/server mode with auth enabled, keep `Authorization` and `Actor` populated in the wizard before clicking repair or download actions. The wizard fetches files through the same authenticated request path as the API calls, so downloads continue to work when direct browser links would otherwise be rejected.
 

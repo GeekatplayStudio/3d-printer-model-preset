@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Geekatplay Studio Ops Console</title>
+    <link rel="icon" type="image/svg+xml" href="/static/geekatplay-mark.svg" />
     <style>
       :root {
         --bg: #070d13;
@@ -28,6 +29,17 @@
         background: radial-gradient(circle at 20% 0%, #162636 0%, var(--bg-soft) 38%, var(--bg) 100%);
       }
 
+      code {
+        display: inline-flex;
+        align-items: center;
+        min-height: 1.45em;
+        padding: 0 6px;
+        border-radius: 7px;
+        background: rgba(8, 20, 32, 0.22);
+        color: #f0fbff;
+        font-size: 0.88em;
+      }
+
       .shell {
         max-width: 1200px;
         margin: 0 auto;
@@ -40,6 +52,91 @@
         border-radius: 16px;
         padding: 22px;
         box-shadow: 0 18px 34px rgba(2, 6, 12, 0.55);
+      }
+
+      .hero-grid {
+        display: grid;
+        gap: 18px;
+        grid-template-columns: minmax(0, 1.3fr) minmax(290px, 0.9fr);
+        align-items: start;
+      }
+
+      .brand-lockup {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+      }
+
+      .brand-mark {
+        width: 56px;
+        height: 56px;
+        flex: 0 0 auto;
+        border-radius: 16px;
+        border: 1px solid rgba(230, 241, 255, 0.22);
+        background: rgba(8, 20, 32, 0.18);
+        box-shadow: 0 12px 24px rgba(3, 9, 17, 0.24);
+      }
+
+      .brand-kicker {
+        font-size: 0.78rem;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: rgba(232, 245, 255, 0.82);
+      }
+
+      .hero-guide {
+        border-radius: 14px;
+        padding: 14px;
+        background: rgba(8, 20, 32, 0.22);
+        border: 1px solid rgba(230, 241, 255, 0.18);
+      }
+
+      .hero-guide h2 {
+        margin: 0;
+        font-size: 1rem;
+      }
+
+      .hero-guide p {
+        margin-top: 8px;
+        color: #d7e9ff;
+        line-height: 1.5;
+      }
+
+      .guide-kicker {
+        margin-bottom: 8px;
+        font-size: 0.76rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: rgba(217, 255, 249, 0.9);
+      }
+
+      .help-grid {
+        margin-top: 12px;
+        display: grid;
+        gap: 10px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .help-card {
+        min-width: 0;
+        border-radius: 12px;
+        border: 1px solid rgba(230, 241, 255, 0.14);
+        background: rgba(10, 22, 35, 0.2);
+        padding: 10px 11px;
+      }
+
+      .help-card strong {
+        display: block;
+        font-size: 0.9rem;
+        color: #f2fbff;
+      }
+
+      .help-card span {
+        display: block;
+        margin-top: 5px;
+        color: #d3e8fb;
+        font-size: 0.84rem;
+        line-height: 1.45;
       }
 
       .hero h1 {
@@ -132,9 +229,27 @@
         grid-template-columns: repeat(3, minmax(0, 1fr));
       }
 
+      .section-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .section-head h3,
+      .section-head h4 {
+        margin: 0;
+      }
+
       label {
         font-size: 0.83rem;
         color: var(--muted);
+      }
+
+      .field-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
       }
 
       input,
@@ -149,6 +264,12 @@
         font-family: inherit;
         background: #0c1823;
         color: var(--ink);
+      }
+
+      select option,
+      select optgroup {
+        color: #102434;
+        background: #eef6ff;
       }
 
       textarea {
@@ -215,11 +336,100 @@
         color: #93d5ca;
       }
 
+      .help-badge {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        border-radius: 999px;
+        border: 1px solid rgba(223, 252, 248, 0.45);
+        background: rgba(7, 17, 27, 0.26);
+        color: #e9fbf8;
+        font-size: 0.78rem;
+        font-weight: 700;
+        line-height: 1;
+        cursor: help;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      }
+
+      .help-badge:hover,
+      .help-badge:focus-visible {
+        outline: none;
+        border-color: rgba(255, 244, 214, 0.74);
+        background: rgba(255, 244, 214, 0.18);
+        color: #fff6d9;
+      }
+
+      .help-badge::before,
+      .help-badge::after {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.16s ease, transform 0.16s ease;
+        z-index: 30;
+      }
+
+      .help-badge::before {
+        content: "";
+        top: calc(100% + 2px);
+        left: 50%;
+        transform: translateX(-50%) translateY(6px);
+        border-left: 6px solid transparent;
+        border-right: 6px solid transparent;
+        border-bottom: 7px solid #eef8ff;
+      }
+
+      .help-badge::after {
+        content: attr(data-help);
+        top: calc(100% + 8px);
+        left: 50%;
+        transform: translateX(-50%) translateY(6px);
+        width: min(320px, calc(100vw - 48px));
+        padding: 12px 13px;
+        border-radius: 12px;
+        border: 1px solid #9abbd4;
+        background: #eef8ff;
+        box-shadow: 0 22px 34px rgba(2, 10, 19, 0.34);
+        color: #132538;
+        font-size: 0.84rem;
+        font-weight: 500;
+        line-height: 1.48;
+        white-space: normal;
+        text-align: left;
+      }
+
+      .help-badge:hover::before,
+      .help-badge:hover::after,
+      .help-badge:focus-visible::before,
+      .help-badge:focus-visible::after {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+
       @media (max-width: 900px) {
         .auth-bar,
         .grid-2,
-        .grid-3 {
+        .grid-3,
+        .hero-grid,
+        .help-grid {
           grid-template-columns: 1fr;
+        }
+
+        .help-badge::before,
+        .help-badge::after,
+        .help-badge:hover::before,
+        .help-badge:hover::after,
+        .help-badge:focus-visible::before,
+        .help-badge:focus-visible::after {
+          left: auto;
+          right: 0;
+          transform: translateY(0);
+        }
+
+        .help-badge::before {
+          right: 4px;
         }
       }
     </style>
@@ -227,17 +437,50 @@
   <body>
     <div class="shell">
       <section class="hero">
-        <h1>Geekatplay Studio Ops Console</h1>
-        <p>Advanced mode: pipeline execution, technical catalog management, sync automation, and ops monitoring.</p>
-        <p style="margin-top: 6px; font-size: 0.9rem; color: #c4daef">Standalone mode: your data stays in your local database.</p>
-        <div class="hero-actions">
-          <a class="hero-link" href="/wizard">Back To Wizard Mode</a>
-        </div>
-        <div class="auth-bar">
-          <input id="authToken" placeholder="Authorization token (optional, only needed in shared/server mode)" />
-          <input id="actor" placeholder="Actor (example: github-username)" value="ops-admin" />
-          <button onclick="checkWhoAmI()">Check Auth</button>
-          <button class="secondary" onclick="refreshEverything()">Refresh All</button>
+        <div class="hero-grid">
+          <div>
+            <div class="brand-lockup">
+              <img class="brand-mark" src="/static/geekatplay-mark.svg" alt="Geekatplay Studio" />
+              <div>
+                <div class="brand-kicker">Geekatplay Studio</div>
+                <h1>Geekatplay Studio Ops Console</h1>
+                <p>Advanced mode: pipeline execution, technical catalog management, sync automation, and ops monitoring.</p>
+                <p style="margin-top: 6px; font-size: 0.9rem; color: #c4daef">Standalone mode: your data stays in your local database. UI labels say material, while legacy API keys like <code>resin_type</code> stay unchanged for compatibility.</p>
+              </div>
+            </div>
+            <div class="hero-actions">
+              <a class="hero-link" href="/wizard">Back To Wizard Mode</a>
+            </div>
+            <div class="auth-bar">
+              <input id="authToken" placeholder="Authorization token (optional, only needed in shared/server mode)" />
+              <input id="actor" placeholder="Actor (example: github-username)" value="ops-admin" />
+              <button onclick="checkWhoAmI()">Check Auth</button>
+              <button class="secondary" onclick="refreshEverything()">Refresh All</button>
+            </div>
+          </div>
+          <aside class="hero-guide">
+            <div class="guide-kicker">Quick Ops Guide</div>
+            <h2>Hover any <span class="help-badge" tabindex="0" data-help-key="hover_help">?</span> to decode technical fields before you post live data.</h2>
+            <p>This page is intentionally more technical than the wizard. The help chips explain which inputs affect slicer output, which ones only affect catalog state, and where compatibility names still come from the older resin-first API.</p>
+            <div class="help-grid">
+              <div class="help-card">
+                <strong>Pipeline tab</strong>
+                <span>Use it when you already know the exact printer and material and want a direct API run without the wizard flow.</span>
+              </div>
+              <div class="help-card">
+                <strong>Catalog tab</strong>
+                <span>Best for raw JSON upserts, bulk imports, and quick inspection of the current printer, material, and profile tables.</span>
+              </div>
+              <div class="help-card">
+                <strong>Sync + Jobs</strong>
+                <span>Use background jobs and schedules for repeatable imports so operators are not blocked by long-running tasks.</span>
+              </div>
+              <div class="help-card">
+                <strong>Operations</strong>
+                <span>Metrics, audit, and catalog restore are operator tools. Treat them like admin controls, not day-to-day print setup.</span>
+              </div>
+            </div>
+          </aside>
         </div>
         <div id="authStatus" class="status"></div>
       </section>
@@ -250,21 +493,24 @@
       </div>
 
       <section id="tab-pipeline" class="panel">
-        <h3>Run Pipeline</h3>
+        <div class="section-head">
+          <h3>Run Pipeline</h3>
+          <span class="help-badge" tabindex="0" data-help-key="pipeline_section">?</span>
+        </div>
         <div class="grid grid-3">
-          <div><label>Model</label><input id="pipelineFile" type="file" /></div>
-          <div><label>Resin Type</label><input id="pipelineResin" value="Elegoo 8K Standard" /></div>
-          <div><label>Printer</label><input id="pipelinePrinter" value="Elegoo Mars 5 Ultra" /></div>
+          <div><label class="field-label">Model <span class="help-badge" tabindex="0" data-help-key="pipeline_model">?</span></label><input id="pipelineFile" type="file" /></div>
+          <div><label class="field-label">Material <span class="help-badge" tabindex="0" data-help-key="pipeline_material">?</span></label><input id="pipelineResin" value="Elegoo 8K Standard" /></div>
+          <div><label class="field-label">Printer <span class="help-badge" tabindex="0" data-help-key="pipeline_printer">?</span></label><input id="pipelinePrinter" value="Elegoo Mars 5 Ultra" /></div>
           <div>
-            <label>Use Case</label>
+            <label class="field-label">Use Case <span class="help-badge" tabindex="0" data-help-key="pipeline_use_case">?</span></label>
             <select id="pipelineUseCase">
               <option value="miniature">miniature</option>
               <option value="collectible">collectible</option>
               <option value="heavy_use">heavy_use</option>
             </select>
           </div>
-          <div><label>Ambient Temp C</label><input id="pipelineTemp" type="number" step="0.1" /></div>
-          <div><label>Film Releases</label><input id="pipelineFilm" type="number" value="0" /></div>
+          <div><label class="field-label">Ambient Temp C <span class="help-badge" tabindex="0" data-help-key="pipeline_temp">?</span></label><input id="pipelineTemp" type="number" step="0.1" /></div>
+          <div><label class="field-label">Film Releases <span class="help-badge" tabindex="0" data-help-key="pipeline_film">?</span></label><input id="pipelineFilm" type="number" value="0" /></div>
         </div>
         <div class="row" style="margin-top: 10px">
           <button onclick="runPipeline()">Run Now</button>
@@ -274,30 +520,34 @@
       </section>
 
       <section id="tab-catalog" class="panel hidden">
-        <h3>Catalog Maintenance</h3>
+        <div class="section-head">
+          <h3>Catalog Maintenance</h3>
+          <span class="help-badge" tabindex="0" data-help-key="catalog_section">?</span>
+        </div>
+        <p class="status" style="margin-top: 4px; color: #c4daef">User-facing language says material. The API path remains <code>/catalog/resins</code> for backward compatibility.</p>
         <div class="grid grid-2">
           <div>
-            <label>Add Printer (JSON)</label>
+            <label class="field-label">Add Printer (JSON) <span class="help-badge" tabindex="0" data-help-key="catalog_printer_json">?</span></label>
             <textarea id="printerJson">{ "name": "Anycubic Photon Mono M7 Pro", "xy_resolution_um": 17 }</textarea>
             <button onclick="postJson('/catalog/printers', 'printerJson', refreshCatalogViews)">Upsert Printer</button>
           </div>
           <div>
-            <label>Add Resin (JSON)</label>
-            <textarea id="resinJson">{ "name": "Anycubic ABS-Like Pro 2", "viscosity_cp": 210 }</textarea>
-            <button onclick="postJson('/catalog/resins', 'resinJson', refreshCatalogViews)">Upsert Resin</button>
+            <label class="field-label">Add Material (JSON) <span class="help-badge" tabindex="0" data-help-key="catalog_material_json">?</span></label>
+            <textarea id="resinJson">{ "name": "Anycubic ABS-Like Pro 2", "material_type": "resin", "viscosity_cp": 210 }</textarea>
+            <button onclick="postJson('/catalog/resins', 'resinJson', refreshCatalogViews)">Upsert Material</button>
           </div>
         </div>
         <div style="margin-top: 10px" class="grid grid-2">
           <div>
-            <label>Add Profile (JSON)</label>
+            <label class="field-label">Add Profile (JSON) <span class="help-badge" tabindex="0" data-help-key="catalog_profile_json">?</span></label>
             <textarea id="profileJson">{ "printer_name": "Elegoo Mars 5 Ultra", "resin_name": "Elegoo 8K Standard", "profile_name": "Default Detail", "layer_height_mm": 0.05, "exposure_s": 2.3, "bottom_exposure_s": 30.0, "is_default": true }</textarea>
             <button onclick="postJson('/catalog/profiles', 'profileJson', refreshCatalogViews)">Upsert Profile</button>
           </div>
           <div>
-            <label>Import CSV</label>
+            <label class="field-label">Import CSV <span class="help-badge" tabindex="0" data-help-key="catalog_csv">?</span></label>
             <select id="csvEntity">
               <option value="printers">printers</option>
-              <option value="resins">resins</option>
+              <option value="resins">materials (resins API)</option>
               <option value="profiles">profiles</option>
             </select>
             <input id="csvFile" type="file" />
@@ -307,18 +557,21 @@
         </div>
         <div class="grid grid-3" style="margin-top: 12px">
           <div><h4>Printers</h4><pre id="printersOut">Loading...</pre></div>
-          <div><h4>Resins</h4><pre id="resinsOut">Loading...</pre></div>
+          <div><h4>Materials</h4><pre id="resinsOut">Loading...</pre></div>
           <div><h4>Profiles</h4><pre id="profilesOut">Loading...</pre></div>
         </div>
       </section>
 
       <section id="tab-sync" class="panel hidden">
-        <h3>Technical Sync + Jobs</h3>
+        <div class="section-head">
+          <h3>Technical Sync + Jobs</h3>
+          <span class="help-badge" tabindex="0" data-help-key="sync_section">?</span>
+        </div>
         <div class="grid grid-3">
           <div>
-            <label>Sync Source</label>
+            <label class="field-label">Sync Source <span class="help-badge" tabindex="0" data-help-key="sync_source">?</span></label>
             <input id="syncSource" value="manual_console" />
-            <label>Sync Payload JSON</label>
+            <label class="field-label">Sync Payload JSON <span class="help-badge" tabindex="0" data-help-key="sync_payload">?</span></label>
             <textarea id="syncPayload">{ "replace_existing": false, "printers": [], "resins": [], "profiles": [] }</textarea>
             <div class="row">
               <button onclick="runSync()">Apply Sync</button>
@@ -326,7 +579,7 @@
             </div>
           </div>
           <div>
-            <label>Upload Sync JSON File</label>
+            <label class="field-label">Upload Sync JSON File <span class="help-badge" tabindex="0" data-help-key="sync_file">?</span></label>
             <input id="syncFile" type="file" />
             <button onclick="runSyncFile()">Apply File Sync</button>
             <button class="secondary" onclick="seedLegacyJob()">Queue Legacy Seed Job</button>
@@ -343,7 +596,7 @@
             <pre id="jobsOut">No jobs loaded yet.</pre>
           </div>
           <div>
-            <label>Schedule JSON</label>
+            <label class="field-label">Schedule JSON <span class="help-badge" tabindex="0" data-help-key="schedule_json">?</span></label>
             <textarea id="schedulePayload">{ "name": "daily_sync", "source": "scheduled_daily", "interval_seconds": 86400, "enabled": true, "replace_existing": false, "payload": { "printers": [], "resins": [], "profiles": [] } }</textarea>
             <div class="row">
               <button onclick="saveSchedule()">Upsert Schedule</button>
@@ -360,7 +613,10 @@
       </section>
 
       <section id="tab-ops" class="panel hidden">
-        <h3>Operations</h3>
+        <div class="section-head">
+          <h3>Operations</h3>
+          <span class="help-badge" tabindex="0" data-help-key="ops_section">?</span>
+        </div>
         <div class="row">
           <button onclick="refreshMetrics()">Refresh Metrics</button>
           <button onclick="refreshAudit()">Refresh Audit</button>
@@ -376,6 +632,52 @@
     </div>
 
     <script>
+      const HELP_CONTENT = {
+        hover_help: "Hover or focus any question-mark chip to see a short explanation written for operators. These tips explain intent, not implementation details.",
+        pipeline_section: "Runs the backend pipeline directly from this page. Use it when you already know the exact printer and material and do not need the wizard flow.",
+        pipeline_model: "The uploaded 3D model file that the pipeline will analyze and turn into settings output.",
+        pipeline_material: "User-facing material name. The backend still posts this value under the legacy API field resin_type.",
+        pipeline_printer: "Exact printer name used to select matching profile logic and export settings.",
+        pipeline_use_case: "Tells the optimizer whether to bias for fine detail, presentation quality, or harder-wearing output.",
+        pipeline_temp: "Ambient room temperature around the printer. Cool rooms can change curing or extrusion behavior.",
+        pipeline_film: "MSLA-focused override for release film wear. Older film can need gentler peel behavior.",
+        catalog_section: "Use this tab for direct catalog edits, JSON upserts, CSV imports, and raw inspection of printer, material, and profile records.",
+        catalog_printer_json: "Paste a single printer object exactly as the API expects it. This is the fastest way to add or patch one machine manually.",
+        catalog_material_json: "Paste a single material object. The UI says material, but the endpoint remains /catalog/resins for compatibility with older tooling.",
+        catalog_profile_json: "Profiles connect a printer to a material and store the print settings that the wizard and pipeline can reuse.",
+        catalog_csv: "Bulk-import printers, materials, or profiles from CSV using API-aligned column names.",
+        sync_section: "Sync and job tools are for repeatable imports, remote feeds, and background execution so large updates do not block the operator.",
+        sync_source: "Short label recorded in audit trails so you can tell where a sync came from later.",
+        sync_payload: "Normalized sync body containing printer, material, and profile rows to merge into the catalog.",
+        sync_file: "Upload a normalized JSON file instead of pasting the payload directly into the text area.",
+        schedule_json: "Defines a repeatable background sync schedule, including frequency, enable state, and the payload or remote source details.",
+        ops_section: "Operations exposes metrics, audit history, and restore actions. These are admin controls and can affect shared environments.",
+      };
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll("\"", "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function hydrateHelpBadges(root = document) {
+        const scope = root && typeof root.querySelectorAll === "function" ? root : document;
+        scope.querySelectorAll(".help-badge[data-help-key]").forEach((badge) => {
+          const key = badge.getAttribute("data-help-key") || "";
+          const helpText = HELP_CONTENT[key] || "";
+          if (!helpText) return;
+          if (!badge.getAttribute("data-help")) {
+            badge.setAttribute("data-help", helpText);
+          }
+          if (!badge.getAttribute("aria-label")) {
+            badge.setAttribute("aria-label", helpText);
+          }
+        });
+      }
+
       function headers(json = true) {
         const out = {};
         const token = document.getElementById("authToken").value.trim();
@@ -652,6 +954,7 @@
         });
       });
 
+      hydrateHelpBadges();
       refreshEverything();
     </script>
   </body>

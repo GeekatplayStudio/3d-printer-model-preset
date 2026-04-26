@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Geekatplay Studio mark">
+  <defs>
+    <linearGradient id="bg" x1="6" y1="6" x2="58" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0f7fb2" />
+      <stop offset="0.56" stop-color="#184f88" />
+      <stop offset="1" stop-color="#0c8e77" />
+    </linearGradient>
+    <linearGradient id="glyph" x1="16" y1="14" x2="46" y2="46" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f4fbff" />
+      <stop offset="1" stop-color="#93f0df" />
+    </linearGradient>
+    <linearGradient id="play" x1="33" y1="24" x2="47" y2="39" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffeec1" />
+      <stop offset="1" stop-color="#ffb767" />
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="18" fill="url(#bg)" />
+  <rect x="6.5" y="6.5" width="51" height="51" rx="15.5" fill="none" stroke="rgba(239,248,255,0.24)" />
+  <path d="M17 23.4 26.8 13.6h21l-5.6 5.7H29.4l-5.6 5.7v14l5.6 5.7h14.5l4.3-4.4v-4.1H35.4v-6.9H54v13.8L46.4 51H26.2L17 41.7z" fill="url(#glyph)" />
+  <path d="M35.7 25.6 46.2 31.8 35.7 38z" fill="url(#play)" />
+  <path d="M18.8 51.8h17.6" fill="none" stroke="#8df2e0" stroke-width="2.1" stroke-linecap="round" opacity="0.85" />
+</svg>

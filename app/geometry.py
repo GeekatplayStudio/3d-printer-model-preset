@@ -178,6 +178,8 @@ def _analysis_profile_config(
             "include_suction_cups": False,
             "include_islands": False,
             "include_curvature": False,
+            "use_fast_cross_section": True,
+            "lightweight_label": "Minimum analysis",
         }
     if analysis_level == "extreme":
         return {
@@ -186,6 +188,8 @@ def _analysis_profile_config(
             "include_suction_cups": True,
             "include_islands": True,
             "include_curvature": True,
+            "use_fast_cross_section": False,
+            "lightweight_label": None,
         }
     if analysis_level == "deep":
         return {
@@ -194,6 +198,8 @@ def _analysis_profile_config(
             "include_suction_cups": True,
             "include_islands": True,
             "include_curvature": True,
+            "use_fast_cross_section": False,
+            "lightweight_label": None,
         }
     return {
         "max_slices": min(max_slices, 6000),
@@ -201,6 +207,8 @@ def _analysis_profile_config(
         "include_suction_cups": True,
         "include_islands": True,
         "include_curvature": True,
+        "use_fast_cross_section": False,
+        "lightweight_label": None,
     }
 
 
@@ -256,6 +264,18 @@ def _adaptive_profile_overrides(
             notes.append(
                 f"Analysis level '{analysis_level}' capped max slices at {capped_slices} for a high-complexity mesh."
             )
+
+    if face_count >= 1_500_000 and requested_slices >= 20_000:
+        adjusted["max_slices"] = min(int(adjusted["max_slices"]), 600)
+        adjusted["voxel_pitch_mm"] = max(float(adjusted["voxel_pitch_mm"]), 0.6)
+        adjusted["include_suction_cups"] = False
+        adjusted["include_islands"] = False
+        adjusted["include_curvature"] = False
+        adjusted["use_fast_cross_section"] = True
+        adjusted["lightweight_label"] = "Large-model fallback"
+        notes.append(
+            f"Analysis level '{analysis_level}' fell back to minimum heuristics for an extremely large mesh to avoid request timeouts."
+        )
 
     if analysis_level == "balanced":
         curvature_face_limit = 400_000
@@ -328,17 +348,19 @@ def analyze_geometry(
             f"Analysis level '{analysis_level}' adjusted voxel pitch to {profile['voxel_pitch_mm']}mm "
             f"(requested {voxel_pitch_mm}mm)."
         )
+    lightweight_label = profile.get("lightweight_label")
 
     _check_cancel(cancel_check)
     _report_progress(progress_callback, "cross_section", "Computing cross-sections through the model.")
     started = perf_counter()
-    if analysis_level == "minimum":
+    if bool(profile.get("use_fast_cross_section", analysis_level == "minimum")):
         cross_section = _cross_section_areas_fast(
             mesh=mesh,
             slice_height_mm=slice_height_mm,
             max_slices=int(profile["max_slices"]),
             progress_callback=progress_callback,
             cancel_check=cancel_check,
+            mode_label=str(lightweight_label or "Fast analysis"),
         )
     else:
         cross_section = _cross_section_areas(
@@ -357,6 +379,7 @@ def analyze_geometry(
     suction_cups: list[Cavity] = []
     islands: list[Island] = []
     curvature_proxy: float | None = None
+    skip_label = str(lightweight_label or "Analysis")
 
     voxel_data = cross_section.voxel_data
     cross_section_voxel_pitch_mm = cross_section.voxel_pitch_mm
@@ -402,7 +425,7 @@ def analyze_geometry(
         )
         timings_ms["detect_suction_cups"] = _elapsed_ms(started)
     else:
-        notes.append("Minimum analysis: suction cup detection skipped for faster processing.")
+        notes.append(f"{skip_label}: suction cup detection skipped for faster processing.")
 
     if bool(profile["include_islands"]):
         _check_cancel(cancel_check)
@@ -417,7 +440,7 @@ def analyze_geometry(
         )
         timings_ms["detect_islands"] = _elapsed_ms(started)
     else:
-        notes.append("Minimum analysis: island detection skipped for faster processing.")
+        notes.append(f"{skip_label}: island detection skipped for faster processing.")
 
     if bool(profile["include_curvature"]):
         _check_cancel(cancel_check)
@@ -426,8 +449,8 @@ def analyze_geometry(
         curvature_proxy = _curvature_proxy(mesh, cancel_check=cancel_check)
         timings_ms["curvature_proxy"] = _elapsed_ms(started)
     else:
-        if analysis_level == "minimum":
-            notes.append("Minimum analysis: curvature proxy skipped for faster processing.")
+        if lightweight_label:
+            notes.append(f"{skip_label}: curvature proxy skipped for faster processing.")
         else:
             notes.append("Curvature proxy skipped to stay within runtime limits for this mesh.")
 
@@ -835,6 +858,9 @@ def _repair_mesh_with_pymeshlab(mesh: trimesh.Trimesh) -> tuple[bool, list[str]]
         mesh.merge_vertices()
     except Exception:
         pass
+    debris_pruned, debris_action = _prune_tiny_disconnected_shells(mesh)
+    if debris_pruned and debris_action:
+        actions.append(debris_action)
     try:
         trimesh.repair.fix_normals(mesh, multibody=True)
     except Exception:
@@ -855,6 +881,7 @@ def _repair_mesh_with_pymeshlab(mesh: trimesh.Trimesh) -> tuple[bool, list[str]]
     repaired = (
         duplicate_removed > 0
         or degenerate_removed > 0
+        or debris_pruned
         or after_faces != before_faces
         or after_vertices != before_vertices
         or after_watertight != before_watertight
@@ -919,6 +946,10 @@ def _repair_mesh_with_trimesh(mesh: trimesh.Trimesh) -> tuple[bool, list[str]]:
     except Exception:
         pass
 
+    debris_pruned, debris_action = _prune_tiny_disconnected_shells(mesh)
+    if debris_pruned and debris_action:
+        actions.append(debris_action)
+
     after_faces = int(len(mesh.faces))
     after_vertices = int(len(mesh.vertices))
     after_watertight = bool(mesh.is_watertight)
@@ -928,11 +959,85 @@ def _repair_mesh_with_trimesh(mesh: trimesh.Trimesh) -> tuple[bool, list[str]]:
         or duplicate_removed_after_fill > 0
         or degenerate_removed_after_fill > 0
         or holes_filled
+        or debris_pruned
         or after_faces != before_faces
         or after_vertices != before_vertices
         or after_watertight != before_watertight
     )
     return repaired, actions
+
+
+def _prune_tiny_disconnected_shells(
+    mesh: trimesh.Trimesh,
+    *,
+    min_components: int = 5,
+    min_face_ratio: float = 0.995,
+) -> tuple[bool, str | None]:
+    try:
+        parts = [part.copy() for part in mesh.split(only_watertight=False)]
+    except Exception:
+        return False, None
+
+    if len(parts) < min_components:
+        return False, None
+
+    parts = [part for part in parts if len(part.faces) > 0]
+    if len(parts) < min_components:
+        return False, None
+
+    parts.sort(key=lambda part: len(part.faces), reverse=True)
+    total_faces = int(sum(len(part.faces) for part in parts))
+    if total_faces <= 0:
+        return False, None
+
+    largest = parts[0]
+    retained_face_ratio = float(len(largest.faces) / total_faces)
+    if retained_face_ratio < float(min_face_ratio):
+        return False, None
+
+    try:
+        largest.remove_unreferenced_vertices()
+    except Exception:
+        pass
+    try:
+        largest.merge_vertices()
+    except Exception:
+        pass
+    try:
+        trimesh.repair.fix_normals(largest, multibody=True)
+    except Exception:
+        pass
+    try:
+        trimesh.repair.fix_inversion(largest, multibody=True)
+    except TypeError:
+        try:
+            trimesh.repair.fix_inversion(largest)
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+    candidate_health = _mesh_health_report(largest, repaired=False, repair_actions=[])
+    if not candidate_health.watertight:
+        return False, None
+    if (candidate_health.boundary_edge_count or 0) > 0:
+        return False, None
+    if (candidate_health.non_manifold_edge_count or 0) > 0:
+        return False, None
+
+    removed_shell_count = len(parts) - 1
+    removed_face_count = total_faces - int(len(largest.faces))
+    if removed_shell_count <= 0 or removed_face_count <= 0:
+        return False, None
+
+    _replace_mesh_geometry(mesh, largest)
+    removed_ratio_percent = (1.0 - retained_face_ratio) * 100.0
+    return (
+        True,
+        "Discarded "
+        f"{removed_shell_count} tiny disconnected shell(s) after repair "
+        f"({removed_face_count} faces, {round(removed_ratio_percent, 4)}% of the mesh).",
+    )
 
 
 def _component_count(mesh: trimesh.Trimesh) -> int:
@@ -1337,6 +1442,7 @@ def _cross_section_areas_fast(
     max_slices: int,
     progress_callback: AnalysisProgressCallback | None = None,
     cancel_check: AnalysisCancelCheck | None = None,
+    mode_label: str = "Minimum analysis",
 ) -> _CrossSectionResult:
     z_min, z_max = mesh.bounds[:, 2]
     height = max(0.0, float(z_max - z_min))
@@ -1365,19 +1471,19 @@ def _cross_section_areas_fast(
     if effective_slice < fast_floor:
         effective_slice = fast_floor
         notes.append(
-            f"Minimum analysis raised slice spacing to {effective_slice}mm for faster processing."
+            f"{mode_label} raised slice spacing to {effective_slice}mm for faster processing."
         )
 
     heights = np.arange(0.0, height + effective_slice, effective_slice)
     if len(heights) > max_slices:
         heights = heights[:max_slices]
         notes.append(
-            f"Minimum analysis truncated slice sampling to {len(heights)} slices."
+            f"{mode_label} truncated slice sampling to {len(heights)} slices."
         )
 
     face_count = int(len(mesh.faces))
     if face_count <= 80_000 and len(heights) <= 240:
-        notes.append("Minimum analysis used exact multiplane slicing because the mesh is small enough.")
+        notes.append(f"{mode_label} used exact multiplane slicing because the mesh is small enough.")
         try:
             return _cross_section_areas_multiplane(
                 mesh=mesh,
@@ -1392,10 +1498,12 @@ def _cross_section_areas_fast(
             missing_hint = f"{exc.name or ''} {exc}".lower()
             if "scipy" not in missing_hint:
                 raise
-            notes.append("scipy not available; minimum analysis kept the lightweight cross-section approximation.")
+            notes.append(
+                f"scipy not available; {mode_label.lower()} kept the lightweight cross-section approximation."
+            )
 
     _check_cancel(cancel_check)
-    notes.append("Minimum analysis: using lightweight surface-span weighted cross-section approximation.")
+    notes.append(f"{mode_label}: using lightweight surface-span weighted cross-section approximation.")
     _report_progress(
         progress_callback,
         "cross_section",
@@ -1434,7 +1542,7 @@ def _cross_section_areas_fast(
     if face_count > sample_limit:
         stride = int(math.ceil(face_count / sample_limit))
         notes.append(
-            f"Minimum analysis sampled faces at stride {stride} to limit memory on very large meshes."
+            f"{mode_label} sampled faces at stride {stride} to limit memory on very large meshes."
         )
 
     bin_count = len(heights)

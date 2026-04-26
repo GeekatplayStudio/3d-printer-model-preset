@@ -4,7 +4,6 @@ import asyncio
 import json
 import os
 import tempfile
-import threading
 import time
 from collections.abc import Callable
 from datetime import datetime, timezone
@@ -158,6 +157,19 @@ from app.sync_schedule_store import (
     mark_sync_schedule_run,
     update_sync_schedule,
 )
+from app.wizard_artifact_store import (
+    cleanup_wizard_artifacts as cleanup_wizard_artifacts_store,
+    create_wizard_artifact,
+    delete_wizard_artifact,
+    get_wizard_artifact,
+    init_wizard_artifact_store,
+)
+from app.wizard_analysis_store import (
+    cleanup_wizard_analysis_progress as cleanup_wizard_analysis_progress_store,
+    get_wizard_analysis_progress,
+    init_wizard_analysis_store,
+    upsert_wizard_analysis_progress,
+)
 
 def _resolve_local_data_dir() -> Path:
     configured = os.getenv("RESINLOGIC_DATA_DIR")
@@ -193,6 +205,8 @@ CATALOG_PATH = init_catalog_store(DATA_DIR / "tech_catalog.db")
 AUDIT_PATH = init_audit_store(DATA_DIR / "audit_log.db")
 JOBS_PATH = init_job_store(DATA_DIR / "jobs.db")
 SCHEDULES_PATH = init_sync_schedule_store(DATA_DIR / "sync_schedules.db")
+WIZARD_ARTIFACTS_PATH = init_wizard_artifact_store(DATA_DIR / "wizard_artifacts.db")
+WIZARD_ANALYSIS_PROGRESS_PATH = init_wizard_analysis_store(DATA_DIR / "wizard_analysis_progress.db")
 seed_catalog_from_legacy_json(db_path=CATALOG_PATH)
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 ADMIN_UI_PATH = STATIC_DIR / "catalog_admin.html"
@@ -202,14 +216,11 @@ OFFICIAL_SYNC_PATH = Path(__file__).resolve().parent.parent / "data" / "official
 WIZARD_ARTIFACTS_DIR = DATA_DIR / "wizard_artifacts"
 WIZARD_ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
 WIZARD_ARTIFACT_TTL_SECONDS = 7 * 86400
-WIZARD_ARTIFACTS: dict[str, dict[str, object]] = {}
 WIZARD_SLICERS_BY_TARGET = {
     "msla": "Chitubox Free",
     "fdm": "Ultimaker Cura",
 }
 WIZARD_ANALYSIS_PROGRESS_TTL_SECONDS = 3600
-WIZARD_ANALYSIS_PROGRESS: dict[str, dict[str, object]] = {}
-WIZARD_ANALYSIS_PROGRESS_LOCK = threading.Lock()
 JOB_QUEUE = InMemoryJobQueue(max_workers=2, db_path=JOBS_PATH)
 METRICS = InMemoryMetrics()
 SCHEDULER: TechnicalSyncScheduler | None = None
@@ -230,39 +241,35 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 def _cleanup_wizard_artifacts() -> None:
-    now = time.time()
-    stale_ids: list[str] = []
-    for artifact_id, meta in WIZARD_ARTIFACTS.items():
-        created_at = float(meta.get("created_at", 0.0))
-        if now - created_at <= WIZARD_ARTIFACT_TTL_SECONDS:
-            continue
-        path = Path(str(meta.get("path", "")))
-        _safe_unlink(path)
-        stale_ids.append(artifact_id)
-    for artifact_id in stale_ids:
-        WIZARD_ARTIFACTS.pop(artifact_id, None)
+    stale_artifacts = cleanup_wizard_artifacts_store(
+        max_age_seconds=WIZARD_ARTIFACT_TTL_SECONDS,
+        db_path=WIZARD_ARTIFACTS_PATH,
+    )
+    for meta in stale_artifacts:
+        _safe_unlink(Path(str(meta.get("path", ""))))
 
 
 def _register_wizard_artifact(path: Path, *, download_name: str, media_type: str) -> str:
     _cleanup_wizard_artifacts()
     artifact_id = uuid4().hex
-    WIZARD_ARTIFACTS[artifact_id] = {
-        "path": str(path),
-        "download_name": download_name,
-        "media_type": media_type,
-        "created_at": time.time(),
-    }
+    create_wizard_artifact(
+        artifact_id=artifact_id,
+        path=path,
+        download_name=download_name,
+        media_type=media_type,
+        db_path=WIZARD_ARTIFACTS_PATH,
+    )
     return artifact_id
 
 
 def _wizard_artifact(artifact_id: str) -> dict[str, object]:
     _cleanup_wizard_artifacts()
-    meta = WIZARD_ARTIFACTS.get(artifact_id)
+    meta = get_wizard_artifact(artifact_id, db_path=WIZARD_ARTIFACTS_PATH)
     if meta is None:
         raise HTTPException(status_code=404, detail=f"Artifact '{artifact_id}' not found or expired.")
     path = Path(str(meta.get("path", "")))
     if not path.exists():
-        WIZARD_ARTIFACTS.pop(artifact_id, None)
+        delete_wizard_artifact(artifact_id, db_path=WIZARD_ARTIFACTS_PATH)
         raise HTTPException(status_code=404, detail=f"Artifact '{artifact_id}' is no longer available.")
     return meta
 
@@ -313,16 +320,16 @@ def _normalize_wizard_analysis_job_id(job_id: str | None) -> str | None:
 
 
 def _cleanup_wizard_analysis_progress() -> None:
-    now = time.time()
-    stale_ids: list[str] = []
-    with WIZARD_ANALYSIS_PROGRESS_LOCK:
-        for job_id, meta in WIZARD_ANALYSIS_PROGRESS.items():
-            updated_at = float(meta.get("updated_at_ts", 0.0))
-            if now - updated_at <= WIZARD_ANALYSIS_PROGRESS_TTL_SECONDS:
-                continue
-            stale_ids.append(job_id)
-        for job_id in stale_ids:
-            WIZARD_ANALYSIS_PROGRESS.pop(job_id, None)
+    cleanup_wizard_analysis_progress_store(
+        max_age_seconds=WIZARD_ANALYSIS_PROGRESS_TTL_SECONDS,
+        db_path=WIZARD_ANALYSIS_PROGRESS_PATH,
+    )
+
+
+def _wizard_analysis_progress_meta(job_id: str | None) -> dict[str, object]:
+    if job_id is None:
+        return {}
+    return dict(get_wizard_analysis_progress(job_id, db_path=WIZARD_ANALYSIS_PROGRESS_PATH) or {})
 
 
 def _wizard_analysis_status_is_terminal(status: str) -> bool:
@@ -365,40 +372,40 @@ def _set_wizard_analysis_progress(
         return
     _cleanup_wizard_analysis_progress()
     now = time.time()
-    with WIZARD_ANALYSIS_PROGRESS_LOCK:
-        previous = WIZARD_ANALYSIS_PROGRESS.get(job_id, {})
-        current_stage = stage if stage is not None else previous.get("stage")
-        stage_started_at = float(previous.get("stage_started_at_ts", now))
-        if current_stage != previous.get("stage"):
-            stage_started_at = now
-        current_cancel_requested = bool(previous.get("cancel_requested", False))
-        if cancel_requested is not None:
-            current_cancel_requested = cancel_requested
-        WIZARD_ANALYSIS_PROGRESS[job_id] = {
-            "status": status,
-            "stage": current_stage,
-            "message": message,
-            "cancel_requested": current_cancel_requested,
-            "error": error,
-            "started_at_ts": float(previous.get("started_at_ts", now)),
-            "stage_started_at_ts": stage_started_at,
-            "updated_at_ts": now,
-            "performance_ms": dict(performance_ms or previous.get("performance_ms") or {}),
-            "stage_timings_ms": _wizard_analysis_stage_timings(
-                previous,
-                current_stage=current_stage,
-                status=status,
-                now=now,
-                performance_ms=performance_ms,
-            ),
-        }
+    previous = _wizard_analysis_progress_meta(job_id)
+    current_stage = stage if stage is not None else previous.get("stage")
+    stage_started_at = float(previous.get("stage_started_at_ts", now))
+    if current_stage != previous.get("stage"):
+        stage_started_at = now
+    stored_cancel_requested = cancel_requested
+    if stored_cancel_requested is None and not previous:
+        stored_cancel_requested = False
+    upsert_wizard_analysis_progress(
+        job_id=job_id,
+        status=status,
+        stage=current_stage if isinstance(current_stage, str) else None,
+        message=message,
+        cancel_requested=stored_cancel_requested,
+        error=error,
+        started_at_ts=float(previous.get("started_at_ts", now)),
+        stage_started_at_ts=stage_started_at,
+        updated_at_ts=now,
+        performance_ms=dict(performance_ms or previous.get("performance_ms") or {}),
+        stage_timings_ms=_wizard_analysis_stage_timings(
+            previous,
+            current_stage=current_stage if isinstance(current_stage, str) else None,
+            status=status,
+            now=now,
+            performance_ms=performance_ms,
+        ),
+        db_path=WIZARD_ANALYSIS_PROGRESS_PATH,
+    )
 
 
 def _wizard_analysis_progress_response(job_id: str) -> WizardAnalysisProgressResponse:
     _cleanup_wizard_analysis_progress()
     now = time.time()
-    with WIZARD_ANALYSIS_PROGRESS_LOCK:
-        meta = dict(WIZARD_ANALYSIS_PROGRESS.get(job_id, {}))
+    meta = _wizard_analysis_progress_meta(job_id)
     if not meta:
         return WizardAnalysisProgressResponse(
             job_id=job_id,
@@ -435,8 +442,7 @@ def _wizard_analysis_progress_response(job_id: str) -> WizardAnalysisProgressRes
 def _wizard_analysis_runtime_status(job_id: str | None) -> str:
     if job_id is None:
         return "running"
-    with WIZARD_ANALYSIS_PROGRESS_LOCK:
-        meta = dict(WIZARD_ANALYSIS_PROGRESS.get(job_id, {}))
+    meta = _wizard_analysis_progress_meta(job_id)
     if meta and bool(meta.get("cancel_requested", False)) and not _wizard_analysis_status_is_terminal(str(meta.get("status", ""))):
         return "cancelling"
     return "running"
@@ -444,8 +450,7 @@ def _wizard_analysis_runtime_status(job_id: str | None) -> str:
 
 def _request_wizard_analysis_cancel(job_id: str) -> WizardAnalysisProgressResponse:
     _cleanup_wizard_analysis_progress()
-    with WIZARD_ANALYSIS_PROGRESS_LOCK:
-        meta = dict(WIZARD_ANALYSIS_PROGRESS.get(job_id, {}))
+    meta = _wizard_analysis_progress_meta(job_id)
     if not meta:
         raise HTTPException(status_code=404, detail=f"Analysis job '{job_id}' was not found.")
     status = str(meta.get("status", "unknown"))
@@ -469,8 +474,7 @@ def _raise_if_wizard_analysis_cancelled(job_id: str | None) -> None:
     if job_id is None:
         return
     _cleanup_wizard_analysis_progress()
-    with WIZARD_ANALYSIS_PROGRESS_LOCK:
-        meta = dict(WIZARD_ANALYSIS_PROGRESS.get(job_id, {}))
+    meta = _wizard_analysis_progress_meta(job_id)
     if not meta or not bool(meta.get("cancel_requested", False)):
         return
     raise AnalysisCancelledError(
@@ -2580,14 +2584,19 @@ async def wizard_model_fix(
     auth: AuthContext = Depends(require_role("operator")),
 ) -> WizardModelFixResponse:
     _require_stl_upload(file)
-    temp_file = _save_upload(file)
+    temp_file = await asyncio.to_thread(_save_upload, file)
     original_name = Path(file.filename or "model.stl")
     safe_base = _safe_slug(original_name.stem, "model")
     out_name = f"{safe_base}_fixed_{uuid4().hex[:8]}.stl"
     output_path = WIZARD_ARTIFACTS_DIR / out_name
     try:
-        repair_outcome = repair_mesh_file(str(temp_file), str(output_path))
-        analysis = pipeline.run_phase_1_geometry(
+        repair_outcome = await asyncio.to_thread(
+            repair_mesh_file,
+            str(temp_file),
+            str(output_path),
+        )
+        analysis = await asyncio.to_thread(
+            pipeline.run_phase_1_geometry,
             file_path=str(output_path),
             slice_height_mm=slice_height_mm,
             auto_repair=False,
@@ -2604,6 +2613,14 @@ async def wizard_model_fix(
         after_issues = mesh_health_actionable_issues(after_fix)
         resolved_issues = [issue for issue in before_issues if issue not in after_issues]
         fully_repaired = not mesh_health_requires_fix(after_fix)
+        recheck_summary = (
+            "Auto-Fix saved the repaired STL and re-checked it. No blocking mesh defects remain."
+            if fully_repaired
+            else (
+                "Auto-Fix saved the repaired STL and re-checked it. "
+                f"{len(after_issues)} blocking issue type(s) remain after save/reload."
+            )
+        )
         download_name = f"{safe_base}_fixed.stl"
         artifact_id = _register_wizard_artifact(
             output_path,
@@ -2628,6 +2645,8 @@ async def wizard_model_fix(
             analysis=analysis,
             repaired=repair_outcome.repaired,
             fully_repaired=fully_repaired,
+            rechecked_after_fix=True,
+            recheck_summary=recheck_summary,
             repair_actions=repair_outcome.repair_actions,
             resolved_issues=resolved_issues,
             remaining_issues=after_issues,
@@ -2919,9 +2938,10 @@ async def phase1_analyze(
     auto_repair: bool = Form(True),
     analysis_level: AnalysisLevel = Form("balanced"),
 ) -> dict:
-    temp_file = _save_upload(file)
+    temp_file = await asyncio.to_thread(_save_upload, file)
     try:
-        analysis = pipeline.run_phase_1_geometry(
+        analysis = await asyncio.to_thread(
+            pipeline.run_phase_1_geometry,
             file_path=str(temp_file),
             slice_height_mm=slice_height_mm,
             auto_repair=auto_repair,
@@ -3205,9 +3225,10 @@ async def run_pipeline(
     analysis_level: AnalysisLevel = Form(default="balanced"),
     auth: AuthContext = Depends(require_role("operator")),
 ) -> PipelineResponse:
-    temp_file = _save_upload(file)
+    temp_file = await asyncio.to_thread(_save_upload, file)
     try:
-        result = pipeline.run_full_pipeline(
+        result = await asyncio.to_thread(
+            pipeline.run_full_pipeline,
             file_path=str(temp_file),
             resin_type=resin_type,
             use_case=use_case,
@@ -3262,7 +3283,7 @@ async def run_pipeline_job(
     analysis_level: AnalysisLevel = Form(default="balanced"),
     auth: AuthContext = Depends(require_role("operator")),
 ) -> PipelineAsyncSubmitResponse:
-    temp_file = _save_upload(file)
+    temp_file = await asyncio.to_thread(_save_upload, file)
 
     def _work() -> dict:
         try:

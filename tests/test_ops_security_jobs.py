@@ -49,6 +49,11 @@ def test_app_ui_route_served(tmp_path, monkeypatch):
     response = client.get("/app")
     assert response.status_code == 200
     assert "Geekatplay Studio Ops Console" in response.text
+    assert "/static/geekatplay-mark.svg" in response.text
+    assert "Add Material (JSON)" in response.text
+    assert "Quick Ops Guide" in response.text
+    assert 'data-help-key="pipeline_material"' in response.text
+    assert "select option," in response.text
     assert "Advanced mode:" in response.text
     assert "Back To Wizard Mode" in response.text
 

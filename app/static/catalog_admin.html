@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Geekatplay Studio Catalog Admin</title>
+    <link rel="icon" type="image/svg+xml" href="/static/geekatplay-mark.svg" />
     <style>
       :root {
         --bg: #f5f7fa;
@@ -21,7 +22,91 @@
         color: var(--ink);
         font-family: "Segoe UI", Tahoma, sans-serif;
       }
+      code {
+        display: inline-flex;
+        align-items: center;
+        min-height: 1.45em;
+        padding: 0 6px;
+        border-radius: 7px;
+        background: #eef3f8;
+        color: #214160;
+        font-size: 0.9em;
+      }
       h1 { margin: 0 0 12px; }
+      .page-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.95fr);
+        gap: 16px;
+        align-items: start;
+      }
+      .page-hero,
+      .hero-guide {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 16px;
+        box-shadow: 0 14px 28px rgba(18, 36, 56, 0.06);
+      }
+      .brand-lockup {
+        display: flex;
+        gap: 14px;
+        align-items: flex-start;
+      }
+      .brand-mark {
+        width: 56px;
+        height: 56px;
+        flex: 0 0 auto;
+        border-radius: 16px;
+        border: 1px solid #dbe5ef;
+        background: linear-gradient(180deg, #f7fbff 0%, #eef4f9 100%);
+      }
+      .brand-kicker {
+        font-size: 0.76rem;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: #54708c;
+        margin-bottom: 4px;
+      }
+      .hero-guide h2 {
+        margin: 0;
+        font-size: 1rem;
+      }
+      .hero-guide p {
+        margin: 8px 0 0;
+        color: #50647a;
+        line-height: 1.52;
+      }
+      .guide-kicker {
+        margin-bottom: 8px;
+        font-size: 0.74rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: #537d78;
+      }
+      .help-grid {
+        margin-top: 12px;
+        display: grid;
+        gap: 10px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .help-card {
+        min-width: 0;
+        border-radius: 12px;
+        border: 1px solid #e0e8f1;
+        background: #f8fbfe;
+        padding: 10px 11px;
+      }
+      .help-card strong {
+        display: block;
+        font-size: 0.9rem;
+      }
+      .help-card span {
+        display: block;
+        margin-top: 5px;
+        color: #5f7083;
+        font-size: 0.84rem;
+        line-height: 1.45;
+      }
       .grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -40,6 +125,11 @@
         border: 1px solid var(--line);
         border-radius: 8px;
         padding: 8px 10px;
+        background: #fff;
+      }
+      select option,
+      select optgroup {
+        color: var(--ink);
         background: #fff;
       }
       textarea { min-height: 120px; width: 100%; }
@@ -69,6 +159,90 @@
       .ok { background: #e7f7ec; color: var(--ok); }
       .warn { background: #fff3e2; color: var(--warn); }
       .muted { color: #617084; font-size: 12px; }
+      .field-guide {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .field-guide span {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .section-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .section-head h3 {
+        margin: 0;
+      }
+      .help-badge {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        border-radius: 999px;
+        border: 1px solid #bfd0de;
+        background: #f7fbfe;
+        color: #29506b;
+        font-size: 0.78rem;
+        font-weight: 700;
+        line-height: 1;
+        cursor: help;
+      }
+      .help-badge:hover,
+      .help-badge:focus-visible {
+        outline: none;
+        border-color: #8baacc;
+        background: #eaf4ff;
+      }
+      .help-badge::before,
+      .help-badge::after {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.16s ease, transform 0.16s ease;
+        z-index: 30;
+      }
+      .help-badge::before {
+        content: "";
+        top: calc(100% + 2px);
+        left: 50%;
+        transform: translateX(-50%) translateY(6px);
+        border-left: 6px solid transparent;
+        border-right: 6px solid transparent;
+        border-bottom: 7px solid #18324b;
+      }
+      .help-badge::after {
+        content: attr(data-help);
+        top: calc(100% + 8px);
+        left: 50%;
+        transform: translateX(-50%) translateY(6px);
+        width: min(320px, calc(100vw - 48px));
+        padding: 12px 13px;
+        border-radius: 12px;
+        border: 1px solid #244564;
+        background: #18324b;
+        color: #f2f8ff;
+        box-shadow: 0 18px 28px rgba(18, 36, 56, 0.18);
+        font-size: 0.84rem;
+        font-weight: 500;
+        line-height: 1.48;
+        white-space: normal;
+        text-align: left;
+      }
+      .help-badge:hover::before,
+      .help-badge:hover::after,
+      .help-badge:focus-visible::before,
+      .help-badge:focus-visible::after {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
       .table-actions { display: flex; gap: 6px; flex-wrap: wrap; }
       button.small {
         padding: 4px 8px;
@@ -84,15 +258,70 @@
         max-height: 360px;
         overflow: auto;
       }
+      @media (max-width: 900px) {
+        .page-head,
+        .help-grid {
+          grid-template-columns: 1fr;
+        }
+        .help-badge::before,
+        .help-badge::after,
+        .help-badge:hover::before,
+        .help-badge:hover::after,
+        .help-badge:focus-visible::before,
+        .help-badge:focus-visible::after {
+          left: auto;
+          right: 0;
+          transform: translateY(0);
+        }
+        .help-badge::before {
+          right: 4px;
+        }
+      }
     </style>
   </head>
   <body>
-    <h1>Geekatplay Studio Catalog Admin</h1>
-    <div class="muted">Maintain printers, printable materials, and compatibility profiles in <code>tech_catalog.db</code>.</div>
+    <div class="page-head">
+      <section class="page-hero">
+        <div class="brand-lockup">
+          <img class="brand-mark" src="/static/geekatplay-mark.svg" alt="Geekatplay Studio" />
+          <div>
+            <div class="brand-kicker">Geekatplay Studio</div>
+            <h1>Geekatplay Studio Catalog Admin</h1>
+            <div class="muted">Maintain printers, printable materials, and compatibility profiles in <code>tech_catalog.db</code>. The API still uses <code>/catalog/resins</code> for backward compatibility.</div>
+          </div>
+        </div>
+      </section>
+      <aside class="hero-guide">
+        <div class="guide-kicker">Quick Admin Guide</div>
+        <h2>Hover any <span class="help-badge" tabindex="0" data-help-key="hover_help">?</span> to explain technical catalog fields before editing live rows.</h2>
+        <p>This page is for direct maintenance. It assumes you are comfortable editing source records, but the help chips now explain what each technical field means in print terms rather than raw schema terms.</p>
+        <div class="help-grid">
+          <div class="help-card">
+            <strong>Printers</strong>
+            <span>Store machine identity, technology, and hardware-specific capabilities that later settings rely on.</span>
+          </div>
+          <div class="help-card">
+            <strong>Materials</strong>
+            <span>Store resin or filament properties that influence temperature, exposure, and compatibility decisions.</span>
+          </div>
+          <div class="help-card">
+            <strong>Profiles</strong>
+            <span>Profiles are the actual printer plus material pairings. Most wizard output depends on these rows being accurate.</span>
+          </div>
+          <div class="help-card">
+            <strong>CSV and JSON</strong>
+            <span>Use bulk import for controlled datasets. Use direct JSON editing when you need fast one-off repairs.</span>
+          </div>
+        </div>
+      </aside>
+    </div>
 
     <div class="grid" style="margin-top:12px">
       <section class="card">
-        <h3>Health</h3>
+        <div class="section-head">
+          <h3>Health</h3>
+          <span class="help-badge" tabindex="0" data-help-key="health_section">?</span>
+        </div>
         <div class="row">
           <button class="primary" onclick="loadHealth()">Refresh</button>
           <span id="healthBadge" class="badge">unknown</span>
@@ -101,23 +330,30 @@
       </section>
 
       <section class="card">
-        <h3>Bulk CSV Import</h3>
+        <div class="section-head">
+          <h3>Bulk CSV Import</h3>
+          <span class="help-badge" tabindex="0" data-help-key="csv_import">?</span>
+        </div>
         <div class="row">
           <select id="csvEntity">
             <option value="printers">printers</option>
-            <option value="resins">resins</option>
+            <option value="resins">materials (resins API)</option>
             <option value="profiles">profiles</option>
           </select>
           <input type="file" id="csvFile" />
           <button class="primary" onclick="importCsv()">Import CSV</button>
         </div>
-        <div class="muted">Expected columns align with API fields. Profiles can use <code>printer_id/resin_id</code> or <code>printer_name/resin_name</code>.</div>
+        <div class="muted">Expected columns align with API fields. Profiles can use <code>printer_id/resin_id</code> or <code>printer_name/resin_name</code>; the UI calls the second field material name.</div>
         <div id="csvResult" class="log" style="margin-top:8px"></div>
       </section>
 
       <section class="card">
-        <h3>Create Printer</h3>
+        <div class="section-head">
+          <h3>Create Printer</h3>
+          <span class="help-badge" tabindex="0" data-help-key="printer_section">?</span>
+        </div>
         <div class="row"><input id="pName" placeholder="Name (required)" style="flex:1" /></div>
+        <div class="field-guide muted"><span>Technology <span class="help-badge" tabindex="0" data-help-key="printer_technology">?</span></span><span>XY um <span class="help-badge" tabindex="0" data-help-key="printer_xy">?</span></span></div>
         <div class="row">
           <input id="pBrand" placeholder="Brand" />
           <input id="pModel" placeholder="Model" />
@@ -131,8 +367,12 @@
       </section>
 
       <section class="card">
-        <h3>Create Material</h3>
+        <div class="section-head">
+          <h3>Create Material</h3>
+          <span class="help-badge" tabindex="0" data-help-key="material_section">?</span>
+        </div>
         <div class="row"><input id="rName" placeholder="Name (required)" style="flex:1" /></div>
+        <div class="field-guide muted"><span>Material Type <span class="help-badge" tabindex="0" data-help-key="material_type">?</span></span><span>Family <span class="help-badge" tabindex="0" data-help-key="material_family">?</span></span></div>
         <div class="row">
           <select id="rType">
             <option value="resin">Resin</option>
@@ -142,6 +382,7 @@
           <input id="rSeries" placeholder="Series" />
           <input id="rFamily" placeholder="Family (PLA/PETG/ABS)" />
         </div>
+        <div class="field-guide muted"><span>Viscosity <span class="help-badge" tabindex="0" data-help-key="material_viscosity">?</span></span><span>Nozzle Range <span class="help-badge" tabindex="0" data-help-key="material_nozzle_range">?</span></span><span>Bed Temp <span class="help-badge" tabindex="0" data-help-key="material_bed_temp">?</span></span></div>
         <div class="row">
           <input id="rVisc" placeholder="Viscosity cP" />
           <input id="rTempMin" placeholder="Nozzle min C" />
@@ -155,22 +396,28 @@
       </section>
 
       <section class="card">
-        <h3>Create Profile</h3>
+        <div class="section-head">
+          <h3>Create Profile</h3>
+          <span class="help-badge" tabindex="0" data-help-key="profile_section">?</span>
+        </div>
+        <div class="field-guide muted"><span>Printer Name <span class="help-badge" tabindex="0" data-help-key="profile_printer">?</span></span><span>Material Name <span class="help-badge" tabindex="0" data-help-key="profile_material">?</span></span><span>Layer mm <span class="help-badge" tabindex="0" data-help-key="profile_layer">?</span></span></div>
         <div class="row">
           <input id="prPrinterName" placeholder="Printer name (required)" style="flex:1" />
         </div>
         <div class="row">
-          <input id="prResinName" placeholder="Resin name (required)" style="flex:1" />
+          <input id="prResinName" placeholder="Material name (required)" style="flex:1" />
         </div>
         <div class="row">
           <input id="prName" placeholder="Profile name (required)" style="flex:1" />
           <input id="prLayer" placeholder="Layer mm" />
         </div>
+        <div class="field-guide muted"><span>Exposure <span class="help-badge" tabindex="0" data-help-key="profile_exposure">?</span></span><span>Bottom Exposure <span class="help-badge" tabindex="0" data-help-key="profile_bottom_exposure">?</span></span><span>Tilt Ref <span class="help-badge" tabindex="0" data-help-key="profile_tilt">?</span></span></div>
         <div class="row">
           <input id="prExp" placeholder="Exposure s" />
           <input id="prBottom" placeholder="Bottom exp s" />
           <input id="prTilt" placeholder="Tilt ref mm/h" />
         </div>
+        <div class="field-guide muted"><span>Nozzle Temp <span class="help-badge" tabindex="0" data-help-key="profile_nozzle_temp">?</span></span><span>Print Speed <span class="help-badge" tabindex="0" data-help-key="profile_print_speed">?</span></span><span>Nozzle Dia <span class="help-badge" tabindex="0" data-help-key="profile_nozzle_diameter">?</span></span></div>
         <div class="row">
           <input id="prNozzle" placeholder="Nozzle C" />
           <input id="prBed" placeholder="Bed C" />
@@ -184,7 +431,10 @@
       </section>
 
       <section class="card">
-        <h3>Catalog Export/Import JSON</h3>
+        <div class="section-head">
+          <h3>Catalog Export/Import JSON</h3>
+          <span class="help-badge" tabindex="0" data-help-key="json_section">?</span>
+        </div>
         <div class="row">
           <button onclick="exportCatalog()">Export JSON</button>
           <button class="primary" onclick="importJson()">Import JSON</button>
@@ -195,7 +445,10 @@
 
     <div class="grid" style="margin-top:16px">
       <section class="card">
-        <h3>Printers</h3>
+        <div class="section-head">
+          <h3>Printers</h3>
+          <span class="help-badge" tabindex="0" data-help-key="printers_table">?</span>
+        </div>
         <div class="row">
           <input id="printerQuery" placeholder="Search printers (name/brand/model)" style="flex:1" />
           <button onclick="loadPrinters()">Search</button>
@@ -205,9 +458,12 @@
         </div>
       </section>
       <section class="card">
-        <h3>Resins</h3>
+        <div class="section-head">
+          <h3>Materials</h3>
+          <span class="help-badge" tabindex="0" data-help-key="materials_table">?</span>
+        </div>
         <div class="row">
-          <input id="resinQuery" placeholder="Search resins (name/brand/series)" style="flex:1" />
+          <input id="resinQuery" placeholder="Search materials (name/brand/series)" style="flex:1" />
           <button onclick="loadResins()">Search</button>
         </div>
         <div class="table-wrap" style="margin-top:8px">
@@ -215,9 +471,12 @@
         </div>
       </section>
       <section class="card" style="grid-column:1/-1">
-        <h3>Profiles</h3>
+        <div class="section-head">
+          <h3>Profiles</h3>
+          <span class="help-badge" tabindex="0" data-help-key="profiles_table">?</span>
+        </div>
         <div class="row">
-          <input id="profileQuery" placeholder="Search profiles (printer/resin/profile)" style="flex:1" />
+          <input id="profileQuery" placeholder="Search profiles (printer/material/profile)" style="flex:1" />
           <button onclick="loadProfiles()">Search</button>
         </div>
         <div class="row">
@@ -230,6 +489,35 @@
     </div>
 
     <script>
+      const HELP_CONTENT = {
+        hover_help: "Hover or focus any question-mark chip to see a short plain-language explanation for the nearby admin field.",
+        health_section: "Checks whether the catalog database is reachable and whether core tables look healthy before you start editing rows.",
+        csv_import: "Bulk-import printers, materials, or profiles from a CSV file. Use this when you need controlled batch updates instead of one-off form entries.",
+        printer_section: "Printers describe the hardware. Profiles later reference these names to decide which settings apply to which machine.",
+        printer_technology: "The print process the machine uses, such as MSLA or FDM. This controls which profile fields matter later.",
+        printer_xy: "Native XY resolution in microns. Smaller values usually mean finer printable detail in the X and Y plane.",
+        material_section: "Materials describe resin or filament properties that influence exposure, temperature, and compatibility decisions.",
+        material_type: "Use resin for light-cured liquid materials and filament for nozzle-based FDM materials.",
+        material_family: "Short family tag like PLA, PETG, ABS, or a resin family. Helpful for filtering and broad defaults.",
+        material_viscosity: "Mostly relevant for liquid resin. Higher viscosity usually means thicker flow behavior and can affect print handling or temperature assumptions.",
+        material_nozzle_range: "FDM-focused nozzle temperature range for this material. The optimizer can use it to stay within a safe extrusion window.",
+        material_bed_temp: "FDM-focused bed temperature guideline used to improve first-layer adhesion.",
+        profile_section: "Profiles are the core printer plus material pairings. Most generated settings are derived from these rows.",
+        profile_printer: "Exact printer name this profile belongs to. It must match a printer row already stored in the catalog.",
+        profile_material: "Exact material name this profile belongs to. The UI says material, while the API field is still named resin_name.",
+        profile_layer: "Layer height in millimeters. Smaller values improve detail but increase print time.",
+        profile_exposure: "MSLA only. Normal-layer light-on time. Too low can under-cure; too high can soften detail.",
+        profile_bottom_exposure: "MSLA only. Stronger first-layer exposure used to anchor the print to the build plate.",
+        profile_tilt: "MSLA reference speed for peel or lift movement. Slower movement is often safer for large cross-sections.",
+        profile_nozzle_temp: "FDM only. Nozzle temperature used for extrusion on this printer plus material pairing.",
+        profile_print_speed: "FDM only. Print movement speed. Faster prints finish sooner but can reduce quality or bonding.",
+        profile_nozzle_diameter: "FDM only. Physical nozzle size, which affects line width, fine detail, and recommended layer heights.",
+        json_section: "Export the full catalog as JSON or import a prepared JSON snapshot. This is useful for versioned handoffs and recovery.",
+        printers_table: "Search and edit stored printers. Changes here can affect every profile that references the same printer name.",
+        materials_table: "Search and edit stored materials. Changes here can affect every profile that references the same material name.",
+        profiles_table: "Search and edit actual printer plus material presets. These rows are usually the most operationally sensitive.",
+      };
+
       async function api(url, options = {}) {
         const res = await fetch(url, options);
         const text = await res.text();
@@ -323,6 +611,21 @@
         });
       }
 
+      function hydrateHelpBadges(root = document) {
+        const scope = root && typeof root.querySelectorAll === "function" ? root : document;
+        scope.querySelectorAll(".help-badge[data-help-key]").forEach((badge) => {
+          const key = badge.getAttribute("data-help-key") || "";
+          const helpText = HELP_CONTENT[key] || "";
+          if (!helpText) return;
+          if (!badge.getAttribute("data-help")) {
+            badge.setAttribute("data-help", helpText);
+          }
+          if (!badge.getAttribute("aria-label")) {
+            badge.setAttribute("aria-label", helpText);
+          }
+        });
+      }
+
       function displayCell(value) {
         if (value === null || value === undefined) return "";
         if (typeof value === "object") return `<code>${escapeHtml(JSON.stringify(value))}</code>`;
@@ -384,7 +687,7 @@
       async function editResin(id) {
         const current = resinsCache.find((item) => item.id === id);
         if (!current) return;
-        const raw = prompt("Edit resin JSON", JSON.stringify(buildResinPatchInput(current), null, 2));
+        const raw = prompt("Edit material JSON", JSON.stringify(buildResinPatchInput(current), null, 2));
         if (raw === null) return;
         const payload = JSON.parse(raw);
         await api(`/catalog/resins/${id}`, {
@@ -396,7 +699,7 @@
       }
 
       async function deleteResinById(id) {
-        if (!confirm(`Delete resin ${id}?`)) return;
+        if (!confirm(`Delete material ${id}?`)) return;
         await api(`/catalog/resins/${id}`, { method: "DELETE" });
         await Promise.all([loadHealth(), loadResins(), loadProfiles()]);
       }
@@ -525,6 +828,7 @@
       document.getElementById("profileActiveOnly").addEventListener("change", loadProfiles);
 
       (async function init() {
+        hydrateHelpBadges();
         await Promise.all([loadHealth(), loadPrinters(), loadResins(), loadProfiles()]);
       })();
     </script>

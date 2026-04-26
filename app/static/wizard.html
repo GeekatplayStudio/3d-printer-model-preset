@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Geekatplay Studio Wizard</title>
+    <link rel="icon" type="image/svg+xml" href="/static/geekatplay-mark.svg" />
     <style>
       :root {
         --bg: #060b12;
@@ -29,6 +30,17 @@
         background: radial-gradient(circle at 15% 0%, #1b3047 0%, #0c1521 36%, var(--bg) 100%);
       }
 
+      code {
+        display: inline-flex;
+        align-items: center;
+        min-height: 1.45em;
+        padding: 0 6px;
+        border-radius: 7px;
+        background: rgba(8, 18, 29, 0.28);
+        color: #eaf8ff;
+        font-size: 0.88em;
+      }
+
       .wrap {
         max-width: 980px;
         margin: 0 auto;
@@ -40,6 +52,96 @@
         border-radius: 16px;
         padding: 18px;
         box-shadow: 0 14px 34px rgba(1, 6, 13, 0.45);
+      }
+
+      .hero-grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.95fr);
+        align-items: start;
+      }
+
+      .brand-lockup {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+      }
+
+      .brand-mark {
+        width: 54px;
+        height: 54px;
+        flex: 0 0 auto;
+        border-radius: 16px;
+        border: 1px solid rgba(232, 241, 255, 0.28);
+        background: rgba(9, 19, 28, 0.24);
+        box-shadow: 0 12px 26px rgba(3, 11, 20, 0.24);
+      }
+
+      .brand-kicker {
+        font-size: 0.78rem;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: rgba(227, 244, 255, 0.82);
+      }
+
+      .hero-copy {
+        min-width: 0;
+      }
+
+      .hero-guide {
+        border-radius: 14px;
+        padding: 14px;
+        background: rgba(7, 18, 29, 0.28);
+        border: 1px solid rgba(232, 241, 255, 0.18);
+      }
+
+      .hero-guide h2 {
+        margin: 0;
+        font-size: 1.02rem;
+      }
+
+      .hero-guide p {
+        margin: 8px 0 0;
+        color: #d6e9ff;
+        font-size: 0.92rem;
+        line-height: 1.48;
+      }
+
+      .guide-kicker {
+        font-size: 0.76rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: rgba(223, 252, 248, 0.88);
+        margin-bottom: 8px;
+      }
+
+      .help-grid {
+        margin-top: 12px;
+        display: grid;
+        gap: 10px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .help-card {
+        min-width: 0;
+        border-radius: 12px;
+        border: 1px solid rgba(232, 241, 255, 0.14);
+        background: rgba(10, 20, 31, 0.24);
+        padding: 10px 11px;
+      }
+
+      .help-card strong {
+        display: block;
+        font-size: 0.9rem;
+        color: #f2fbff;
+      }
+
+      .help-card span {
+        display: block;
+        margin-top: 5px;
+        color: #d2e7f7;
+        font-size: 0.84rem;
+        line-height: 1.45;
       }
 
       .hero h1 {
@@ -84,6 +186,17 @@
         display: grid;
         gap: 8px;
         grid-template-columns: 1fr 1fr;
+      }
+
+      .step-heading {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .step-heading h2 {
+        margin: 0;
       }
 
       .steps {
@@ -356,6 +469,12 @@
         font-size: 0.95rem;
       }
 
+      select option,
+      select optgroup {
+        color: #102434;
+        background: #eef6ff;
+      }
+
       textarea {
         resize: vertical;
       }
@@ -442,6 +561,12 @@
       .summary-row div:first-child {
         color: var(--muted);
         background: #0d1622;
+      }
+
+      .summary-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
       }
 
       .summary-row:last-child div {
@@ -705,10 +830,86 @@
         line-height: 1.45;
       }
 
+      .help-badge {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        border-radius: 999px;
+        border: 1px solid rgba(223, 252, 248, 0.45);
+        background: rgba(7, 17, 27, 0.3);
+        color: #e9fbf8;
+        font-size: 0.78rem;
+        font-weight: 700;
+        line-height: 1;
+        cursor: help;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      }
+
+      .help-badge:hover,
+      .help-badge:focus-visible {
+        outline: none;
+        border-color: rgba(255, 244, 214, 0.74);
+        background: rgba(255, 244, 214, 0.18);
+        color: #fff6d9;
+      }
+
+      .help-badge::before,
+      .help-badge::after {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.16s ease, transform 0.16s ease;
+        z-index: 30;
+      }
+
+      .help-badge::before {
+        content: "";
+        top: calc(100% + 2px);
+        left: 50%;
+        transform: translateX(-50%) translateY(6px);
+        border-left: 6px solid transparent;
+        border-right: 6px solid transparent;
+        border-bottom: 7px solid #eef8ff;
+      }
+
+      .help-badge::after {
+        content: attr(data-help);
+        top: calc(100% + 8px);
+        left: 50%;
+        transform: translateX(-50%) translateY(6px);
+        width: min(320px, calc(100vw - 48px));
+        padding: 12px 13px;
+        border-radius: 12px;
+        border: 1px solid #9abbd4;
+        background: #eef8ff;
+        box-shadow: 0 22px 34px rgba(2, 10, 19, 0.34);
+        color: #132538;
+        font-size: 0.84rem;
+        font-weight: 500;
+        line-height: 1.48;
+        white-space: normal;
+        text-transform: none;
+        letter-spacing: 0;
+        text-align: left;
+      }
+
+      .help-badge:hover::before,
+      .help-badge:hover::after,
+      .help-badge:focus-visible::before,
+      .help-badge:focus-visible::after {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+
       @media (max-width: 900px) {
         .auth,
         .grid-2,
         .grid-3,
+        .hero-grid,
+        .help-grid,
         .form-grid-2,
         .form-grid-3,
         .form-grid-4,
@@ -739,6 +940,21 @@
           min-height: auto;
         }
 
+        .help-badge::before,
+        .help-badge::after,
+        .help-badge:hover::before,
+        .help-badge:hover::after,
+        .help-badge:focus-visible::before,
+        .help-badge:focus-visible::after {
+          left: auto;
+          right: 0;
+          transform: translateY(0);
+        }
+
+        .help-badge::before {
+          right: 4px;
+        }
+
         #modelPreviewCanvas {
           height: 300px;
         }
@@ -748,47 +964,86 @@
   <body>
     <main class="wrap">
       <section class="hero">
-        <h1>Geekatplay Studio Wizard</h1>
-        <p>Clean flow: 0) choose target, 1) setup database, 2) upload STL + check/fix, 3) choose printer + material and get slicer-ready settings.</p>
-        <div class="hero-actions">
-          <a class="hero-link secondary" href="/app">Open Advanced Mode</a>
-        </div>
-        <div class="auth">
-          <input id="authToken" placeholder="Authorization token (optional in standalone mode)" />
-          <input id="actor" placeholder="Actor" value="wizard-user" />
+        <div class="hero-grid">
+          <div class="hero-copy">
+            <div class="brand-lockup">
+              <img class="brand-mark" src="/static/geekatplay-mark.svg" alt="Geekatplay Studio" />
+              <div>
+                <div class="brand-kicker">Geekatplay Studio</div>
+                <h1>Geekatplay Studio Wizard</h1>
+                <p>Clean flow: 0) choose target, 1) setup database, 2) upload STL + check/fix, 3) choose printer + material and get slicer-ready settings.</p>
+              </div>
+            </div>
+            <div class="hero-actions">
+              <a class="hero-link secondary" href="/app">Open Advanced Mode</a>
+            </div>
+            <div class="auth">
+              <input id="authToken" placeholder="Authorization token (optional in standalone mode)" />
+              <input id="actor" placeholder="Actor" value="wizard-user" />
+            </div>
+          </div>
+          <aside class="hero-guide">
+            <div class="guide-kicker">Need Help Fast?</div>
+            <h2>Hover any <span class="help-badge" tabindex="0" data-help-key="hover_help">?</span> for plain-language explanations.</h2>
+            <p>Every important term now explains what it changes, why it matters, and when you should care. The safest order is target first, catalog second, analysis third, settings last.</p>
+            <div class="help-grid">
+              <div class="help-card">
+                <strong>Start simple</strong>
+                <span>Use the bundled official dataset, then run <code>balanced</code> or <code>deep</code> analysis unless you know you need the slowest scan.</span>
+              </div>
+              <div class="help-card">
+                <strong>UI says Material</strong>
+                <span>The website uses material language unless a control is truly resin-only. Some old API keys still say <code>resin</code> for backward compatibility.</span>
+              </div>
+              <div class="help-card">
+                <strong>Trust matters</strong>
+                <span>Data Quality and Confidence tell you how much source evidence backs a preset before you commit to a long print.</span>
+              </div>
+              <div class="help-card">
+                <strong>One step at a time</strong>
+                <span>If printer or material lists look empty, return to Step 1. If settings still look risky, hover the trust and source terms for next-step guidance.</span>
+              </div>
+            </div>
+          </aside>
         </div>
       </section>
 
       <section class="steps">
         <article class="card target-stage">
-          <h2>Step 0: Select Analyzer Target</h2>
+          <div class="step-heading">
+            <h2>Step 0: Select Analyzer Target</h2>
+            <span class="help-badge" tabindex="0" data-help-key="step_target">?</span>
+          </div>
           <p class="sub">Choose the print process first so the wizard filters the catalog correctly and exports the right slicer profile.</p>
           <div class="target-grid">
             <div class="target-field">
-              <label>Target process</label>
+              <label>Target process <span class="help-badge" tabindex="0" data-help-key="target_process">?</span></label>
               <select id="targetSel" class="target-select" onchange="onTargetChanged()">
                 <option value="msla">MSLA / resin</option>
                 <option value="fdm">FDM / filament</option>
               </select>
             </div>
             <div class="target-field">
-              <label>Primary slicer</label>
+              <label>Primary slicer <span class="help-badge" tabindex="0" data-help-key="primary_slicer">?</span></label>
               <div id="targetSlicerMsg" class="target-readout target-readout-accent">Primary slicer: Chitubox Free</div>
             </div>
             <div class="target-field">
-              <label>Catalog coverage</label>
+              <label>Catalog coverage <span class="help-badge" tabindex="0" data-help-key="catalog_coverage">?</span></label>
               <div id="targetCountsMsg" class="target-readout">Catalog target coverage will appear after the first refresh.</div>
             </div>
           </div>
         </article>
 
         <article class="card db-stage">
-          <h2>Step 1: Setup / Update Database</h2>
-          <p class="sub">Import printers, filaments, resins, and profiles from the bundled dataset, a curated remote feed, or supported vendor web pages.</p>
+          <div class="step-heading">
+            <h2>Step 1: Setup / Update Database</h2>
+            <span class="help-badge" tabindex="0" data-help-key="step_catalog">?</span>
+          </div>
+          <p class="sub">Import printers, liquid resins, filament materials, and profiles from the bundled dataset, a curated remote feed, or supported vendor web pages.</p>
 
           <div class="db-source-grid">
-            <div class="db-source-label db-source-label-source">Catalog source</div>
-            <div class="db-source-label db-source-label-summary">Selected source summary</div>
+            <div class="db-source-label db-source-label-source">Catalog source <span class="help-badge" tabindex="0" data-help-key="catalog_source">?</span></div>
+            <div class="db-source-label db-source-label-summary">Selected source summary <span class="help-badge" tabindex="0" data-help-key="source_summary">?</span></div>
             <select id="dbSourceMode" class="db-source-control db-source-control-source" onchange="onDatabaseSourceChanged()">
               <option value="official_local">Official local dataset</option>
               <option value="github">GitHub sync feed</option>
@@ -836,21 +1091,21 @@
 
           <div class="form-grid form-grid-3 source-config-block">
             <div id="dbWriteModeField" class="form-field form-field-span-3">
-              <label>Catalog write mode</label>
+              <label>Catalog write mode <span class="help-badge" tabindex="0" data-help-key="catalog_write_mode">?</span></label>
               <div class="toggle-row">
                 <input id="dbReplaceExisting" type="checkbox" />
                 <span>Replace existing records when matching printer, material, or profile names already exist.</span>
               </div>
             </div>
             <div id="dbAutoUpdateField" class="form-field" style="display:none">
-              <label>Remote refresh</label>
+              <label>Remote refresh <span class="help-badge" tabindex="0" data-help-key="remote_refresh">?</span></label>
               <div class="toggle-row">
                 <input id="dbAutoUpdate" type="checkbox" onchange="onDatabaseSourceChanged()" />
                 <span>Save this remote feed as the wizard auto-update source.</span>
               </div>
             </div>
             <div id="dbAutoUpdateIntervalField" class="form-field" style="display:none">
-              <label>Auto-update interval (seconds)</label>
+              <label>Auto-update interval (seconds) <span class="help-badge" tabindex="0" data-help-key="auto_update_interval">?</span></label>
               <input id="dbAutoUpdateInterval" type="number" min="300" step="300" value="86400" />
             </div>
           </div>
@@ -886,7 +1141,10 @@
         </article>
 
         <article class="card">
-          <h2>Step 2: Upload STL and Analyze / Fix</h2>
+          <div class="step-heading">
+            <h2>Step 2: Upload STL and Analyze / Fix</h2>
+            <span class="help-badge" tabindex="0" data-help-key="step_analysis">?</span>
+          </div>
           <p class="sub">STL only. We run a careful topology scan, can auto-fix when needed, and can generate a separate retopologized STL.</p>
           <div class="grid grid-2" style="margin-top: 10px">
             <div>
@@ -894,13 +1152,13 @@
               <input id="modelFile" type="file" accept=".stl" />
             </div>
             <div>
-              <label>Slice height (mm)</label>
+              <label>Slice height (mm) <span class="help-badge" tabindex="0" data-help-key="slice_height">?</span></label>
               <input id="sliceHeight" type="number" step="0.001" value="0.01" />
             </div>
           </div>
           <div class="grid" style="margin-top: 8px">
             <div>
-              <label>Analysis depth</label>
+              <label>Analysis depth <span class="help-badge" tabindex="0" data-help-key="analysis_depth">?</span></label>
               <select id="analysisLevel">
                 <option value="minimum">minimum (fastest)</option>
                 <option value="balanced">balanced</option>
@@ -911,18 +1169,18 @@
           </div>
           <div class="grid grid-3" style="margin-top: 8px">
             <div>
-              <label>Retopology mode</label>
+              <label>Retopology mode <span class="help-badge" tabindex="0" data-help-key="retopology_mode">?</span></label>
               <select id="retopoMode">
                 <option value="quad" selected>quad remesh (best topology)</option>
                 <option value="voxel">voxel remesh (best cleanup)</option>
               </select>
             </div>
             <div>
-              <label>Target faces (quad only)</label>
+              <label>Target faces (quad only) <span class="help-badge" tabindex="0" data-help-key="target_faces">?</span></label>
               <input id="retopoTargetFaces" type="number" min="1" placeholder="auto" />
             </div>
             <div>
-              <label>Voxel size (mm, voxel only)</label>
+              <label>Voxel size (mm, voxel only) <span class="help-badge" tabindex="0" data-help-key="voxel_size">?</span></label>
               <input id="retopoVoxelSize" type="number" min="0.001" step="0.001" placeholder="auto" />
             </div>
           </div>
@@ -1024,19 +1282,22 @@
         </article>
 
         <article class="card settings-stage">
-          <h2 id="settingsStepTitle">Step 3: Select Printer + Material, Generate Settings</h2>
+          <div class="step-heading">
+            <h2 id="settingsStepTitle">Step 3: Select Printer + Material, Generate Settings</h2>
+            <span class="help-badge" tabindex="0" data-help-key="step_settings">?</span>
+          </div>
           <p class="sub" id="settingsStepSub">Dropdowns only. The target you chose above controls the compatible printer/material list and slicer export.</p>
           <div class="form-grid form-grid-3" style="margin-top: 10px">
             <div class="form-field">
-              <label>Printer</label>
+              <label>Printer <span class="help-badge" tabindex="0" data-help-key="printer_selection">?</span></label>
               <select id="printerSel"></select>
             </div>
             <div class="form-field">
-              <label id="materialLabel">Material</label>
+              <label id="materialLabel"><span id="materialLabelText">Material</span> <span class="help-badge" tabindex="0" data-help-key="material_selection">?</span></label>
               <select id="resinSel"></select>
             </div>
             <div class="form-field">
-              <label>Use case</label>
+              <label>Use case <span class="help-badge" tabindex="0" data-help-key="use_case">?</span></label>
               <select id="useCaseSel">
                 <option value="miniature">miniature</option>
                 <option value="collectible">collectible</option>
@@ -1047,11 +1308,11 @@
 
           <div class="form-grid form-grid-2" style="margin-top: 8px">
             <div class="form-field">
-              <label>Ambient temp C (optional)</label>
+              <label>Ambient temp C (optional) <span class="help-badge" tabindex="0" data-help-key="ambient_temp">?</span></label>
               <input id="ambientTemp" type="number" step="0.1" placeholder="optional" />
             </div>
             <div id="filmReleasesWrap" class="form-field">
-              <label id="filmReleasesLabel">Film releases (MSLA only)</label>
+              <label id="filmReleasesLabel">Film releases (MSLA only) <span class="help-badge" tabindex="0" data-help-key="film_releases">?</span></label>
               <input id="filmReleases" type="number" value="0" />
             </div>
           </div>
@@ -1131,7 +1392,7 @@
         msla: {
           label: "MSLA / resin",
           materialLabel: "Resin",
-          settingsLabel: "resin settings",
+          settingsLabel: "MSLA print settings",
           slicer: "Chitubox Free",
         },
         fdm: {
@@ -1140,6 +1401,95 @@
           settingsLabel: "slicer profile",
           slicer: "Ultimaker Cura",
         },
+      };
+
+      const HELP_CONTENT = {
+        hover_help:
+          "Hover or focus any question-mark chip to see a short plain-language explanation. These tips are written for operators, not developers.",
+        step_target:
+          "Step 0 sets the print technology. The rest of the wizard uses that choice to filter the catalog and choose the correct slicer export.",
+        step_catalog:
+          "Step 1 fills your local database with printers, materials, and tested pairings. If the catalog is empty or incomplete, later steps cannot give reliable settings.",
+        step_analysis:
+          "Step 2 inspects the STL for printability problems, can repair obvious issues, and can build a cleaner remeshed copy when the original geometry is messy.",
+        step_settings:
+          "Step 3 uses the analyzed model plus your selected printer and material to build slicer-ready settings and explain how trustworthy they are.",
+        target_process:
+          "Pick the print technology first. MSLA uses liquid resin and light exposure. FDM uses solid filament, nozzle heat, and movement speed.",
+        primary_slicer:
+          "This is the slicer format the wizard will export for the selected target. MSLA exports Chitubox Free CFG. FDM exports an Ultimaker Cura profile.",
+        catalog_coverage:
+          "Shows how many printers and materials are currently available for the selected target. If this looks thin, finish Step 1 before continuing.",
+        catalog_source:
+          "Where Step 1 pulls catalog data from. Use the official local dataset for the safest starting point, or a remote source when your team actively maintains data elsewhere.",
+        source_summary:
+          "A plain-language reminder of the source mode you chose, so you can confirm the next import will come from the place you expect.",
+        catalog_write_mode:
+          "When enabled, matching names are overwritten by the new import. Leave this off when you only want to add missing rows and keep current values.",
+        remote_refresh:
+          "Saves the current remote source as the background update source. Use this when you want the catalog to keep refreshing from the same feed later.",
+        auto_update_interval:
+          "How often the saved remote source should be checked again. Slower schedules are safer when upstream data changes infrequently.",
+        slice_height:
+          "The distance between scan layers during analysis. Smaller values inspect more detail but increase runtime.",
+        analysis_depth:
+          "Controls how much geometry work the scanner does. Minimum is fastest. Deep and extreme check harder for hidden problems but take longer.",
+        retopology_mode:
+          "Quad remesh aims for cleaner topology and easier downstream editing. Voxel remesh is more aggressive and better when the source STL is badly damaged.",
+        target_faces:
+          "Quad remesh only. Lower counts simplify the mesh more. Higher counts preserve more detail but produce a heavier file.",
+        voxel_size:
+          "Voxel remesh only. Smaller voxels keep more shape detail but cost more time and memory.",
+        printer_selection:
+          "Pick the printer you actually plan to slice for. The wizard only shows printers that have matching presets for the selected target.",
+        material_selection:
+          "Pick the resin or filament you really plan to print with. The list is filtered to pairings that exist in the catalog.",
+        use_case:
+          "Tells the optimizer what matters most: tiny detail, display quality, or strength. That choice nudges speed, layer height, supports, and other settings.",
+        ambient_temp:
+          "Room temperature around the printer. Cool rooms often need slightly warmer or slower settings to stay reliable.",
+        film_releases:
+          "MSLA only. Older release film can need gentler peel behavior, so this number helps the wizard compensate.",
+        source_reliability:
+          "A high-level estimate of how trustworthy the current import source is. Official manufacturer sources usually score higher than loosely curated data.",
+        smart_settings_mode:
+          "Shows whether the current settings are backed only by manufacturer data or also cross-checked with real field history.",
+        manufacturer_backed_profiles:
+          "Profiles that carry upstream source links. More manufacturer-backed coverage usually means better traceability and fewer blind guesses.",
+        confidence_scored_profiles:
+          "Profiles that include a numeric confidence estimate after curation. Better coverage makes it easier to judge how much to trust a preset.",
+        field_records:
+          "Imported field or community history that can confirm or challenge the manufacturer defaults.",
+        next_trust_step:
+          "A plain-language suggestion for how to improve trust before printing, such as importing more evidence or using a better matched profile.",
+        target_process_summary:
+          "Confirms whether the generated preset is for MSLA or FDM, which changes both the math and the export file.",
+        slicer_summary:
+          "Shows which slicer file was generated so you know what to open next.",
+        layer_height:
+          "How thick each printed layer is. Smaller layers usually improve detail but increase print time.",
+        nozzle_temp:
+          "FDM only. Hotter nozzles usually bond layers better, but too much heat can cause stringing or soft details.",
+        bed_temp:
+          "FDM only. Warmer beds help the first layer stick. Too much heat can soften the base or make removal harder.",
+        print_speed:
+          "FDM only. Faster prints finish sooner, but can reduce surface quality or layer bonding.",
+        retraction:
+          "FDM only. Pulls filament back during travel moves to reduce stringing. Too much retraction can cause jams or under-extrusion.",
+        support_style:
+          "FDM only. Tree supports are gentler on visible surfaces. Normal or line supports can be stiffer and simpler.",
+        exposure:
+          "MSLA only. Light-on time for each normal layer. Too low can under-cure. Too high can blur detail and over-harden thin features.",
+        bottom_exposure:
+          "MSLA only. Stronger exposure for the first layers so the print anchors to the build plate.",
+        tilt_speed:
+          "MSLA only. How aggressively the printer peels each layer from the film. Slower peel is safer on heavy cross-sections.",
+        tilt_angle:
+          "MSLA only. The release angle used during peel movement. It affects how strongly the part lifts from the film.",
+        data_quality:
+          "Shows whether the preset came from verified source-backed data, an unverified catalog row, or fallback defaults.",
+        confidence:
+          "Numeric confidence in the selected preset. Lower confidence means you should validate with a short test print before committing to a long job.",
       };
 
       const DATABASE_SOURCE_META = {
@@ -1307,11 +1657,32 @@
         el.textContent = text;
       }
 
+      function helpBadgeMarkup(helpKey) {
+        const helpText = HELP_CONTENT[helpKey];
+        if (!helpText) return "";
+        return `<span class="help-badge" tabindex="0" data-help-key="${escapeHtml(helpKey)}" data-help="${escapeHtml(helpText)}" aria-label="${escapeHtml(helpText)}">?</span>`;
+      }
+
+      function hydrateHelpBadges(root = document) {
+        const scope = root && typeof root.querySelectorAll === "function" ? root : document;
+        scope.querySelectorAll(".help-badge[data-help-key]").forEach((badge) => {
+          const key = badge.getAttribute("data-help-key") || "";
+          const helpText = HELP_CONTENT[key] || "";
+          if (!helpText) return;
+          if (!badge.getAttribute("data-help")) {
+            badge.setAttribute("data-help", helpText);
+          }
+          if (!badge.getAttribute("aria-label")) {
+            badge.setAttribute("aria-label", helpText);
+          }
+        });
+      }
+
       function buildSummaryRows(rows) {
         return rows
           .map(
             (row) =>
-              `<div class="summary-row"><div>${escapeHtml(row.label)}</div><div>${escapeHtml(String(row.value))}</div></div>`
+              `<div class="summary-row"><div class="summary-label"><span>${escapeHtml(row.label)}</span>${row.helpKey ? helpBadgeMarkup(row.helpKey) : ""}</div><div>${escapeHtml(String(row.value))}</div></div>`
           )
           .join("");
       }
@@ -1775,7 +2146,9 @@
           ? "Preview geometry is loaded. Run Analyze STL to add printability and defect statistics."
           : state.lastRetopologyResult
             ? `Retopology result is active. Statistics now reflect the remeshed STL analyzed at ${analysis.analysis_level} depth.`
-            : `Analysis level: ${analysis.analysis_level}. Preview and computed printability metrics are shown together.`;
+            : state.fixedAnalysis
+              ? `Analysis level: ${analysis.analysis_level}. Auto-Fix re-checked the saved repaired STL, and the metrics below reflect that verified result.`
+              : `Analysis level: ${analysis.analysis_level}. Preview and computed printability metrics are shown together.`;
         table.style.display = rows.length ? "block" : "none";
         table.innerHTML = rows.length ? buildSummaryRows(rows) : "";
       }
@@ -1852,9 +2225,13 @@
               ? state.lastCheckResult.fix_reasons
               : meshBlockingIssues(health);
         setPanelBadge("modelHealthBadge", blocking.length ? "fail" : "pass", blocking.length ? "Blocking" : "Clean");
-        summary.textContent = blocking.length
-          ? `${blocking.length} blocking issue types currently need attention.`
-          : "No blocking mesh defects are currently reported.";
+        summary.textContent = state.lastFixResult
+          ? blocking.length
+            ? `Auto-Fix saved the STL and re-checked it. ${blocking.length} blocking issue types still need attention.`
+            : "Auto-Fix saved the STL and re-checked it. No blocking mesh defects are currently reported."
+          : blocking.length
+            ? `${blocking.length} blocking issue types currently need attention.`
+            : "No blocking mesh defects are currently reported.";
         container.innerHTML = checks
           .map(
             (check) => `
@@ -1917,8 +2294,8 @@
             ? "Retopology pre-pass changed the source mesh and it passed save/reload checks before remeshing."
             : `Retopology pre-pass changed the source mesh, but ${formatNumber((fix.remaining_issues || []).length, 0)} blocking issue types remained before remeshing.`
           : fix.fully_repaired
-            ? "Repair changed the mesh and it now passes save/reload checks."
-            : `Repair changed the mesh, but ${formatNumber((fix.remaining_issues || []).length, 0)} blocking issue types remain after save/reload.`;
+            ? "Repair changed the mesh, the app re-checked the saved STL, and it now passes save/reload checks."
+            : `Repair changed the mesh and the app re-checked the saved STL, but ${formatNumber((fix.remaining_issues || []).length, 0)} blocking issue types remain after save/reload.`;
         content.innerHTML = `
           <div class="summary">${buildSummaryRows(diffRows)}</div>
           <div class="tiny">${escapeHtml(actionsHeading)}</div>
@@ -1984,6 +2361,22 @@
         `;
       }
 
+      function analysisFallbackNotice(analysis) {
+        if (!analysis) return null;
+        const notes = Array.isArray(analysis.notes) ? analysis.notes : [];
+        const fallbackNote = notes.find((note) => /fell back to minimum heuristics/i.test(String(note || "")));
+        if (!fallbackNote) return null;
+
+        const effectiveSlice = Number(analysis.slice_height_mm);
+        const sliceText = Number.isFinite(effectiveSlice) && effectiveSlice > 0
+          ? ` Effective slice spacing for this scan was ${formatMetric(effectiveSlice, "mm", effectiveSlice >= 1 ? 1 : 3)}.`
+          : "";
+        return (
+          "Large-model fallback is active. The server switched this run to minimum-style heuristics to stay responsive, so runtime is faster but defect scanning is lighter." +
+          sliceText
+        );
+      }
+
       function renderModelNotesPanel() {
         const analysis = currentAnalysisResult();
         const content = document.getElementById("modelNotesContent");
@@ -1994,11 +2387,28 @@
         }
 
         const notes = Array.isArray(analysis.notes) ? analysis.notes : [];
-        setPanelBadge("modelNotesBadge", notes.length ? "info" : "pass", notes.length ? `${notes.length} notes` : "Clear");
-        content.innerHTML = buildList(
-          notes,
-          "No additional analysis notes were reported."
+        const fallbackNotice = analysisFallbackNotice(analysis);
+        setPanelBadge(
+          "modelNotesBadge",
+          fallbackNotice ? "warn" : notes.length ? "info" : "pass",
+          fallbackNotice ? "Fallback" : notes.length ? `${notes.length} notes` : "Clear"
         );
+        const notesMarkup = buildList(notes, "No additional analysis notes were reported.");
+        if (!fallbackNotice) {
+          content.innerHTML = notesMarkup;
+          return;
+        }
+
+        content.innerHTML = `
+          <div class="check-card" style="margin-bottom: 10px;">
+            <div class="check-title">
+              <span class="status-badge status-warn">Fallback</span>
+              <span>Large-model fallback is active</span>
+            </div>
+            <div class="check-detail">${escapeHtml(fallbackNotice)}</div>
+          </div>
+          ${notesMarkup}
+        `;
       }
 
       function renderModelInsightPanels() {
@@ -2067,7 +2477,7 @@
           const raw = String(err && err.message ? err.message : err);
           if (raw.toLowerCase().includes("failed to fetch")) {
             throw new Error(
-              "Could not reach API server. If this happened on a large STL, retry with minimum depth and larger slice height (e.g. 0.05mm)."
+              "Could not reach API server or the request connection dropped before a response returned. If this happened on a large STL, retry with minimum depth and larger slice height (e.g. 0.05mm)."
             );
           }
           throw err;
@@ -2257,8 +2667,8 @@
             buildDatabaseCheck(
               "Latest import scan",
               droppedTotal === 0 ? "pass" : "warn",
-              `Imported ${setupResult.printers_upserted} printers, ${setupResult.resins_upserted} resins, ${setupResult.profiles_upserted} profiles from ${setupResult.mode}.`,
-              `Curated keep/drop: printers ${Number(kept.printers) || 0}/${Number(dropped.printers) || 0}, resins ${Number(kept.resins) || 0}/${Number(dropped.resins) || 0}, profiles ${Number(kept.profiles) || 0}/${Number(dropped.profiles) || 0}. Source reliability estimate: ${reliabilityText}.`,
+              `Imported ${setupResult.printers_upserted} printers, ${setupResult.resins_upserted} materials, ${setupResult.profiles_upserted} profiles from ${setupResult.mode}.`,
+              `Curated keep/drop: printers ${Number(kept.printers) || 0}/${Number(dropped.printers) || 0}, materials ${Number(kept.resins) || 0}/${Number(dropped.resins) || 0}, profiles ${Number(kept.profiles) || 0}/${Number(dropped.profiles) || 0}. Source reliability estimate: ${reliabilityText}.`,
               Array.isArray(setupResult.notes) ? setupResult.notes.slice(0, 3) : []
             )
           );
@@ -2279,14 +2689,14 @@
         );
         checks.push(
           buildDatabaseCheck(
-            "Resin source scan",
+            "Material source scan",
             status.resins_total === 0 ? "fail" : resinMissing === 0 ? "pass" : "warn",
             status.resins_total === 0
-              ? "No resins are loaded yet."
-              : `${formatRatio(status.resins_with_sources, status.resins_total)} resins have source links.`,
+              ? "No materials are loaded yet."
+              : `${formatRatio(status.resins_with_sources, status.resins_total)} materials have source links.`,
             resinMissing === 0
-              ? "Every loaded resin carries manufacturer/source provenance."
-              : `${resinMissing} resins are still missing source URLs.`,
+              ? "Every loaded material carries manufacturer/source provenance."
+              : `${resinMissing} materials are still missing source URLs.`,
             (gaps && gaps.missing_resin_sources) || []
           )
         );
@@ -2295,7 +2705,7 @@
             "Profile source scan",
             status.profiles_total === 0 ? "fail" : profileMissing === 0 ? "pass" : "warn",
             status.profiles_total === 0
-              ? "No printer/resin profiles are loaded yet."
+              ? "No printer/material profiles are loaded yet."
               : `${formatRatio(status.profiles_with_sources, status.profiles_total)} profiles have source links.`,
             profileMissing === 0
               ? "Every loaded profile has upstream source references."
@@ -2312,16 +2722,16 @@
                 ? "pass"
                 : "warn",
             status.profiles_total === 0
-              ? "Settings cannot be generated until at least one printer/resin profile exists."
+              ? "Settings cannot be generated until at least one printer/material profile exists."
               : printersWithoutProfiles === 0 && resinsWithoutProfiles === 0
-                ? "All loaded printers and resins participate in at least one preset pairing."
-                : `${printersWithoutProfiles} printers and ${resinsWithoutProfiles} resins still have no paired preset.`,
+                ? "All loaded printers and materials participate in at least one preset pairing."
+                : `${printersWithoutProfiles} printers and ${resinsWithoutProfiles} materials still have no paired preset.`,
             status.ready_for_settings
               ? "Catalog can generate settings for supported pairings."
               : "Catalog still has gaps that block full settings readiness.",
             [
               ...(((gaps && gaps.printers_without_profiles) || []).slice(0, 2).map((item) => `Printer gap: ${item}`)),
-              ...(((gaps && gaps.resins_without_profiles) || []).slice(0, 2).map((item) => `Resin gap: ${item}`)),
+              ...(((gaps && gaps.resins_without_profiles) || []).slice(0, 2).map((item) => `Material gap: ${item}`)),
             ]
           )
         );
@@ -2428,13 +2838,36 @@
         const confidenceCoverage = percentFromCounts(status.profiles_with_confidence, status.profiles_total);
         const crossCheckReady = status.profiles_with_sources > 0 && feedbackHistoryTotal > 0;
         smartEl.style.display = "block";
-        smartEl.innerHTML = [
-          `<div class="summary-row"><div>Smart settings mode</div><div>${escapeHtml(crossCheckReady ? "Cross-checked" : status.profiles_with_sources > 0 ? "Manufacturer-only" : "Limited evidence")}</div></div>`,
-          `<div class="summary-row"><div>Manufacturer-backed profiles</div><div>${escapeHtml(formatRatio(status.profiles_with_sources, status.profiles_total))} (${manufacturerCoverage}%)</div></div>`,
-          `<div class="summary-row"><div>Confidence-scored profiles</div><div>${escapeHtml(formatRatio(status.profiles_with_confidence, status.profiles_total))} (${confidenceCoverage}%)</div></div>`,
-          `<div class="summary-row"><div>Imported field/community records</div><div>${escapeHtml(String(feedbackHistoryTotal))}</div></div>`,
-          `<div class="summary-row"><div>Next trust step</div><div>${escapeHtml(crossCheckReady ? "Use selected printer/resin smart check below." : "Import community sheets, YouTube logs, or normalized Reddit/forum findings to cross-check presets.")}</div></div>`,
-        ].join("");
+        smartEl.innerHTML = buildSummaryRows([
+          {
+            label: "Smart settings mode",
+            value: crossCheckReady ? "Cross-checked" : status.profiles_with_sources > 0 ? "Manufacturer-only" : "Limited evidence",
+            helpKey: "smart_settings_mode",
+          },
+          {
+            label: "Manufacturer-backed profiles",
+            value: `${formatRatio(status.profiles_with_sources, status.profiles_total)} (${manufacturerCoverage}%)`,
+            helpKey: "manufacturer_backed_profiles",
+          },
+          {
+            label: "Confidence-scored profiles",
+            value: `${formatRatio(status.profiles_with_confidence, status.profiles_total)} (${confidenceCoverage}%)`,
+            helpKey: "confidence_scored_profiles",
+          },
+          {
+            label: "Imported field/community records",
+            value: String(feedbackHistoryTotal),
+            helpKey: "field_records",
+          },
+          {
+            label: "Next trust step",
+            value: crossCheckReady
+              ? "Use the selected printer/material smart check below."
+              : "Import community sheets, YouTube logs, or normalized Reddit/forum findings to cross-check presets.",
+            helpKey: "next_trust_step",
+          },
+        ]);
+        hydrateHelpBadges(smartEl);
       }
 
       function renderSettingsSmartPanel(provenance = null, feedbackResult = null) {
@@ -2474,7 +2907,7 @@
             `Real-world signal ${Math.round((Number(summary.real_world_ratio) || 0) * 100)}%, marketing-heavy ${Math.round((Number(summary.marketing_ratio) || 0) * 100)}%.`
           );
         } else {
-          parts.push("No imported community or field history exists for this printer + resin yet.");
+          parts.push("No imported community or field history exists for this printer + material yet.");
         }
         if (!crossChecked) {
           parts.push("Import community sheets, YouTube transcripts, or normalized Reddit/forum notes to cross-check manufacturer presets.");
@@ -2504,6 +2937,37 @@
           return window.crypto.randomUUID();
         }
         return `analysis-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+      }
+
+      function sleepMs(delayMs) {
+        return new Promise((resolve) => window.setTimeout(resolve, delayMs));
+      }
+
+      async function checkApiReachability(attempts = 3, timeoutMs = 2500, delayMs = 450) {
+        const totalAttempts = Math.max(1, Number(attempts) || 1);
+        const baseTimeoutMs = Math.max(250, Number(timeoutMs) || 2500);
+        const baseDelayMs = Math.max(0, Number(delayMs) || 0);
+        for (let attemptIndex = 0; attemptIndex < totalAttempts; attemptIndex += 1) {
+          const controller = new AbortController();
+          let timer = null;
+          try {
+            timer = window.setTimeout(() => controller.abort(), baseTimeoutMs + (attemptIndex * 500));
+            const response = await fetch("/health", {
+              headers: headers(false),
+              cache: "no-store",
+              signal: controller.signal,
+            });
+            if (response.ok) return true;
+          } catch (_) {
+            // Connectivity checks should stay silent and let the caller decide the visible message.
+          } finally {
+            if (timer !== null) window.clearTimeout(timer);
+          }
+          if (attemptIndex < totalAttempts - 1) {
+            await sleepMs(baseDelayMs + (attemptIndex * 350));
+          }
+        }
+        return false;
       }
 
       function analysisProgressDelayHint(stage, stageElapsedSeconds) {
@@ -2622,6 +3086,75 @@
         } catch (_) {
           return null;
         }
+      }
+
+      function clearAnalysisRecoveryState(jobId, message) {
+        const previous = state.analysisProgress || {};
+        state.activeAnalysisJobId = null;
+        state.analysisProgress = {
+          job_id: jobId || previous.job_id || createProgressJobId(),
+          status: "failed",
+          stage: previous.stage || "connection_lost",
+          message,
+          elapsed_seconds: Number(previous.elapsed_seconds) || 0,
+          stage_elapsed_seconds: 0,
+          updated_at: new Date().toISOString(),
+          cancel_requested: false,
+          error: message,
+          performance_ms: previous.performance_ms || {},
+          stage_timings_ms: previous.stage_timings_ms || {},
+        };
+        renderAnalysisProgressPanel(state.analysisProgress);
+        updateLocks();
+      }
+
+      async function recoverAnalyzeConnectionDrop(jobId, progressPoller) {
+        let progress = (await fetchAnalysisProgress(jobId)) || progressPoller.latest();
+        if (progress && isTerminalAnalysisStatus(progress.status)) {
+          return {
+            keepPolling: false,
+            progress,
+            message: String(progress.message || "Analysis stopped after the request connection dropped."),
+          };
+        }
+
+        const activeStage = String((progress && progress.stage) || "");
+        const isUploadStage = activeStage === "save_upload" || activeStage === "load_prepare_mesh";
+        const serverReachable = await checkApiReachability(isUploadStage ? 4 : 3, isUploadStage ? 3000 : 2500);
+        if (serverReachable) {
+          progress = (await fetchAnalysisProgress(jobId)) || progress;
+          if (progress && isActiveAnalysisStatus(progress.status)) {
+            return {
+              keepPolling: true,
+              progress,
+              message:
+                "Analyze connection dropped, but the API is still alive and the STL job is still running. Keep this tab open, or cancel and retry with minimum depth and a larger slice height for very large models.",
+            };
+          }
+        }
+
+
+        if (!serverReachable) {
+          await sleepMs(isUploadStage ? 1200 : 700);
+          progress = (await fetchAnalysisProgress(jobId)) || progress;
+          if (progress && isActiveAnalysisStatus(progress.status)) {
+            return {
+              keepPolling: true,
+              progress,
+              message:
+                "Analyze connection dropped and the API missed a brief health check, but the STL job is still running. Keep this tab open, or cancel and retry with minimum depth and a larger slice height for very large models.",
+            };
+          }
+        }
+        const unlockedMessage = serverReachable
+          ? "Analyze request dropped before the server reported a running job. The wizard controls were unlocked locally. Retry with minimum depth and a larger slice height (for example 0.05mm) for very large models."
+          : "Could not reach API server. The wizard controls were unlocked locally. If you are running Docker, restart the api service, then retry with minimum depth and a larger slice height (for example 0.05mm).";
+        clearAnalysisRecoveryState(jobId, unlockedMessage);
+        return {
+          keepPolling: false,
+          progress: state.analysisProgress,
+          message: unlockedMessage,
+        };
       }
 
       function formatAnalysisProgress(progress) {
@@ -2924,8 +3457,8 @@
         document.getElementById("settingsStepSub").textContent =
           target === "fdm"
             ? "Dropdowns only. The FDM target filters printers and filament profiles, then exports an Ultimaker Cura profile."
-            : "Dropdowns only. The MSLA target filters resin-capable printers and exports a Chitubox Free profile.";
-        document.getElementById("materialLabel").textContent = meta.materialLabel;
+            : "Dropdowns only. The MSLA target filters MSLA printers and resin profiles, then exports a Chitubox Free profile.";
+        document.getElementById("materialLabelText").textContent = meta.materialLabel;
         document.getElementById("filmReleasesWrap").style.display = target === "msla" ? "block" : "none";
       }
 
@@ -3181,6 +3714,7 @@
         };
         renderAnalysisProgressPanel(state.analysisProgress);
         const progressPoller = startAnalysisProgressPolling("modelMsg", progressJobId);
+        let keepProgressPolling = false;
         setMsg("modelMsg", "Preparing STL upload for analysis...");
         document.getElementById("modelDownload").innerHTML = "";
         startPreviewAnalysisMode("Preview scan: preparing uploaded STL for analysis.");
@@ -3225,10 +3759,11 @@
           setMsg("modelMsg", msg, body.requires_fix ? "warn" : "");
         } catch (err) {
           const progress = (await fetchAnalysisProgress(progressJobId)) || progressPoller.latest();
+          const rawMessage = String(err && err.message ? err.message : err);
           const message =
             progress && ["failed", "cancelled"].includes(progress.status) && progress.message
               ? String(progress.message)
-              : String(err && err.message ? err.message : err);
+              : rawMessage;
           if (progress && progress.status === "cancelled") {
             setMsg("modelMsg", `Analyze cancelled: ${message}`, "warn");
           } else if (message.toLowerCase().includes("timed out")) {
@@ -3237,12 +3772,21 @@
               `Analyze error: ${message} Try minimum depth and a larger slice height (for example 0.05mm) for very large models.`,
               "error"
             );
+          } else if (
+            rawMessage.toLowerCase().includes("could not reach api server") ||
+            rawMessage.toLowerCase().includes("request connection dropped before a response returned")
+          ) {
+            const recovery = await recoverAnalyzeConnectionDrop(progressJobId, progressPoller);
+            keepProgressPolling = recovery.keepPolling;
+            setMsg("modelMsg", keepProgressPolling ? recovery.message : `Analyze error: ${recovery.message}`, keepProgressPolling ? "warn" : "error");
           } else {
             setMsg("modelMsg", `Analyze error: ${message}`, "error");
           }
           renderModelInsightPanels();
         } finally {
-          progressPoller.stop();
+          if (!keepProgressPolling) {
+            progressPoller.stop();
+          }
           if (state.analysisProgress && isTerminalAnalysisStatus(state.analysisProgress.status)) {
             state.activeAnalysisJobId = null;
           }
@@ -3288,6 +3832,7 @@
           const perfText = performanceSummary(body.analysis);
           const resolvedCount = Array.isArray(body.resolved_issues) ? body.resolved_issues.length : 0;
           const remainingCount = Array.isArray(body.remaining_issues) ? body.remaining_issues.length : 0;
+          const recheckSummary = String(body.recheck_summary || "Auto-Fix saved the repaired STL and re-checked it.");
           const remainingText = remainingCount
             ? `Remaining after save/reload: ${body.remaining_issues.slice(0, 3).join(" | ")}`
             : "Saved STL now passes the current mesh-health checks.";
@@ -3302,7 +3847,7 @@
           await downloadArtifact(body.download_url, body.output_file_name || "repaired.stl");
           setMsg(
             "modelMsg",
-            `Auto-fix finished. Repaired geometry: ${repaired}. Resolved issue types: ${resolvedCount}. ${remainingText} ${perfText} Download started.`.trim(),
+            `Auto-fix finished. Repaired geometry: ${repaired}. ${recheckSummary} Resolved issue types: ${resolvedCount}. ${remainingText} ${perfText} Download started.`.trim(),
             body.fully_repaired ? "" : "warn"
           );
         } catch (err) {
@@ -3426,41 +3971,43 @@
         };
         const qualityKey = String(provenance.data_quality || "fallback_defaults");
         const summaryRows = [
-          { label: "Target", value: targetMeta(exportMeta.target_process || settings.process_technology).label },
-          { label: "Slicer", value: exportMeta.slicer_name || targetSlicerName(exportMeta.target_process || currentTarget()) },
-          { label: "Layer Height", value: `${settings.layer_height_mm} mm` },
+          { label: "Target", value: targetMeta(exportMeta.target_process || settings.process_technology).label, helpKey: "target_process_summary" },
+          { label: "Slicer", value: exportMeta.slicer_name || targetSlicerName(exportMeta.target_process || currentTarget()), helpKey: "slicer_summary" },
+          { label: "Layer Height", value: `${settings.layer_height_mm} mm`, helpKey: "layer_height" },
         ];
 
         if (String(settings.process_technology || "").toUpperCase() === "FDM" && settings.fdm) {
           summaryRows.push(
-            { label: "Nozzle Temp", value: `${settings.fdm.nozzle_temp_c} C` },
-            { label: "Bed Temp", value: settings.fdm.bed_temp_c == null ? "-" : `${settings.fdm.bed_temp_c} C` },
-            { label: "Print Speed", value: `${settings.fdm.print_speed_mm_s} mm/s` },
-            { label: "Retraction", value: settings.fdm.retraction_distance_mm == null ? "-" : `${settings.fdm.retraction_distance_mm} mm @ ${settings.fdm.retraction_speed_mm_s || 0} mm/s` },
-            { label: "Support Style", value: settings.fdm.support_style || "-" },
+            { label: "Nozzle Temp", value: `${settings.fdm.nozzle_temp_c} C`, helpKey: "nozzle_temp" },
+            { label: "Bed Temp", value: settings.fdm.bed_temp_c == null ? "-" : `${settings.fdm.bed_temp_c} C`, helpKey: "bed_temp" },
+            { label: "Print Speed", value: `${settings.fdm.print_speed_mm_s} mm/s`, helpKey: "print_speed" },
+            { label: "Retraction", value: settings.fdm.retraction_distance_mm == null ? "-" : `${settings.fdm.retraction_distance_mm} mm @ ${settings.fdm.retraction_speed_mm_s || 0} mm/s`, helpKey: "retraction" },
+            { label: "Support Style", value: settings.fdm.support_style || "-", helpKey: "support_style" },
             { label: "Profile Used", value: settings.source_profile || "-" }
           );
         } else {
           summaryRows.push(
-            { label: "Exposure", value: settings.exposure_s == null ? "-" : `${settings.exposure_s} s` },
-            { label: "Bottom Exposure", value: settings.bottom_exposure_s == null ? "-" : `${settings.bottom_exposure_s} s` },
-            { label: "Tilt Speed", value: settings.tilt_speed_mm_min == null ? "-" : `${settings.tilt_speed_mm_min} mm/min` },
-            { label: "Tilt Angle", value: settings.tilt_angle_deg == null ? "-" : `${settings.tilt_angle_deg} deg` },
+            { label: "Exposure", value: settings.exposure_s == null ? "-" : `${settings.exposure_s} s`, helpKey: "exposure" },
+            { label: "Bottom Exposure", value: settings.bottom_exposure_s == null ? "-" : `${settings.bottom_exposure_s} s`, helpKey: "bottom_exposure" },
+            { label: "Tilt Speed", value: settings.tilt_speed_mm_min == null ? "-" : `${settings.tilt_speed_mm_min} mm/min`, helpKey: "tilt_speed" },
+            { label: "Tilt Angle", value: settings.tilt_angle_deg == null ? "-" : `${settings.tilt_angle_deg} deg`, helpKey: "tilt_angle" },
             { label: "Profile Used", value: settings.source_profile || "-" }
           );
         }
 
         summaryRows.push(
-          { label: "Data Quality", value: qualityMap[qualityKey] || qualityKey },
+          { label: "Data Quality", value: qualityMap[qualityKey] || qualityKey, helpKey: "data_quality" },
           {
             label: "Confidence",
             value: provenance.confidence_score == null ? "-" : `${Math.round(Number(provenance.confidence_score) * 100)}%`,
+            helpKey: "confidence",
           }
         );
 
         const summary = document.getElementById("settingsSummary");
         summary.style.display = "block";
         summary.innerHTML = buildSummaryRows(summaryRows);
+        hydrateHelpBadges(summary);
       }
 
       function renderSettingsReferences(provenance) {
@@ -3596,6 +4143,7 @@
       async function init() {
         document.getElementById("printerSel").addEventListener("change", updateResinOptionsForPrinter);
         document.getElementById("modelFile").addEventListener("change", onModelFileSelected);
+        hydrateHelpBadges();
         onDatabaseSourceChanged();
         renderModelInsightPanels();
         updatePreviewModeButtons();

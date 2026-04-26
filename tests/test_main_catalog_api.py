@@ -77,6 +77,11 @@ def test_catalog_admin_page_served(tmp_path, monkeypatch):
     assert response.status_code == 200
     assert "text/html" in response.headers.get("content-type", "")
     assert "Catalog" in response.text
+    assert "/static/geekatplay-mark.svg" in response.text
+    assert "Materials" in response.text
+    assert "Quick Admin Guide" in response.text
+    assert 'data-help-key="profile_layer"' in response.text
+    assert "select option," in response.text
 
 
 def test_catalog_csv_import_endpoint_printers(tmp_path, monkeypatch):

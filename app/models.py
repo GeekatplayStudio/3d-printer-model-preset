@@ -777,6 +777,8 @@ class WizardModelFixResponse(BaseModel):
     analysis: GeometryAnalysis
     repaired: bool
     fully_repaired: bool
+    rechecked_after_fix: bool = True
+    recheck_summary: str
     repair_actions: list[str] = Field(default_factory=list)
     resolved_issues: list[str] = Field(default_factory=list)
     remaining_issues: list[str] = Field(default_factory=list)
