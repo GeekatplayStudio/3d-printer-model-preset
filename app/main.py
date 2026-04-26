@@ -1319,36 +1319,30 @@ def wizard_catalog_options(auth: AuthContext = Depends(require_role("viewer"))) 
         target: {key: sorted(values) for key, values in printer_map.items()}
         for target, printer_map in compatibility_by_target_sets.items()
     }
-    printers_by_target: dict[str, list[str]] = {
-        target: sorted(printer_map.keys())
-        for target, printer_map in compatibility_by_target.items()
-    }
-    materials_by_target: dict[str, list[str]] = {
-        target: sorted({material for values in printer_map.values() for material in values})
-        for target, printer_map in compatibility_by_target.items()
-    }
+    printer_groups: dict[str, set[str]] = {"msla": set(), "fdm": set()}
+    for item in printer_rows:
+        name = str(item.get("name", "")).strip()
+        if not name:
+            continue
+        printer_groups.setdefault(_wizard_target_from_catalog_item(item), set()).add(name)
+    for target, printer_map in compatibility_by_target.items():
+        printer_groups.setdefault(target, set()).update(printer_map.keys())
+    printers_by_target = {key: sorted(values) for key, values in printer_groups.items()}
+
+    material_groups: dict[str, set[str]] = {"msla": set(), "fdm": set()}
+    for item in material_rows:
+        name = str(item.get("name", "")).strip()
+        if not name:
+            continue
+        material_groups.setdefault(_wizard_target_from_catalog_item(item), set()).add(name)
+    for target, printer_map in compatibility_by_target.items():
+        material_groups.setdefault(target, set()).update(
+            material for values in printer_map.values() for material in values
+        )
+    materials_by_target = {key: sorted(values) for key, values in material_groups.items()}
 
     printers = sorted({printer for values in printers_by_target.values() for printer in values})
     resins = sorted({material for values in materials_by_target.values() for material in values})
-
-    if not printers:
-        printer_groups: dict[str, set[str]] = {"msla": set(), "fdm": set()}
-        for item in printer_rows:
-            name = str(item.get("name", "")).strip()
-            if not name:
-                continue
-            printer_groups.setdefault(_wizard_target_from_catalog_item(item), set()).add(name)
-        printers_by_target = {key: sorted(values) for key, values in printer_groups.items()}
-        printers = sorted({name for values in printer_groups.values() for name in values})
-    if not resins:
-        material_groups: dict[str, set[str]] = {"msla": set(), "fdm": set()}
-        for item in material_rows:
-            name = str(item.get("name", "")).strip()
-            if not name:
-                continue
-            material_groups.setdefault(_wizard_target_from_catalog_item(item), set()).add(name)
-        materials_by_target = {key: sorted(values) for key, values in material_groups.items()}
-        resins = sorted({name for values in material_groups.values() for name in values})
 
     targets = [
         target

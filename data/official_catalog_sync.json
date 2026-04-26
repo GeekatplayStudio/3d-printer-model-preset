@@ -1,6 +1,6 @@
 {
   "schema_version": "sync-1.2-official",
-  "updated_at": "2026-04-24",
+  "updated_at": "2026-04-26",
   "replace_existing": false,
   "printers": [
     {
@@ -143,6 +143,81 @@
         ],
         "source_type": "manufacturer_product_page",
         "retrieved_at": "2026-04-21"
+      }
+    },
+    {
+      "name": "Elegoo Mars 4 Ultra",
+      "brand": "Elegoo",
+      "model": "Mars 4 Ultra",
+      "technology": "MSLA",
+      "xy_resolution_um": 18,
+      "build_volume_x_mm": 153.36,
+      "build_volume_y_mm": 77.76,
+      "build_volume_z_mm": 165.0,
+      "tilt_release_supported": false,
+      "wifi_supported": true,
+      "notes": "Official Mars 4 Ultra page lists 18 um XY, Wi-Fi transfer, and a 153.36 x 77.76 x 165 mm build volume.",
+      "metadata": {
+        "manufacturer": "ELEGOO",
+        "xy_resolution_um_exact": {
+          "x": 18.0,
+          "y": 18.0
+        },
+        "source_urls": [
+          "https://us.elegoo.com/products/elegoo-mars-4-ultra-msla-resin-3d-printer-with-9k-mono-lcd"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-26"
+      }
+    },
+    {
+      "name": "Elegoo Mars 4",
+      "brand": "Elegoo",
+      "model": "Mars 4",
+      "technology": "MSLA",
+      "xy_resolution_um": 18,
+      "build_volume_x_mm": 153.36,
+      "build_volume_y_mm": 77.76,
+      "build_volume_z_mm": 175.0,
+      "tilt_release_supported": false,
+      "wifi_supported": false,
+      "notes": "Official Mars 4 page lists 18 um XY and a 153.36 x 77.76 x 175 mm build volume.",
+      "metadata": {
+        "manufacturer": "ELEGOO",
+        "xy_resolution_um_exact": {
+          "x": 18.0,
+          "y": 18.0
+        },
+        "source_urls": [
+          "https://us.elegoo.com/products/elegoo-mars-4-msla-resin-3d-printer-with-9k-mono-lcd"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-26"
+      }
+    },
+    {
+      "name": "Elegoo Mars 3",
+      "brand": "Elegoo",
+      "model": "Mars 3",
+      "technology": "MSLA",
+      "xy_resolution_um": 35,
+      "build_volume_x_mm": 143.0,
+      "build_volume_y_mm": 89.6,
+      "build_volume_z_mm": 175.0,
+      "tilt_release_supported": false,
+      "wifi_supported": false,
+      "notes": "Official Mars 3 page lists 35 um XY and a 143 x 89.6 x 175 mm build volume.",
+      "metadata": {
+        "manufacturer": "ELEGOO",
+        "xy_resolution_um_exact": {
+          "x": 35.0,
+          "y": 35.0
+        },
+        "source_urls": [
+          "https://us.elegoo.com/products/elegoo-mars-3-lcd-3d-printer"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-26"
       }
     },
     {

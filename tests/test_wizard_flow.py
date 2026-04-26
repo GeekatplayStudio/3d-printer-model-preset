@@ -244,6 +244,9 @@ def test_wizard_setup_local_dataset_and_catalog_options(tmp_path, monkeypatch):
     assert options_body["slicers_by_target"]["msla"] == "Chitubox Free"
     assert options_body["slicers_by_target"]["fdm"] == "Ultimaker Cura"
     assert options_body["materials_by_target"]["msla"]
+    assert "Elegoo Mars 4 Ultra" in options_body["printers_by_target"]["msla"]
+    assert "Elegoo Mars 4" in options_body["printers_by_target"]["msla"]
+    assert "Elegoo Mars 3" in options_body["printers_by_target"]["msla"]
     assert options_body["printers_by_target"]["fdm"]
     assert options_body["materials_by_target"]["fdm"]
     assert len(options_body["printers_by_target"]["fdm"]) >= 5
@@ -257,9 +260,16 @@ def test_wizard_setup_local_dataset_and_catalog_options(tmp_path, monkeypatch):
     assert options_body["compatibility_details_by_target"]["fdm"]
 
     printer_details = {item["name"]: item for item in options_body["printer_details_by_target"]["fdm"]}
+    msla_printer_details = {item["name"]: item for item in options_body["printer_details_by_target"]["msla"]}
     material_details = {item["name"]: item for item in options_body["material_details_by_target"]["fdm"]}
 
     assert printer_details["Bambu Lab A1"]["provenance"]["source_priority_tier"] == 2
+    assert msla_printer_details["Elegoo Mars 4 Ultra"]["provenance"]["source_url"].startswith(
+        "https://us.elegoo.com/products/elegoo-mars-4-ultra-msla-resin-3d-printer-with-9k-mono-lcd"
+    )
+    assert msla_printer_details["Elegoo Mars 4"]["provenance"]["source_url"].startswith(
+        "https://us.elegoo.com/products/elegoo-mars-4-msla-resin-3d-printer-with-9k-mono-lcd"
+    )
     assert material_details["Anycubic ABS Filament"]["provenance"]["source_priority_tier"] == 1
     assert material_details["Anycubic ABS Filament"]["provenance"]["source_url"].startswith(
         "https://store.anycubic.com/products/abs-filament"
