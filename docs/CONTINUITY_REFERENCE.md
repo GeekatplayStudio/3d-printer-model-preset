@@ -72,14 +72,15 @@ The checked-in `official_local` bundle currently merges:
 - Every bundled row now carries `source_url`, `source_urls`, `retrieved_at`, `source_type`, `source_priority_tier`, `confidence`, `sync_confidence_score`, and `license_note`.
 - Wizard Step 3 now exposes provenance for the selected printer, material, and preferred compatibility profile without changing the downstream settings-generation flow.
 - Community cross-check rows are intentionally allowed into the merged payload, but import curation should keep stronger Tier 1 and Tier 2 rows when names collide.
-- The `2026-04-26` refresh added Tier 1 Kobra S1 compatibility rows for official Anycubic High Speed PLA and PETG, and replaced the stale Prusament PLA Galaxy Black source URL with the live NFC product page.
-- After the live Docker reseed, `/wizard/database/status` reported 22 curated printers, 26 curated materials, and 47 curated profiles, while `/wizard/catalog/options` exposed 7 FDM printers and 15 FDM materials.
+- The `2026-04-26` refresh added Tier 1 Kobra S1 compatibility rows for official Anycubic High Speed PLA and PETG, replaced the stale Prusament PLA Galaxy Black source URL with the live NFC product page, and expanded the distinct official ELEGOO resin line in the bundled MSLA seed.
+- Startup now writes `official_catalog_seed_state.json` beside the active `tech_catalog.db` and auto-upserts bundled official seed rows when the bundled `updated_at` value changes.
+- After the live Docker refresh, `/wizard/database/status` reported 25 curated printers, 43 curated materials, and 47 curated profiles, while `/wizard/catalog/options` exposed 28 MSLA materials including 18 ELEGOO entries.
 
 ### Wizard Flow
 
 - Step 0 chooses `MSLA / resin` or `FDM / filament`.
 - Step 1 can seed from `official_local`, GitHub JSON, direct web JSON, or supported vendor HTML pages.
-- Step 2 handles STL, GLB, and 3MF analysis, metadata inspection, repair, retopology, progress polling, and cancellation.
+- Step 2 handles STL, GLB, and 3MF analysis, metadata inspection, repair, retopology, progress polling, cancellation, and an STL-only local preview with wire/mesh/solid plus maximize/restore fullscreen mode that mirrors model statistics.
 - Step 3 filters printer/material options by target and now shows selection-step source evidence before export.
 
 ## Anti-Drift Update Rules
@@ -94,7 +95,7 @@ The checked-in `official_local` bundle currently merges:
 Run these before treating catalog or wizard changes as complete:
 
 ```bash
-pytest tests/test_official_catalog_seed.py tests/test_wizard_flow.py -q
+pytest tests/test_official_catalog_seed.py tests/test_wizard_flow.py tests/test_main_catalog_api.py -q
 ```
 
 When the change touches broader sync behavior, also run:

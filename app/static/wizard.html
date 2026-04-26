@@ -782,6 +782,13 @@
         margin-bottom: 10px;
         flex-wrap: wrap;
       }
+      .preview-actions {
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
 
       .mode-switch {
         display: inline-flex;
@@ -799,6 +806,38 @@
       .mode-switch button.active {
         background: var(--primary);
         color: #ffffff;
+      }
+      .preview-maximize-btn {
+        width: 42px;
+        min-width: 42px;
+        min-height: 42px;
+        padding: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #20364a;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      }
+
+      .preview-maximize-btn svg {
+        width: 18px;
+        height: 18px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .preview-workspace {
+        display: grid;
+        gap: 10px;
+      }
+
+      .preview-stage-column {
+        display: grid;
+        gap: 10px;
+        min-width: 0;
       }
 
       .preview-stage {
@@ -837,6 +876,71 @@
         flex-wrap: wrap;
         gap: 8px;
         pointer-events: none;
+      }
+      .preview-stats-overlay {
+        display: none;
+        min-width: 0;
+        border: 1px solid #29425a;
+        border-radius: 12px;
+        padding: 12px;
+        background: linear-gradient(180deg, rgba(10, 20, 32, 0.98) 0%, rgba(7, 15, 24, 0.98) 100%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      }
+
+      .preview-stats-overlay .summary {
+        margin-top: 12px;
+      }
+
+      body.preview-maximized-active {
+        overflow: hidden;
+      }
+
+      #modelPreviewPanel.preview-maximized {
+        position: fixed;
+        inset: 16px;
+        z-index: 1200;
+        margin-top: 0;
+        padding: 16px;
+        border-radius: 18px;
+        border-color: rgba(116, 176, 210, 0.4);
+        background: linear-gradient(160deg, rgba(12, 22, 34, 0.98) 0%, rgba(7, 15, 24, 0.99) 100%);
+        box-shadow: 0 28px 68px rgba(2, 8, 14, 0.72);
+      }
+
+      #modelPreviewPanel.preview-maximized .preview-workspace {
+        grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.95fr);
+        align-items: stretch;
+        min-height: calc(100vh - 146px);
+      }
+
+      #modelPreviewPanel.preview-maximized .preview-stage-column {
+        min-height: 0;
+      }
+
+      #modelPreviewPanel.preview-maximized .preview-stage {
+        min-height: 100%;
+        height: 100%;
+      }
+
+      #modelPreviewPanel.preview-maximized #modelPreviewCanvas {
+        height: 100%;
+      }
+
+      #modelPreviewPanel.preview-maximized .preview-stats-overlay {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+
+      #modelPreviewPanel.preview-maximized .preview-stats-overlay .summary {
+        display: block;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: auto;
+      }
+
+      #modelPreviewPanel.preview-maximized #modelPreviewHint {
+        margin-top: 0;
       }
 
       .analysis-scan-line {
@@ -1012,6 +1116,26 @@
 
         #modelPreviewCanvas {
           height: 300px;
+        }
+      }
+      @media (max-width: 1100px) {
+        #modelPreviewPanel.preview-maximized {
+          inset: 10px;
+          padding: 12px;
+        }
+
+        #modelPreviewPanel.preview-maximized .preview-workspace {
+          grid-template-columns: 1fr;
+          grid-template-rows: minmax(0, 1fr) auto;
+          min-height: calc(100vh - 120px);
+        }
+
+        #modelPreviewPanel.preview-maximized .preview-stage {
+          min-height: 320px;
+        }
+
+        #modelPreviewPanel.preview-maximized .preview-stats-overlay {
+          max-height: 34vh;
         }
       }
     </style>
@@ -1269,25 +1393,53 @@
                   <div class="check-title">3D Model Preview</div>
                   <div class="tiny" id="modelPreviewStatus">Load a model to inspect metadata and run analysis. STL files also get a local wire, mesh, and solid preview.</div>
                 </div>
-                <div class="mode-switch">
-                  <button id="previewWireBtn" type="button" class="secondary" onclick="setPreviewMode('wire')">Wire</button>
-                  <button id="previewMeshBtn" type="button" class="secondary" onclick="setPreviewMode('mesh')">Mesh</button>
-                  <button id="previewSolidBtn" type="button" class="secondary" onclick="setPreviewMode('solid')">Solid</button>
+                <div class="preview-actions">
+                  <div class="mode-switch">
+                    <button id="previewWireBtn" type="button" class="secondary" onclick="setPreviewMode('wire')">Wire</button>
+                    <button id="previewMeshBtn" type="button" class="secondary" onclick="setPreviewMode('mesh')">Mesh</button>
+                    <button id="previewSolidBtn" type="button" class="secondary" onclick="setPreviewMode('solid')">Solid</button>
+                  </div>
+                  <button
+                    id="togglePreviewMaximizeBtn"
+                    type="button"
+                    class="secondary preview-maximize-btn"
+                    onclick="togglePreviewMaximized()"
+                    aria-pressed="false"
+                    aria-label="Maximize model preview"
+                    title="Maximize model preview"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path id="previewMaximizeIcon" d="M9 4H4v5 M15 4h5v5 M20 15v5h-5 M4 15v5h5 M9 4L4 9 M15 4l5 5 M20 15l-5 5 M9 20l-5-5"></path>
+                    </svg>
+                  </button>
                 </div>
               </div>
-              <div id="modelPreviewViewport" class="preview-stage">
-                <canvas id="modelPreviewCanvas"></canvas>
-                <div id="modelPreviewEmpty" class="preview-empty">
-                  Load an STL to preview it here. GLB and 3MF files can still be analyzed, but the local preview runtime stays STL-only for now.
+              <div class="preview-workspace">
+                <div class="preview-stage-column">
+                  <div id="modelPreviewViewport" class="preview-stage">
+                    <canvas id="modelPreviewCanvas"></canvas>
+                    <div id="modelPreviewEmpty" class="preview-empty">
+                      Load an STL to preview it here. GLB and 3MF files can still be analyzed, but the local preview runtime stays STL-only for now.
+                    </div>
+                    <div id="analysisScanLine" class="analysis-scan-line" style="display:none"></div>
+                    <div class="preview-hud">
+                      <span class="progress-chip" id="modelPreviewSource">Source: none</span>
+                      <span class="progress-chip" id="modelPreviewCounts">Triangles: -</span>
+                      <span class="progress-chip" id="modelPreviewModeChip">View: mesh</span>
+                    </div>
+                  </div>
+                  <div class="tiny" id="modelPreviewHint">Idle preview auto-rotates after load. Analysis scan pauses rotation to reduce GPU use.</div>
                 </div>
-                <div id="analysisScanLine" class="analysis-scan-line" style="display:none"></div>
-                <div class="preview-hud">
-                  <span class="progress-chip" id="modelPreviewSource">Source: none</span>
-                  <span class="progress-chip" id="modelPreviewCounts">Triangles: -</span>
-                  <span class="progress-chip" id="modelPreviewModeChip">View: mesh</span>
+
+                <div id="modelPreviewStatsOverlay" class="preview-stats-overlay">
+                  <div class="panel-title">
+                    <strong>Model Statistics</strong>
+                    <span class="status-badge status-info" id="modelPreviewStatsBadge">Waiting</span>
+                  </div>
+                  <div class="tiny" id="modelPreviewStatsSummary">Load and analyze an STL to populate geometry statistics.</div>
+                  <div id="modelPreviewStatsTable" class="summary" style="display:none"></div>
                 </div>
               </div>
-              <div class="tiny" id="modelPreviewHint">Idle preview auto-rotates after load. Analysis scan pauses rotation to reduce GPU use.</div>
             </div>
 
             <div id="modelStatsPanel" class="catalog-panel">
@@ -1461,6 +1613,7 @@
           sourceLabel: "none",
           geometryStats: null,
           analysisScanActive: false,
+          maximized: false,
         },
       };
 
@@ -1929,6 +2082,8 @@
               runtime.renderFrame();
             };
 
+            runtime.resize = resize;
+
             if (window.ResizeObserver) {
               new ResizeObserver(resize).observe(container);
             } else {
@@ -2007,6 +2162,43 @@
           button.classList.toggle("active", mode === activeMode);
           button.disabled = state.preview.analysisScanActive;
         });
+      }
+
+      function updatePreviewMaximizeButton() {
+        const button = document.getElementById("togglePreviewMaximizeBtn");
+        const panel = document.getElementById("modelPreviewPanel");
+        const icon = document.getElementById("previewMaximizeIcon");
+        const maximized = Boolean(state.preview.maximized);
+        const label = maximized ? "Restore model preview size" : "Maximize model preview";
+
+        panel.classList.toggle("preview-maximized", maximized);
+        document.body.classList.toggle("preview-maximized-active", maximized);
+        button.setAttribute("aria-pressed", maximized ? "true" : "false");
+        button.setAttribute("aria-label", label);
+        button.setAttribute("title", label);
+        icon.setAttribute(
+          "d",
+          maximized
+            ? "M9 4H4v5 M15 4h5v5 M20 15v5h-5 M4 15v5h5 M10 10L4 4 M14 10l6-6 M14 14l6 6 M10 14l-6 6"
+            : "M9 4H4v5 M15 4h5v5 M20 15v5h-5 M4 15v5h5 M9 4L4 9 M15 4l5 5 M20 15l-5 5 M9 20l-5-5"
+        );
+
+        window.requestAnimationFrame(() => {
+          if (previewRuntime && typeof previewRuntime.resize === "function") {
+            previewRuntime.resize();
+          }
+        });
+      }
+
+      function togglePreviewMaximized(forceValue = null) {
+        state.preview.maximized = typeof forceValue === "boolean" ? forceValue : !state.preview.maximized;
+        updatePreviewMaximizeButton();
+      }
+
+      function handlePreviewKeydown(event) {
+        if (event.key === "Escape" && state.preview.maximized) {
+          togglePreviewMaximized(false);
+        }
       }
 
       function updatePreviewHud() {
@@ -2160,18 +2352,17 @@
         }
       }
 
-      function renderModelStatsPanel() {
+      function buildModelStatsPanelState() {
         const analysis = currentAnalysisResult();
         const previewStats = state.preview.geometryStats;
-        const table = document.getElementById("modelStatsTable");
-        const summary = document.getElementById("modelStatsSummary");
 
         if (!analysis && !previewStats) {
-          setPanelBadge("modelStatsBadge", "info", "Waiting");
-          summary.textContent = "Load and analyze an STL to populate geometry statistics.";
-          table.style.display = "none";
-          table.innerHTML = "";
-          return;
+          return {
+            badgeTone: "info",
+            badgeText: "Waiting",
+            summaryText: "Load and analyze an STL to populate geometry statistics.",
+            rows: [],
+          };
         }
 
         const rows = [];
@@ -2213,20 +2404,34 @@
           rows.push({ label: "Preview Size Z", value: formatMetric(previewStats.sizeMm[2], "mm", 2) });
         }
 
-        setPanelBadge(
-          "modelStatsBadge",
-          state.lastRetopologyResult ? "pass" : state.fixedAnalysis ? "pass" : analysis ? "info" : "warn",
-          state.lastRetopologyResult ? "Retopo" : state.fixedAnalysis ? "Fixed" : analysis ? "Analyzed" : "Preview"
-        );
-        summary.textContent = !analysis
-          ? "Preview geometry is loaded. Run Analyze Model to add printability and defect statistics."
-          : state.lastRetopologyResult
-            ? `Retopology result is active. Statistics now reflect the remeshed STL analyzed at ${analysis.analysis_level} depth.`
-            : state.fixedAnalysis
-              ? `Analysis level: ${analysis.analysis_level}. Auto-Fix re-checked the saved repaired STL, and the metrics below reflect that verified result.`
-              : `Analysis level: ${analysis.analysis_level}. Preview and computed printability metrics are shown together.`;
-        table.style.display = rows.length ? "block" : "none";
-        table.innerHTML = rows.length ? buildSummaryRows(rows) : "";
+        return {
+          badgeTone: state.lastRetopologyResult ? "pass" : state.fixedAnalysis ? "pass" : analysis ? "info" : "warn",
+          badgeText: state.lastRetopologyResult ? "Retopo" : state.fixedAnalysis ? "Fixed" : analysis ? "Analyzed" : "Preview",
+          summaryText: !analysis
+            ? "Preview geometry is loaded. Run Analyze Model to add printability and defect statistics."
+            : state.lastRetopologyResult
+              ? `Retopology result is active. Statistics now reflect the remeshed STL analyzed at ${analysis.analysis_level} depth.`
+              : state.fixedAnalysis
+                ? `Analysis level: ${analysis.analysis_level}. Auto-Fix re-checked the saved repaired STL, and the metrics below reflect that verified result.`
+                : `Analysis level: ${analysis.analysis_level}. Preview and computed printability metrics are shown together.`,
+          rows,
+        };
+      }
+
+      function renderModelStatsInto(badgeId, summaryId, tableId) {
+        const table = document.getElementById(tableId);
+        const summary = document.getElementById(summaryId);
+        const panelState = buildModelStatsPanelState();
+
+        setPanelBadge(badgeId, panelState.badgeTone, panelState.badgeText);
+        summary.textContent = panelState.summaryText;
+        table.style.display = panelState.rows.length ? "block" : "none";
+        table.innerHTML = panelState.rows.length ? buildSummaryRows(panelState.rows) : "";
+      }
+
+      function renderModelStatsPanel() {
+        renderModelStatsInto("modelStatsBadge", "modelStatsSummary", "modelStatsTable");
+        renderModelStatsInto("modelPreviewStatsBadge", "modelPreviewStatsSummary", "modelPreviewStatsTable");
       }
 
       function metadataStatusLabel(value) {
@@ -4488,10 +4693,12 @@
         document.getElementById("printerSel").addEventListener("change", updateResinOptionsForPrinter);
         document.getElementById("resinSel").addEventListener("change", renderCatalogSelectionProvenance);
         document.getElementById("modelFile").addEventListener("change", onModelFileSelected);
+        document.addEventListener("keydown", handlePreviewKeydown);
         hydrateHelpBadges();
         onDatabaseSourceChanged();
         renderModelInsightPanels();
         updatePreviewModeButtons();
+        updatePreviewMaximizeButton();
         await Promise.allSettled([refreshStatus(), refreshOptions()]);
       }
 

@@ -602,6 +602,261 @@
       }
     },
     {
+      "name": "ELEGOO Tough Resin",
+      "brand": "ELEGOO",
+      "series": "Tough Resin",
+      "technical_goal": "Impact-resistant functional parts",
+      "notes": "Official ELEGOO tough resin listing.",
+      "metadata": {
+        "manufacturer": "ELEGOO",
+        "source_urls": [
+          "https://us.elegoo.com/collections/resin/products/elegoo-tough-resin"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-26"
+      }
+    },
+    {
+      "name": "ELEGOO Standard Resin V2.0",
+      "brand": "ELEGOO",
+      "series": "Standard Resin V2.0",
+      "technical_goal": "Balanced general-purpose resin printing",
+      "notes": "Official ELEGOO Standard Resin V2.0 listing.",
+      "metadata": {
+        "manufacturer": "ELEGOO",
+        "source_urls": [
+          "https://us.elegoo.com/collections/resin/products/elegoo-standard-resin-v-2-0"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-26"
+      }
+    },
+    {
+      "name": "ELEGOO Standard Resin",
+      "brand": "ELEGOO",
+      "series": "Standard Resin",
+      "technical_goal": "General-purpose display and prototype prints",
+      "notes": "Official ELEGOO Standard Resin listing.",
+      "metadata": {
+        "manufacturer": "ELEGOO",
+        "source_urls": [
+          "https://us.elegoo.com/collections/resin/products/elegoo-standard-resin"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-26"
+      }
+    },
+    {
+      "name": "ELEGOO 8K ABS-Like Resin V3.0",
+      "brand": "ELEGOO",
+      "series": "8K ABS-Like Resin V3.0",
+      "technical_goal": "High-detail functional resin parts",
+      "notes": "Official ELEGOO 8K ABS-Like Resin V3.0 listing.",
+      "metadata": {
+        "manufacturer": "ELEGOO",
+        "source_urls": [
+          "https://us.elegoo.com/collections/resin/products/elegoo-8k-abs-like-resin-v-3-0"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-26"
+      }
+    },
+    {
+      "name": "ELEGOO ABS-Like Resin V3.0 Pro",
+      "brand": "ELEGOO",
+      "series": "ABS-Like Resin V3.0 Pro",
+      "technical_goal": "Stronger engineering-style parts",
+      "notes": "Official ELEGOO ABS-Like Resin V3.0 Pro listing.",
+      "metadata": {
+        "manufacturer": "ELEGOO",
+        "source_urls": [
+          "https://us.elegoo.com/collections/resin/products/elegoo-abs-like-resin-v-3-0-pro"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-26"
+      }
+    },
+    {
+      "name": "ELEGOO ABS-Like Resin V3.0+",
+      "brand": "ELEGOO",
+      "series": "ABS-Like Resin V3.0+",
+      "technical_goal": "Durable all-purpose functional prints",
+      "notes": "Official ELEGOO ABS-Like Resin V3.0+ listing.",
+      "metadata": {
+        "manufacturer": "ELEGOO",
+        "source_urls": [
+          "https://us.elegoo.com/collections/resin/products/elegoo-abs-like-resin-v-3-0-plus"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-26"
+      }
+    },
+    {
+      "name": "ELEGOO ABS-Like Resin V3.0",
+      "brand": "ELEGOO",
+      "series": "ABS-Like Resin V3.0",
+      "technical_goal": "Impact-resistant general-purpose parts",
+      "notes": "Official ELEGOO ABS-Like Resin V3.0 listing.",
+      "metadata": {
+        "manufacturer": "ELEGOO",
+        "source_urls": [
+          "https://us.elegoo.com/collections/resin/products/elegoo-abs-like-resin-v-3-0"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-26"
+      }
+    },
+    {
+      "name": "ELEGOO ABS-Like Resin V2.0",
+      "brand": "ELEGOO",
+      "series": "ABS-Like Resin V2.0",
+      "technical_goal": "Earlier ABS-like functional workflow",
+      "notes": "Official ELEGOO ABS-Like Resin V2.0 listing.",
+      "metadata": {
+        "manufacturer": "ELEGOO",
+        "source_urls": [
+          "https://us.elegoo.com/collections/resin/products/elegoo-abs-like-resin-v-2-0"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-26"
+      }
+    },
+    {
+      "name": "ELEGOO ABS-Like Resin",
+      "brand": "ELEGOO",
+      "series": "ABS-Like Resin",
+      "technical_goal": "Legacy ABS-like balanced strength resin",
+      "notes": "Official ELEGOO ABS-Like Resin listing.",
+      "metadata": {
+        "manufacturer": "ELEGOO",
+        "source_urls": [
+          "https://us.elegoo.com/collections/resin/products/elegoo-abs-like-resin"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-26"
+      }
+    },
+    {
+      "name": "ELEGOO ABS-Like Ultra Resin",
+      "brand": "ELEGOO",
+      "series": "ABS-Like Ultra Resin",
+      "technical_goal": "High-impact models with brighter color options",
+      "notes": "Official ELEGOO ABS-Like Ultra Resin listing.",
+      "metadata": {
+        "manufacturer": "ELEGOO",
+        "source_urls": [
+          "https://us.elegoo.com/collections/resin/products/elegoo-abs-like-ultra-resin"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-26"
+      }
+    },
+    {
+      "name": "ELEGOO 8K Water-Washable Resin",
+      "brand": "ELEGOO",
+      "series": "8K Water-Washable Resin",
+      "technical_goal": "High-detail water-cleanable prints",
+      "notes": "Official ELEGOO 8K Water-Washable Resin listing.",
+      "metadata": {
+        "manufacturer": "ELEGOO",
+        "source_urls": [
+          "https://us.elegoo.com/collections/resin/products/elegoo-8k-water-washable-resin"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-26"
+      }
+    },
+    {
+      "name": "ELEGOO Water-Washable Resin V2.0",
+      "brand": "ELEGOO",
+      "series": "Water-Washable Resin V2.0",
+      "technical_goal": "Updated water-cleanable resin workflow",
+      "notes": "Official ELEGOO Water-Washable Resin V2.0 listing.",
+      "metadata": {
+        "manufacturer": "ELEGOO",
+        "source_urls": [
+          "https://us.elegoo.com/collections/resin/products/elegoo-water-washable-resin-v-2-0"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-26"
+      }
+    },
+    {
+      "name": "ELEGOO Water-Washable Resin",
+      "brand": "ELEGOO",
+      "series": "Water-Washable Resin",
+      "technical_goal": "Water-cleanable general-purpose prints",
+      "notes": "Official ELEGOO Water-Washable Resin listing.",
+      "metadata": {
+        "manufacturer": "ELEGOO",
+        "source_urls": [
+          "https://us.elegoo.com/collections/resin/products/elegoo-water-washable-resin"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-26"
+      }
+    },
+    {
+      "name": "ELEGOO Water-Washable ABS-Like Resin",
+      "brand": "ELEGOO",
+      "series": "Water-Washable ABS-Like Resin",
+      "technical_goal": "Water-cleanable tougher functional parts",
+      "notes": "Official ELEGOO Water-Washable ABS-Like Resin listing.",
+      "metadata": {
+        "manufacturer": "ELEGOO",
+        "source_urls": [
+          "https://us.elegoo.com/collections/resin/products/elegoo-water-washable-abs-like-resin"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-26"
+      }
+    },
+    {
+      "name": "ELEGOO Rapid Standard Resin",
+      "brand": "ELEGOO",
+      "series": "Rapid Standard Resin",
+      "technical_goal": "Fast-curing high-throughput printing",
+      "notes": "Official ELEGOO Rapid Standard Resin listing.",
+      "metadata": {
+        "manufacturer": "ELEGOO",
+        "source_urls": [
+          "https://us.elegoo.com/collections/resin/products/elegoo-rapid-standard-resin"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-26"
+      }
+    },
+    {
+      "name": "ELEGOO Plant-Based Resin",
+      "brand": "ELEGOO",
+      "series": "Plant-Based Resin",
+      "technical_goal": "Lower-odor plant-based printing",
+      "notes": "Official ELEGOO Plant-Based Resin listing.",
+      "metadata": {
+        "manufacturer": "ELEGOO",
+        "source_urls": [
+          "https://us.elegoo.com/collections/resin/products/elegoo-plant-based-resin"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-26"
+      }
+    },
+    {
+      "name": "ELEGOO Standard Plant-Based Resin",
+      "brand": "ELEGOO",
+      "series": "Standard Plant-Based Resin",
+      "technical_goal": "Updated plant-based general-purpose printing",
+      "notes": "Official ELEGOO Standard Plant-Based Resin listing.",
+      "metadata": {
+        "manufacturer": "ELEGOO",
+        "source_urls": [
+          "https://us.elegoo.com/collections/resin/products/elegoo-standard-plant-based-resin"
+        ],
+        "source_type": "manufacturer_product_page",
+        "retrieved_at": "2026-04-26"
+      }
+    },
+    {
       "name": "Phrozen Aqua 8K Resin",
       "brand": "Phrozen",
       "series": "Aqua 8K",

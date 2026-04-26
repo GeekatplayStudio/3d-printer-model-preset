@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 import app.main as main
-from app.catalog_store import init_catalog_store
+from app.catalog_store import create_or_upsert_resin, init_catalog_store, list_resins
 
 
 def _analysis_payload() -> dict:
@@ -67,6 +67,44 @@ endfacet
 endsolid tetra
 """
     return text.encode("utf-8")
+
+
+def test_official_seed_refresh_bootstraps_stale_catalog_without_wiping_existing_rows(tmp_path, monkeypatch) -> None:
+    catalog_path = tmp_path / "catalog.db"
+    state_path = tmp_path / "official_catalog_state.json"
+    init_catalog_store(db_path=catalog_path)
+    create_or_upsert_resin({"name": "Custom Resin", "brand": "Local"}, db_path=catalog_path)
+
+    monkeypatch.setattr(
+        main,
+        "_read_official_sync_payload",
+        lambda: {
+            "updated_at": "2026-04-26",
+            "replace_existing": False,
+            "printers": [],
+            "resins": [
+                {
+                    "name": "ELEGOO Tough Resin",
+                    "brand": "ELEGOO",
+                    "series": "Tough Resin",
+                    "technical_goal": "Impact-resistant functional parts",
+                }
+            ],
+            "profiles": [],
+        },
+    )
+
+    first = main._refresh_official_catalog_seed_if_needed(db_path=catalog_path, state_path=state_path)
+
+    assert first is not None
+    resin_names = [item["name"] for item in list_resins(db_path=catalog_path, limit=1000)]
+    assert "Custom Resin" in resin_names
+    assert "ELEGOO Tough Resin" in resin_names
+    assert state_path.exists()
+
+    second = main._refresh_official_catalog_seed_if_needed(db_path=catalog_path, state_path=state_path)
+
+    assert second is None
 
 
 def test_catalog_admin_page_served(tmp_path, monkeypatch):

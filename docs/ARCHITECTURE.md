@@ -69,7 +69,7 @@ It also prepares the wizard artifact directory and wires in-memory objects for:
 - request metrics,
 - optional background schedule execution.
 
-This design keeps the runtime local-first and avoids needing a separate managed database for normal use. Under Docker Compose, the data directory is mounted from `./local-data`, so container rebuilds do not automatically replace the persisted catalog DB.
+This design keeps the runtime local-first and avoids needing a separate managed database for normal use. Under Docker Compose, the data directory is mounted from `./local-data`, so container rebuilds do not replace the persisted catalog DB wholesale. To keep the bundled official seed current, startup now records `official_catalog_seed_state.json` beside the active catalog DB and automatically upserts bundled official seed rows when the bundled `updated_at` value is newer than the last recorded seed import or no seed state file exists.
 
 ### 2. Wizard Flow
 
@@ -79,7 +79,7 @@ The user journey is:
 
 1. choose the target process (`MSLA / resin` or `FDM / filament`),
 2. seed or update the local catalog from the official dataset or a remote source,
-3. upload an STL, GLB, or 3MF model and run geometry analysis,
+3. upload an STL, GLB, or 3MF model, inspect the local preview, and run geometry analysis,
 4. optionally auto-fix or retopologize the mesh,
 5. select a compatible printer and material for the chosen target,
 6. generate slicer-ready settings and download the resulting export.
@@ -94,11 +94,12 @@ The browser code in [app/static/wizard.html](../app/static/wizard.html) talks to
 - remote catalog sources can be saved as schedules and manually triggered,
 - repaired STL and settings downloads are fetched through auth-aware browser requests when server-mode auth is enabled,
 - local browser preview remains STL-only even though analysis accepts STL, GLB, and 3MF,
+- STL preview supports wire, mesh, and solid modes plus a maximize/restore overlay that mirrors the model statistics panel,
 - cancellation is cooperative and checked inside the geometry engine.
 
 Wizard Step 1 catalog modes are:
 
-- `official_local`: bundled `data/official_catalog_sync.json`,
+- `official_local`: bundled official catalog aggregator slices loaded through `app/official_catalog.py`,
 - `github`: normalized sync JSON from a GitHub repo/path/ref,
 - `web_json`: normalized sync JSON from a direct web URL,
 - `web_scrape`: supported vendor pages translated into normalized catalog rows.

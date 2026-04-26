@@ -68,6 +68,7 @@ Primary modules: `app/feedback_sources.py`, `app/feedback_store.py`, `app/camera
 - `[x]` material typing and FDM/filament profile support without breaking resin compatibility
 - `[x]` provenance-backed official catalog aggregator with multi-slice bundled seed inputs
 - `[x]` row-aware dedupe that prefers stronger source tier and row confidence over file order
+- `[x]` startup refresh for bundled official seed updates without wiping operator-added catalog rows
 - `[ ]` migration/version policy for schema changes
 - `[~]` broader trust gating and validation coverage for remote/community bulk ingestion
 
@@ -84,6 +85,7 @@ Primary modules: `app/catalog_store.py`, `app/audit_store.py`, `app/static/catal
 - `[x]` unified ops console (`/app`)
 - `[x]` wizard analysis live progress, per-stage timings, and cancel flow
 - `[x]` wizard local 3D preview, repair report, and retopology report surfaces
+- `[x]` Step 2 maximize/restore preview overlay with embedded model statistics mirror
 - `[ ]` workflow-specific dashboards and SLO alerting presets
 
 Primary modules: `app/auth.py`, `app/job_queue.py`, `app/scheduler.py`, `app/monitoring.py`, `app/static/app.html`

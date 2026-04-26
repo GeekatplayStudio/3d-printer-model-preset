@@ -13,3 +13,4 @@ uploads/
 *.db
 .resinlogic/
 local-data/
+docker-rebuild.log

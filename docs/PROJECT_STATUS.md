@@ -37,6 +37,7 @@ The immediate production target started around Elegoo Mars 5 Ultra behavior. The
 - Wizard model workflow with:
   - always-visible local 3D preview for STL uploads,
   - wire/mesh/solid render modes,
+  - maximize/restore fullscreen preview with the live model statistics mirrored into the expanded preview pane,
   - a dedicated model metadata panel with best-effort author, software, timestamp, and AI/tool hints,
   - repair and retopology report panels,
   - live preview scan state during long-running analysis,
@@ -74,16 +75,18 @@ The immediate production target started around Elegoo Mars 5 Ultra behavior. The
 - Wizard catalog refresh and remote update support:
   - Step 1 now exposes explicit catalog source selection,
   - local setup can still seed from the bundled official dataset,
+  - startup now auto-upserts newer bundled official seed rows into persisted local catalogs without wiping manual rows,
   - remote setup can now pull normalized sync JSON from GitHub or a direct web URL,
   - Step 1 can also scrape supported vendor web pages into normalized printer/material/profile records,
   - supported page scraping currently targets Anycubic official product pages and the official Anycubic resin settings guide,
   - remote sources can be saved as wizard auto-update schedules and triggered manually from the wizard.
 - Bundled official seed dataset refreshed through `2026-04-26` and now ships as a four-slice provenance-backed aggregator:
+  - expanded distinct official ELEGOO resin coverage for the MSLA catalog,
   - conservative MSLA baseline,
   - FDM printer and generic filament expansion,
   - manufacturer-backed filament rows and normalized FDM profiles,
   - community cross-check duplicates held behind row-aware dedupe rules.
-- Live Docker reseed revalidated the bundled catalog against the running wizard endpoints with 7 curated FDM printers, 15 curated FDM materials, and 47 curated compatibility profiles in `/wizard/catalog/options` and `/wizard/database/status`.
+- Live Docker revalidation after the bundled-seed refresh reported 25 curated printers, 43 curated materials, and 47 curated compatibility profiles in `/wizard/database/status`, with 28 MSLA materials visible in `/wizard/catalog/options`, including 18 ELEGOO material entries.
 - Wizard Step 3 provenance surface now shows source tier, confidence, and source links for the selected printer, material, and preferred compatibility profile.
 - Version snapshots and restore.
 - Audit logs for all key catalog mutations.

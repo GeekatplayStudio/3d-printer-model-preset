@@ -211,6 +211,8 @@ def test_wizard_ui_and_status_route(tmp_path, monkeypatch):
     assert "select option," in ui.text
     assert "dbScanPanel" in ui.text
     assert "modelPreviewPanel" in ui.text
+    assert "togglePreviewMaximizeBtn" in ui.text
+    assert "modelPreviewStatsOverlay" in ui.text
     assert "modelStatsPanel" in ui.text
     assert "modelMetadataPanel" in ui.text
     assert "modelRepairPanel" in ui.text
@@ -303,6 +305,9 @@ def test_wizard_setup_local_dataset_and_catalog_options(tmp_path, monkeypatch):
     assert "Elegoo Mars 4 Ultra" in options_body["printers_by_target"]["msla"]
     assert "Elegoo Mars 4" in options_body["printers_by_target"]["msla"]
     assert "Elegoo Mars 3" in options_body["printers_by_target"]["msla"]
+    assert "ELEGOO Tough Resin" in options_body["materials_by_target"]["msla"]
+    assert "ELEGOO Water-Washable ABS-Like Resin" in options_body["materials_by_target"]["msla"]
+    assert "ELEGOO Standard Plant-Based Resin" in options_body["materials_by_target"]["msla"]
     assert options_body["printers_by_target"]["fdm"]
     assert options_body["materials_by_target"]["fdm"]
     assert len(options_body["printers_by_target"]["fdm"]) >= 5
@@ -317,6 +322,7 @@ def test_wizard_setup_local_dataset_and_catalog_options(tmp_path, monkeypatch):
 
     printer_details = {item["name"]: item for item in options_body["printer_details_by_target"]["fdm"]}
     msla_printer_details = {item["name"]: item for item in options_body["printer_details_by_target"]["msla"]}
+    msla_material_details = {item["name"]: item for item in options_body["material_details_by_target"]["msla"]}
     material_details = {item["name"]: item for item in options_body["material_details_by_target"]["fdm"]}
 
     assert printer_details["Bambu Lab A1"]["provenance"]["source_priority_tier"] == 2
@@ -325,6 +331,10 @@ def test_wizard_setup_local_dataset_and_catalog_options(tmp_path, monkeypatch):
     )
     assert msla_printer_details["Elegoo Mars 4"]["provenance"]["source_url"].startswith(
         "https://us.elegoo.com/products/elegoo-mars-4-msla-resin-3d-printer-with-9k-mono-lcd"
+    )
+    assert msla_material_details["ELEGOO Water-Washable ABS-Like Resin"]["provenance"]["source_priority_tier"] == 1
+    assert msla_material_details["ELEGOO Water-Washable ABS-Like Resin"]["provenance"]["source_url"].startswith(
+        "https://us.elegoo.com/collections/resin/products/elegoo-water-washable-abs-like-resin"
     )
     assert material_details["Anycubic ABS Filament"]["provenance"]["source_priority_tier"] == 1
     assert material_details["Anycubic ABS Filament"]["provenance"]["source_url"].startswith(

@@ -43,7 +43,7 @@ def test_official_seed_imports_with_sync_pipeline(tmp_path: Path) -> None:
     )
 
     assert result["printers_upserted"] >= 7
-    assert result["resins_upserted"] >= 12
+    assert result["resins_upserted"] >= 25
     assert result["profiles_upserted"] >= 35
 
     printers = list_printers(db_path=db_path)
@@ -51,7 +51,7 @@ def test_official_seed_imports_with_sync_pipeline(tmp_path: Path) -> None:
     profiles = list_profiles(db_path=db_path, active_only=False)
 
     assert len(printers) >= 7
-    assert len(resins) >= 12
+    assert len(resins) >= 25
     assert len(profiles) >= 35
     assert any(isinstance(item.get("metadata"), dict) and item["metadata"].get("source_urls") for item in profiles)
     assert any(str(item.get("technology", "")).upper() == "FDM" for item in printers)
@@ -61,6 +61,9 @@ def test_official_seed_imports_with_sync_pipeline(tmp_path: Path) -> None:
     assert any(item.get("name") == "Elegoo Mars 4 Ultra" for item in printers)
     assert any(item.get("name") == "Elegoo Mars 4" for item in printers)
     assert any(item.get("name") == "Elegoo Mars 3" for item in printers)
+    assert any(item.get("name") == "ELEGOO Tough Resin" for item in resins)
+    assert any(item.get("name") == "ELEGOO Water-Washable ABS-Like Resin" for item in resins)
+    assert any(item.get("name") == "ELEGOO Standard Plant-Based Resin" for item in resins)
     assert any(item.get("name") == "Generic ABS" for item in resins)
     assert any(item.get("name") == "Anycubic ABS Filament" for item in resins)
     assert any(item.get("name") == "Prusament PA11 Carbon Fiber Black 800g (NFC)" for item in resins)

@@ -14,18 +14,18 @@ Legacy compatibility note: internal package names, environment variables, SQLite
   - supported vendor HTML pages.
 - STL, GLB, and 3MF analysis, repair, retopology, live progress polling, cooperative cancel, and post-repair save/recheck verification.
 - Wizard model metadata inspection for STL, GLB, and 3MF uploads with best-effort author, software, timestamp, and AI/tool hints.
-- Local 3D preview for STL uploads, with clear in-app fallback messaging when the selected upload is GLB or 3MF.
+- Local 3D preview for STL uploads, with wire/mesh/solid modes, maximize/restore fullscreen inspection, mirrored statistics in the expanded preview, and clear in-app fallback messaging when the selected upload is GLB or 3MF.
 - Settings generation with provenance, confidence, and downloadable slicer artifacts.
 - Chitubox Free export for MSLA and Ultimaker Cura profile export for FDM.
 - Step 3 selection-stage provenance panel showing source tier, confidence, and source link for the chosen printer, material, and preferred profile.
 - Catalog CRUD, CSV/JSON import/export, version snapshots, audit logs, jobs, schedules, and Prometheus metrics.
-- Source-attributed official seed data updated through `2026-04-26`, now merged as a provenance-backed catalog aggregator with manufacturer-backed filament rows, community cross-check slices, expanded FDM printers, generic filament references, refreshed live Prusament PLA provenance, and normalized FDM profiles.
+- Source-attributed official seed data updated through `2026-04-26`, now merged as a provenance-backed catalog aggregator with expanded distinct official ELEGOO resin coverage, manufacturer-backed filament rows, community cross-check slices, expanded FDM printers, generic filament references, refreshed live Prusament PLA provenance, normalized FDM profiles, and startup auto-refresh for persisted local catalogs when the bundled seed version changes.
 
 ## End-To-End Workflow
 
 1. Open `/wizard` and choose the analyzer target.
 2. Seed or update the local catalog from the official dataset or a remote source.
-3. Upload an STL, GLB, or 3MF model, run geometry analysis, inspect the extracted metadata, and optionally repair or retopologize the mesh. Auto-Fix saves the repaired STL and re-checks that saved file before reporting the result.
+3. Upload an STL, GLB, or 3MF model, run geometry analysis, inspect the extracted metadata, use the STL preview in wire/mesh/solid or maximized fullscreen mode, and optionally repair or retopologize the mesh. Auto-Fix saves the repaired STL and re-checks that saved file before reporting the result.
 4. Choose a compatible printer and material for the selected target.
 5. Generate slicer-ready settings, review provenance, and download the exported profile.
 
@@ -108,7 +108,7 @@ Every sync response includes a `curation` summary so you can inspect how many ro
 
 ## How The Backend Works
 
-At runtime, `app/main.py` initializes local SQLite-backed stores and serves the three browser surfaces. The main processing path is phase-oriented:
+At runtime, `app/main.py` initializes local SQLite-backed stores, opportunistically refreshes the bundled official catalog into the active SQLite DB when the bundled seed timestamp is newer than the last recorded import, and serves the three browser surfaces. The main processing path is phase-oriented:
 
 1. `app/geometry.py` loads STL, GLB, 3MF, and OBJ meshes, extracts best-effort embedded metadata, repairs obvious topology issues, computes cross-sections, voxelizes when needed, and emits cavity/island/detail/support-risk metrics.
 2. `app/logic.py` combines geometry metrics, the selected printer/material profile, and rule-based heuristics to produce print settings.
@@ -247,7 +247,7 @@ Stop the stack:
 docker compose down
 ```
 
-Docker persistence note: `docker-compose.yml` mounts `./local-data` into `/app/local-data`. Rebuilding the image does not replace the persisted catalog database. If you change `data/official_catalog_sync.json` or update a remote source definition, rerun the Step 1 catalog import/update so the live DB picks up the new data.
+Docker persistence note: `docker-compose.yml` mounts `./local-data` into `/app/local-data`. On startup, the app records `official_catalog_seed_state.json` beside the active `tech_catalog.db` and automatically upserts bundled official seed changes when the bundled dataset `updated_at` value is newer than the last recorded import. Use Step 1 or `scripts/import_official_catalog.py` when you want a manual `replace_existing` import, a remote source refresh, or an immediate refresh without restarting the runtime.
 
 ## Tests
 

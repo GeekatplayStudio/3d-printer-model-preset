@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import tempfile
 import time
@@ -221,9 +222,11 @@ WIZARD_SLICERS_BY_TARGET = {
     "fdm": "Ultimaker Cura",
 }
 WIZARD_ANALYSIS_PROGRESS_TTL_SECONDS = 3600
+OFFICIAL_CATALOG_STATE_PATH = DATA_DIR / "official_catalog_seed_state.json"
 JOB_QUEUE = InMemoryJobQueue(max_workers=2, db_path=JOBS_PATH)
 METRICS = InMemoryMetrics()
 SCHEDULER: TechnicalSyncScheduler | None = None
+LOGGER = logging.getLogger(__name__)
 WIZARD_ANALYSIS_STAGE_LABELS = {
     "save_upload": "upload staging",
     "load_prepare_mesh": "mesh loading and topology checks",
@@ -519,6 +522,72 @@ def _analysis_failure_detail(job_id: str | None, exc: Exception) -> str:
 
 def _read_official_sync_payload() -> dict:
     return load_official_sync_payload()
+
+
+def _read_official_catalog_state(state_path: Path = OFFICIAL_CATALOG_STATE_PATH) -> dict[str, object]:
+    try:
+        payload = json.loads(state_path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _write_official_catalog_state(state: dict[str, object], state_path: Path = OFFICIAL_CATALOG_STATE_PATH) -> None:
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    state_path.write_text(json.dumps(state, ensure_ascii=True, indent=2), encoding="utf-8")
+
+
+def _refresh_official_catalog_seed_if_needed(
+    *,
+    db_path: str | Path = CATALOG_PATH,
+    state_path: Path = OFFICIAL_CATALOG_STATE_PATH,
+) -> dict[str, object] | None:
+    payload = _read_official_sync_payload()
+    bundled_updated_at = str(payload.get("updated_at") or "").strip() or None
+    current_state = _read_official_catalog_state(state_path)
+    applied_updated_at = str(current_state.get("official_dataset_updated_at") or "").strip() or None
+
+    catalog = export_catalog(db_path=db_path)
+    has_catalog_content = any(bool(catalog.get(key)) for key in ("printers", "resins", "profiles"))
+
+    if has_catalog_content:
+        if bundled_updated_at and bundled_updated_at == applied_updated_at:
+            return None
+        if bundled_updated_at is None and current_state.get("initialized") is True:
+            return None
+
+    result = apply_technical_sync(
+        payload=payload,
+        source="official_catalog_seed",
+        db_path=db_path,
+        replace_existing=False,
+        source_metadata={
+            "kind": "official_docs",
+            "verified": True,
+            "trust_score": 0.92,
+            "seed_file": "; ".join(str(path) for path in official_sync_paths()),
+            "official_dataset_updated_at": bundled_updated_at,
+            "bootstrap": True,
+        },
+    )
+
+    _write_official_catalog_state(
+        {
+            "initialized": True,
+            "official_dataset_updated_at": bundled_updated_at,
+            "seed_files": [str(path) for path in official_sync_paths()],
+            "imported_at": _iso_timestamp(),
+            "replace_existing": False,
+            "db_path": str(Path(db_path)),
+            "result": {
+                "printers_upserted": int(result.get("printers_upserted", 0)),
+                "resins_upserted": int(result.get("resins_upserted", 0)),
+                "profiles_upserted": int(result.get("profiles_upserted", 0)),
+            },
+        },
+        state_path,
+    )
+    return result
 
 
 def _has_source_urls(metadata: object) -> bool:
@@ -1158,6 +1227,10 @@ def shutdown_scheduler() -> None:
 
 @asynccontextmanager
 async def _app_lifespan(_: FastAPI):
+    try:
+        _refresh_official_catalog_seed_if_needed()
+    except Exception:
+        LOGGER.exception("Failed to refresh bundled official catalog seed.")
     startup_scheduler()
     try:
         yield

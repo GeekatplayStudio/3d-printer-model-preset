@@ -131,7 +131,11 @@ In `/wizard`, choose Step 1 `Catalog source -> Official local dataset` and run `
 
 ### Docker Persistence Note
 
-When running through Docker Compose, the API persists data into `./local-data`. Rebuilding the image updates the bundled JSON files in the image, but it does not replace the existing persisted `tech_catalog.db`. After changing any bundled slice under `data/official_catalog_*.json`, rerun the Step 1 import/update (or the import script) so the live DB picks up the refreshed rows.
+When running through Docker Compose, the API persists data into `./local-data`. Rebuilding the image updates the bundled JSON files in the image, but it does not replace the existing persisted `tech_catalog.db` wholesale.
+
+On startup, the app now records `official_catalog_seed_state.json` beside the active catalog DB and automatically upserts bundled official seed rows when the bundled dataset `updated_at` value is newer than the last recorded bundled-seed import or no seed state file exists. This keeps the persisted DB current with checked-in official seed updates, including the expanded distinct official ELEGOO resin line, without wiping operator-added rows.
+
+Use Step 1 import/update or `python scripts/import_official_catalog.py --replace-existing` when you want to force a clean replacement import, refresh from a remote source, or update the live DB immediately without restarting the app.
 
 ## Trust Surface in Recommendations
 

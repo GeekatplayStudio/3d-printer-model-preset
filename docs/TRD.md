@@ -71,6 +71,7 @@ External runtime tooling:
 - audit events and catalog snapshots,
 - async job records and lifecycle state,
 - sync schedule records for interval automation.
+- bundled official seed state tracking (`official_catalog_seed_state.json`) for startup refresh bookkeeping.
 
 ### Geometry Analysis Output
 
@@ -138,6 +139,7 @@ All stores must initialize automatically at startup if missing.
 - `GET /wizard/model/check/status/{job_id}`: live wizard analysis status and stage timing lookup.
 - `POST /wizard/model/check/status/{job_id}/cancel`: cooperative cancellation for a running wizard analysis job.
 - `POST /wizard/settings/recommend`: target-aware settings/export generation.
+- the STL browser preview must support wire, mesh, and solid modes plus a maximize/restore fullscreen overlay that mirrors the current model statistics panel.
 - upload staging for wizard analysis must stream file chunks instead of buffering the full model in memory.
 - geometry analysis responses must expose best-effort `source_metadata` including format, encoding, author/tool hints, embedded timestamps, extracted metadata fields, AI heuristic status, and warnings when the file format does not preserve enough evidence.
 
@@ -209,7 +211,7 @@ Required automated coverage areas:
 - per-user local data directory supported (`RESINLOGIC_DATA_DIR`, default `~/.resinlogic`),
 - docker-compose-based run path with Prometheus service,
 - environment-based configuration for auth, scheduler mode, and Blender path,
-- Docker persistence behavior documented clearly so rebuilds are not mistaken for DB refreshes.
+- Docker persistence behavior documented clearly so rebuilds are not mistaken for DB replacement, while bundled official seed startup refresh behavior remains explicit.
 
 ## 10. Technical Gaps To Close
 
