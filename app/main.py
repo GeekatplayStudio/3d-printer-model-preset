@@ -620,10 +620,13 @@ def _safe_slug(value: str, fallback: str) -> str:
     return text or fallback
 
 
-def _require_stl_upload(file: UploadFile) -> None:
+_SUPPORTED_MODEL_UPLOAD_EXTENSIONS = {".stl", ".glb", ".3mf"}
+
+
+def _require_supported_model_upload(file: UploadFile) -> None:
     name = str(file.filename or "").strip().lower()
-    if not name.endswith(".stl"):
-        raise HTTPException(status_code=400, detail="Only STL files are supported in the wizard upload flow.")
+    if Path(name).suffix not in _SUPPORTED_MODEL_UPLOAD_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="Only STL, GLB, and 3MF files are supported in the wizard upload flow.")
 
 
 def _limited_sorted(values: list[str], limit: int = 20) -> list[str]:
@@ -2627,13 +2630,13 @@ async def wizard_model_check(
     progress_job_id: str | None = Form(default=None),
     auth: AuthContext = Depends(require_role("operator")),
 ) -> WizardModelCheckResponse:
-    _require_stl_upload(file)
+    _require_supported_model_upload(file)
     job_id = _normalize_wizard_analysis_job_id(progress_job_id)
     _set_wizard_analysis_progress(
         job_id,
         status="queued",
         stage="save_upload",
-        message="Saving uploaded STL to local storage.",
+        message="Saving uploaded model to local storage.",
         cancel_requested=False,
     )
     temp_file = await asyncio.to_thread(_save_upload, file)
@@ -2733,7 +2736,7 @@ async def wizard_model_fix(
     analysis_level: AnalysisLevel = Form("minimum"),
     auth: AuthContext = Depends(require_role("operator")),
 ) -> WizardModelFixResponse:
-    _require_stl_upload(file)
+    _require_supported_model_upload(file)
     temp_file = await asyncio.to_thread(_save_upload, file)
     original_name = Path(file.filename or "model.stl")
     safe_base = _safe_slug(original_name.stem, "model")
@@ -2831,7 +2834,7 @@ async def wizard_model_retopology(
     preserve_boundary: bool = Form(True),
     auth: AuthContext = Depends(require_role("operator")),
 ) -> WizardModelRetopologyResponse:
-    _require_stl_upload(file)
+    _require_supported_model_upload(file)
     if target_faces is not None and target_faces < 1:
         raise HTTPException(status_code=400, detail="target_faces must be at least 1 when provided.")
     if voxel_size_mm is not None and voxel_size_mm <= 0:

@@ -79,7 +79,7 @@ The checked-in `official_local` bundle currently merges:
 
 - Step 0 chooses `MSLA / resin` or `FDM / filament`.
 - Step 1 can seed from `official_local`, GitHub JSON, direct web JSON, or supported vendor HTML pages.
-- Step 2 handles STL analysis, repair, retopology, progress polling, and cancellation.
+- Step 2 handles STL, GLB, and 3MF analysis, metadata inspection, repair, retopology, progress polling, and cancellation.
 - Step 3 filters printer/material options by target and now shows selection-step source evidence before export.
 
 ## Anti-Drift Update Rules

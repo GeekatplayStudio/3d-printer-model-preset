@@ -4,6 +4,7 @@ import io
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import trimesh
 from fastapi.testclient import TestClient
@@ -79,6 +80,56 @@ def _broken_mesh_bytes() -> bytes:
     ]
     mesh = trimesh.Trimesh(vertices=vertices, faces=faces, process=False)
     return mesh.export(file_type="stl")
+
+
+def _three_mf_mesh_bytes() -> bytes:
+        model_xml = '''<?xml version="1.0" encoding="UTF-8"?>
+<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">
+    <metadata name="Application">PrusaSlicer 2.7.4</metadata>
+    <metadata name="Designer">Wizard QA</metadata>
+    <metadata name="CreationDate">2026-04-24T10:00:00Z</metadata>
+    <resources>
+        <object id="1" type="model">
+            <mesh>
+                <vertices>
+                    <vertex x="0" y="0" z="0"/>
+                    <vertex x="20" y="0" z="0"/>
+                    <vertex x="0" y="20" z="0"/>
+                    <vertex x="0" y="0" z="20"/>
+                </vertices>
+                <triangles>
+                    <triangle v1="0" v2="1" v3="2"/>
+                    <triangle v1="0" v2="1" v3="3"/>
+                    <triangle v1="0" v2="3" v3="2"/>
+                    <triangle v1="1" v2="2" v3="3"/>
+                </triangles>
+            </mesh>
+        </object>
+    </resources>
+    <build>
+        <item objectid="1"/>
+    </build>
+</model>
+'''
+        buffer = io.BytesIO()
+        with ZipFile(buffer, "w", compression=ZIP_DEFLATED) as archive:
+                archive.writestr(
+                        "[Content_Types].xml",
+                        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                        "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">\n"
+                        "  <Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>\n"
+                        "  <Default Extension=\"model\" ContentType=\"application/vnd.ms-package.3dmanufacturing-3dmodel+xml\"/>\n"
+                        "</Types>",
+                )
+                archive.writestr(
+                        "_rels/.rels",
+                        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                        "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n"
+                        "  <Relationship Target=\"/3D/3dmodel.model\" Id=\"rel0\" Type=\"http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel\"/>\n"
+                        "</Relationships>",
+                )
+                archive.writestr("3D/3dmodel.model", model_xml)
+        return buffer.getvalue()
 
 
 def _analysis_payload() -> dict:
@@ -161,8 +212,13 @@ def test_wizard_ui_and_status_route(tmp_path, monkeypatch):
     assert "dbScanPanel" in ui.text
     assert "modelPreviewPanel" in ui.text
     assert "modelStatsPanel" in ui.text
+    assert "modelMetadataPanel" in ui.text
     assert "modelRepairPanel" in ui.text
     assert "modelRetopologyPanel" in ui.text
+    assert "accept=\".stl,.glb,.3mf\"" in ui.text
+    assert "Analyze Model" in ui.text
+    assert "Supports STL, GLB, and 3MF uploads" in ui.text
+    assert "Model Metadata" in ui.text
     assert "Detected Issues" in ui.text
     assert "Retopology and Download STL" in ui.text
     assert "/wizard/model/retopology" in ui.text
@@ -619,6 +675,38 @@ def test_wizard_model_fix_and_settings_downloads(tmp_path, monkeypatch):
     assert client.get(settings_body["cfg_download_url"]).status_code == 200
 
 
+def test_wizard_model_check_accepts_3mf_and_reports_metadata(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+
+    setup = client.post(
+        "/wizard/database/setup",
+        json={
+            "mode": "official_local",
+            "replace_existing": True,
+            "auto_update": False,
+            "source": "wizard_test",
+        },
+    )
+    assert setup.status_code == 200
+
+    check = client.post(
+        "/wizard/model/check",
+        files={"file": ("sample.3mf", _three_mf_mesh_bytes(), "application/vnd.ms-package.3dmanufacturing-3dmodel+xml")},
+        data={"slice_height_mm": "0.2"},
+    )
+    assert check.status_code == 200
+    body = check.json()
+    metadata = body["analysis"]["source_metadata"]
+    assert metadata["file_format"] == "3mf"
+    assert metadata["encoding"] == "zip"
+    assert metadata["author"] == "Wizard QA"
+    assert metadata["software"] == "PrusaSlicer"
+    assert metadata["software_version"] == "2.7.4"
+    assert metadata["software_kind"] == "slicer"
+    assert metadata["embedded_created_at"] == "2026-04-24T10:00:00Z"
+    assert metadata["likely_ai_generated"] is False
+
+
 def test_wizard_heavy_stl_endpoints_offload_blocking_work(tmp_path, monkeypatch):
     client = _client(tmp_path, monkeypatch)
     recorded_calls: list[str] = []
@@ -941,15 +1029,15 @@ def test_wizard_rejects_non_stl_upload(tmp_path, monkeypatch):
         data={"slice_height_mm": "0.2"},
     )
     assert bad_check.status_code == 400
-    assert "Only STL files are supported" in bad_check.json()["detail"]
+    assert "Only STL, GLB, and 3MF files are supported" in bad_check.json()["detail"]
 
     bad_fix = client.post(
         "/wizard/model/fix",
-        files={"file": ("bad.3mf", b"dummy", "application/octet-stream")},
+        files={"file": ("bad.obj", b"dummy", "application/octet-stream")},
         data={"slice_height_mm": "0.2"},
     )
     assert bad_fix.status_code == 400
-    assert "Only STL files are supported" in bad_fix.json()["detail"]
+    assert "Only STL, GLB, and 3MF files are supported" in bad_fix.json()["detail"]
 
 
 def test_wizard_model_check_reports_live_progress_status(tmp_path, monkeypatch):

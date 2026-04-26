@@ -57,7 +57,7 @@ This file maps the provided Gemini roadmap to the current implementation.
 
 ## Wizard Mapping
 
-- STL-only guided upload and analysis flow in `/wizard`
+- Guided STL, GLB, and 3MF upload and analysis flow in `/wizard`
 - Step 0 target selector now routes the wizard between `MSLA / resin` and `FDM / filament`
 - Step 1 catalog source modes now include:
   - bundled official dataset

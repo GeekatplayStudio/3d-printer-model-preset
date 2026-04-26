@@ -9,7 +9,7 @@ Legacy compatibility note: package names, database names, and many environment v
 The application helps an operator move through four connected concerns:
 
 1. maintain a trustworthy local printer/material/profile catalog,
-2. inspect, repair, and retopologize incoming STL geometry,
+2. inspect, repair, and retopologize incoming model geometry (`STL`, `GLB`, `3MF`),
 3. generate target-aware slicer settings and exports,
 4. ingest feedback and operational signals so later recommendations can improve.
 
@@ -79,7 +79,7 @@ The user journey is:
 
 1. choose the target process (`MSLA / resin` or `FDM / filament`),
 2. seed or update the local catalog from the official dataset or a remote source,
-3. upload an STL and run geometry analysis,
+3. upload an STL, GLB, or 3MF model and run geometry analysis,
 4. optionally auto-fix or retopologize the mesh,
 5. select a compatible printer and material for the chosen target,
 6. generate slicer-ready settings and download the resulting export.
@@ -87,11 +87,13 @@ The user journey is:
 The browser code in [app/static/wizard.html](../app/static/wizard.html) talks to wizard routes in [app/main.py](../app/main.py). Those routes are designed for long-running geometry work and operator-friendly catalog maintenance:
 
 - uploads are streamed to disk in chunks,
+- best-effort source metadata is extracted from STL headers, GLB asset metadata, or 3MF package metadata and surfaced back into the wizard,
 - geometry analysis is offloaded with `asyncio.to_thread`,
 - in-memory status is tracked by `progress_job_id`,
 - the UI polls status routes for live stage messages and timings,
 - remote catalog sources can be saved as schedules and manually triggered,
 - repaired STL and settings downloads are fetched through auth-aware browser requests when server-mode auth is enabled,
+- local browser preview remains STL-only even though analysis accepts STL, GLB, and 3MF,
 - cancellation is cooperative and checked inside the geometry engine.
 
 Wizard Step 1 catalog modes are:
@@ -107,7 +109,7 @@ Geometry analysis is implemented in [app/geometry.py](../app/geometry.py). It is
 
 The rough sequence is:
 
-1. load and normalize the mesh,
+1. inspect embedded file metadata, then load and normalize the mesh,
 2. inspect mesh health and optionally attempt repair,
 3. choose an analysis profile (`minimum`, `balanced`, `deep`, `extreme`),
 4. adapt slice and voxel settings for large meshes,
@@ -231,7 +233,7 @@ The most important files for understanding the app are:
 
 - [app/main.py](../app/main.py): process startup, store initialization, HTTP routes, wizard runtime state.
 - [app/pipeline.py](../app/pipeline.py): orchestration between geometry, logic, and feedback phases.
-- [app/geometry.py](../app/geometry.py): STL analysis, repair, slicing, voxel work, cavity/island heuristics, and FDM support metrics.
+- [app/geometry.py](../app/geometry.py): STL/GLB/3MF analysis, metadata extraction, repair, slicing, voxel work, cavity/island heuristics, and FDM support metrics.
 - [app/logic.py](../app/logic.py): target-aware settings generation for MSLA and FDM.
 - [app/chitubox.py](../app/chitubox.py): MSLA slicer export rendering.
 - [app/cura.py](../app/cura.py): FDM Cura profile rendering.
@@ -248,16 +250,16 @@ The most important files for understanding the app are:
 
 ## End-To-End Request Example
 
-For a wizard STL analysis request, the flow is:
+For a wizard model analysis request, the flow is:
 
-1. the browser posts STL bytes to `POST /wizard/model/check`,
+1. the browser posts STL, GLB, or 3MF bytes to `POST /wizard/model/check`,
 2. [app/main.py](../app/main.py) streams the upload to a temp file,
 3. the route calls `pipeline.run_phase_1_geometry(...)` in a worker thread,
 4. [app/geometry.py](../app/geometry.py) emits progress callbacks during each major stage,
 5. progress is stored in the in-memory wizard progress map,
 6. the browser polls `GET /wizard/model/check/status/{job_id}`,
 7. when analysis completes, the response returns `GeometryAnalysis`,
-8. the UI can then call STL repair or `POST /wizard/settings/recommend` using the selected target, printer, and material.
+8. the UI can then call repair or `POST /wizard/settings/recommend` using the selected target, printer, and material.
 
 For a remote catalog refresh:
 

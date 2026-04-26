@@ -63,6 +63,28 @@ class MeshRepairOutcome(BaseModel):
     repair_actions: list[str] = Field(default_factory=list)
 
 
+ModelSoftwareKind = Literal["ai", "cad", "dcc", "scan", "slicer", "unknown"]
+ModelFileEncoding = Literal["ascii", "binary", "zip", "unknown"]
+
+
+class ModelSourceMetadata(BaseModel):
+    file_format: str = "stl"
+    encoding: ModelFileEncoding = "unknown"
+    file_size_bytes: int = Field(ge=0)
+    raw_metadata_text: str | None = None
+    author: str | None = None
+    software: str | None = None
+    software_version: str | None = None
+    software_kind: ModelSoftwareKind = "unknown"
+    embedded_created_at: str | None = None
+    filesystem_created_at: str | None = None
+    filesystem_modified_at: str | None = None
+    likely_ai_generated: bool | None = None
+    ai_detection_basis: list[str] = Field(default_factory=list)
+    extracted_fields: dict[str, str] = Field(default_factory=dict)
+    warnings: list[str] = Field(default_factory=list)
+
+
 class GeometryAnalysis(BaseModel):
     file_name: str
     mesh_volume_mm3: float
@@ -89,6 +111,7 @@ class GeometryAnalysis(BaseModel):
     estimated_intent: UseCase | None = None
     intent_reasons: list[str] = Field(default_factory=list)
     structural_risk_score: float = Field(ge=0.0, le=100.0)
+    source_metadata: ModelSourceMetadata | None = None
     notes: list[str] = Field(default_factory=list)
     analysis_level: AnalysisLevel = "balanced"
     performance_ms: dict[str, float] = Field(default_factory=dict)

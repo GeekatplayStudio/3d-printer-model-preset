@@ -47,7 +47,7 @@ Geekatplay Studio solves this by combining geometry analysis, catalog intelligen
   1. Choose the analyzer target (`MSLA / resin` or `FDM / filament`).
   2. Setup/update the catalog from the bundled official dataset, a GitHub feed, a direct web JSON feed, or supported vendor pages.
   3. Review catalog status/completeness and readiness.
-  4. Upload an STL and run integrity plus geometry analysis with live stage progress, timing detail, and cancel support.
+  4. Upload an STL, GLB, or 3MF model and run integrity plus geometry analysis with live stage progress, timing detail, cancel support, and best-effort metadata inspection.
   5. Auto-fix or retopologize the mesh where possible and provide downloadable artifacts.
   6. Select printer plus material and generate settings with on-screen results, source references, trust level, and slicer-ready downloads.
 

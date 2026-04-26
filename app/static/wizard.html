@@ -1026,7 +1026,7 @@
               <div>
                 <div class="brand-kicker">Geekatplay Studio</div>
                 <h1>Geekatplay Studio Wizard</h1>
-                <p>Clean flow: 0) choose target, 1) setup database, 2) upload STL + check/fix, 3) choose printer + material and get slicer-ready settings.</p>
+                <p>Clean flow: 0) choose target, 1) setup database, 2) upload STL, GLB, or 3MF + check/fix, 3) choose printer + material and get slicer-ready settings.</p>
               </div>
             </div>
             <div class="hero-actions">
@@ -1197,14 +1197,14 @@
 
         <article class="card">
           <div class="step-heading">
-            <h2>Step 2: Upload STL and Analyze / Fix</h2>
+            <h2>Step 2: Upload Model and Analyze / Fix</h2>
             <span class="help-badge" tabindex="0" data-help-key="step_analysis">?</span>
           </div>
-          <p class="sub">STL only. We run a careful topology scan, can auto-fix when needed, and can generate a separate retopologized STL.</p>
+          <p class="sub">Supports STL, GLB, and 3MF uploads. Local preview is STL-only for now, but analysis, metadata inspection, auto-fix, and retopology accept all three.</p>
           <div class="grid grid-2" style="margin-top: 10px">
             <div>
-              <label>Model file (.stl)</label>
-              <input id="modelFile" type="file" accept=".stl" />
+              <label>Model file (.stl, .glb, .3mf)</label>
+              <input id="modelFile" type="file" accept=".stl,.glb,.3mf" />
             </div>
             <div>
               <label>Slice height (mm) <span class="help-badge" tabindex="0" data-help-key="slice_height">?</span></label>
@@ -1240,7 +1240,7 @@
             </div>
           </div>
           <div class="grid grid-2" style="margin-top: 10px">
-            <button id="analyzeBtn" onclick="analyzeModel()" disabled>Analyze STL</button>
+            <button id="analyzeBtn" onclick="analyzeModel()" disabled>Analyze Model</button>
             <button id="fixBtn" class="warn" onclick="fixModel()" disabled>Auto-Fix and Download STL</button>
           </div>
           <div class="grid" style="margin-top: 8px">
@@ -1267,7 +1267,7 @@
               <div class="preview-toolbar">
                 <div>
                   <div class="check-title">3D Model Preview</div>
-                  <div class="tiny" id="modelPreviewStatus">Load an STL to inspect it in wire, mesh, or solid view.</div>
+                  <div class="tiny" id="modelPreviewStatus">Load a model to inspect metadata and run analysis. STL files also get a local wire, mesh, and solid preview.</div>
                 </div>
                 <div class="mode-switch">
                   <button id="previewWireBtn" type="button" class="secondary" onclick="setPreviewMode('wire')">Wire</button>
@@ -1278,7 +1278,7 @@
               <div id="modelPreviewViewport" class="preview-stage">
                 <canvas id="modelPreviewCanvas"></canvas>
                 <div id="modelPreviewEmpty" class="preview-empty">
-                  Load an STL to preview it here. Drag to orbit, use the wheel to zoom, and switch between wire, mesh, and solid rendering.
+                  Load an STL to preview it here. GLB and 3MF files can still be analyzed, but the local preview runtime stays STL-only for now.
                 </div>
                 <div id="analysisScanLine" class="analysis-scan-line" style="display:none"></div>
                 <div class="preview-hud">
@@ -1297,6 +1297,15 @@
               </div>
               <div class="tiny" id="modelStatsSummary">Load and analyze an STL to populate geometry statistics.</div>
               <div id="modelStatsTable" class="summary" style="display:none"></div>
+            </div>
+
+            <div id="modelMetadataPanel" class="catalog-panel">
+              <div class="panel-title">
+                <strong>Model Metadata</strong>
+                <span class="status-badge status-info" id="modelMetadataBadge">Waiting</span>
+              </div>
+              <div class="tiny" id="modelMetadataSummary">Run analysis to inspect embedded STL header data, file timestamps, and generator hints.</div>
+              <div id="modelMetadataContent" class="placeholder-copy" style="margin-top: 10px">No model metadata report yet.</div>
             </div>
 
             <div id="modelHealthPanel" class="catalog-panel">
@@ -2010,8 +2019,8 @@
       }
 
       function resetPreviewPanel(
-        statusText = "Preview: waiting for STL upload.",
-        hintText = "Select an STL and the preview will appear here. After load, drag to orbit, wheel to zoom, and switch between wire, mesh, and solid rendering."
+        statusText = "Preview: waiting for model upload.",
+        hintText = "Select an STL for local preview. GLB and 3MF files still run through analysis and metadata inspection, but the browser preview remains STL-only."
       ) {
         const panel = document.getElementById("modelPreviewPanel");
         panel.style.display = "block";
@@ -2210,7 +2219,7 @@
           state.lastRetopologyResult ? "Retopo" : state.fixedAnalysis ? "Fixed" : analysis ? "Analyzed" : "Preview"
         );
         summary.textContent = !analysis
-          ? "Preview geometry is loaded. Run Analyze STL to add printability and defect statistics."
+          ? "Preview geometry is loaded. Run Analyze Model to add printability and defect statistics."
           : state.lastRetopologyResult
             ? `Retopology result is active. Statistics now reflect the remeshed STL analyzed at ${analysis.analysis_level} depth.`
             : state.fixedAnalysis
@@ -2218,6 +2227,82 @@
               : `Analysis level: ${analysis.analysis_level}. Preview and computed printability metrics are shown together.`;
         table.style.display = rows.length ? "block" : "none";
         table.innerHTML = rows.length ? buildSummaryRows(rows) : "";
+      }
+
+      function metadataStatusLabel(value) {
+        if (value === true) return "Likely AI";
+        if (value === false) return "Non-AI Tool";
+        return "Unknown";
+      }
+
+      function formatMetadataLabel(value) {
+        return String(value || "")
+          .split("_")
+          .filter(Boolean)
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(" ");
+      }
+
+      function renderModelMetadataPanel() {
+        const analysis = currentAnalysisResult();
+        const summary = document.getElementById("modelMetadataSummary");
+        const content = document.getElementById("modelMetadataContent");
+        const metadata = analysis && analysis.source_metadata ? analysis.source_metadata : null;
+
+        if (!metadata) {
+          setPanelBadge("modelMetadataBadge", "info", "Waiting");
+          summary.textContent = "Run analysis to inspect embedded file metadata, file timestamps, and generator hints.";
+          content.textContent = "No model metadata report yet.";
+          return;
+        }
+
+        const extractedFields = metadata.extracted_fields && typeof metadata.extracted_fields === "object"
+          ? Object.entries(metadata.extracted_fields)
+          : [];
+        const warnings = Array.isArray(metadata.warnings) ? metadata.warnings : [];
+        const aiBasis = Array.isArray(metadata.ai_detection_basis) ? metadata.ai_detection_basis : [];
+        const rows = [
+          { label: "Format", value: String(metadata.file_format || "stl").toUpperCase() },
+          { label: "Encoding", value: metadata.encoding || "-" },
+          { label: "File Size", value: formatMetric(metadata.file_size_bytes, "bytes", 0) },
+          { label: "Author", value: metadata.author || "-" },
+          { label: "Software", value: metadata.software || "-" },
+          { label: "Software Version", value: metadata.software_version || "-" },
+          { label: "Software Type", value: metadata.software_kind || "unknown" },
+          { label: "Embedded Created", value: metadata.embedded_created_at || "-" },
+          { label: "Filesystem Created", value: metadata.filesystem_created_at || "-" },
+          { label: "Filesystem Modified", value: metadata.filesystem_modified_at || "-" },
+          { label: "AI Origin", value: metadataStatusLabel(metadata.likely_ai_generated) },
+        ];
+        if (metadata.raw_metadata_text) {
+          rows.push({ label: "Metadata Text", value: metadata.raw_metadata_text });
+        }
+
+        const tone = metadata.likely_ai_generated === true ? "warn" : warnings.length ? "info" : "pass";
+        const badge = metadata.likely_ai_generated === true ? "Review" : warnings.length ? "Best Effort" : "Detected";
+        setPanelBadge("modelMetadataBadge", tone, badge);
+        summary.textContent = metadata.author || metadata.software
+          ? "Best-effort metadata was detected from embedded file metadata and local file timestamps."
+          : "Only limited metadata could be recovered. Authoring metadata is optional and exporter-dependent.";
+
+        const extractedMarkup = extractedFields.length
+          ? buildList(
+              extractedFields.map(([key, value]) => `${formatMetadataLabel(key)}: ${value}`),
+              "No embedded key/value fields were found."
+            )
+          : buildList([], "No embedded key/value fields were found.");
+        const aiMarkup = buildList(aiBasis, "No AI-specific signatures were detected.");
+        const warningMarkup = buildList(warnings, "No metadata caveats were reported.");
+
+        content.innerHTML = `
+          <div class="summary">${buildSummaryRows(rows)}</div>
+          <div class="tiny">Detected metadata fields</div>
+          ${extractedMarkup}
+          <div class="tiny">AI and generator hints</div>
+          ${aiMarkup}
+          <div class="tiny">Limitations</div>
+          ${warningMarkup}
+        `;
       }
 
       function renderModelHealthPanel() {
@@ -2480,6 +2565,7 @@
 
       function renderModelInsightPanels() {
         renderModelStatsPanel();
+        renderModelMetadataPanel();
         renderModelHealthPanel();
         renderModelRepairPanel();
         renderModelRetopologyPanel();
@@ -2508,14 +2594,28 @@
           updateLocks();
           return;
         }
-        if (!String(file.name || "").toLowerCase().endsWith(".stl")) {
-          setMsg("modelMsg", "Only STL files are allowed.", "error");
+        const extension = selectedModelExtension(file);
+        if (!extension) {
+          setMsg("modelMsg", "Only STL, GLB, and 3MF files are allowed.", "error");
+          updateLocks();
+          return;
+        }
+        if (extension !== ".stl") {
+          const formatLabel = extension.replace('.', '').toUpperCase();
+          resetPreviewPanel(
+            `Preview: ${formatLabel} selected.`,
+            `${formatLabel} analysis is supported, and metadata will appear after Analyze Model runs. The local browser preview currently stays STL-only.`
+          );
+          setMsg(
+            "modelMsg",
+            `${formatLabel} loaded. Preview is STL-only, but analysis and metadata inspection are available for this upload.`
+          );
           updateLocks();
           return;
         }
         try {
           await loadPreviewFromFile(file);
-          setMsg("modelMsg", "STL loaded into preview. Run Analyze STL to inspect defects, statistics, and repair recommendations.");
+          setMsg("modelMsg", "STL loaded into preview. Run Analyze Model to inspect metadata, defects, statistics, and repair recommendations.");
         } catch (err) {
           setMsg("modelMsg", `Preview error: ${err.message}`, "error");
         } finally {
@@ -3841,7 +3941,7 @@
           renderDatabaseScanPanel(status, gaps, state.databaseSetupResult, state.feedbackHistoryTotal);
           renderDatabaseUpdateStatus(updates);
           if (status.ready_for_model_analysis) {
-            setMsg("dbMsg", "Database is ready. You can upload STL now.");
+            setMsg("dbMsg", "Database is ready. You can upload STL, GLB, or 3MF now.");
           } else {
             setMsg("dbMsg", "Database is not ready. Click Setup / Update Database first.", "warn");
           }
@@ -3912,22 +4012,30 @@
         }
       }
 
-      function ensureStlSelected() {
+      const SUPPORTED_MODEL_EXTENSIONS = [".stl", ".glb", ".3mf"];
+
+      function selectedModelExtension(file) {
+        const name = String((file && file.name) || "").toLowerCase();
+        return SUPPORTED_MODEL_EXTENSIONS.find((extension) => name.endsWith(extension)) || "";
+      }
+
+      function ensureSupportedModelSelected() {
         const file = document.getElementById("modelFile").files[0];
         if (!file) {
-          setMsg("modelMsg", "Select an STL file first.", "warn");
+          setMsg("modelMsg", "Select an STL, GLB, or 3MF file first.", "warn");
           return null;
         }
-        if (!String(file.name || "").toLowerCase().endsWith(".stl")) {
-          setMsg("modelMsg", "Only STL files are allowed.", "error");
+        if (!selectedModelExtension(file)) {
+          setMsg("modelMsg", "Only STL, GLB, and 3MF files are allowed.", "error");
           return null;
         }
         return file;
       }
 
       async function analyzeModel() {
-        const file = ensureStlSelected();
+        const file = ensureSupportedModelSelected();
         if (!file) return;
+        const extension = selectedModelExtension(file);
 
         const analyzeBtn = document.getElementById("analyzeBtn");
         analyzeBtn.disabled = true;
@@ -3939,7 +4047,7 @@
           job_id: progressJobId,
           status: "queued",
           stage: "save_upload",
-          message: "Preparing STL upload for analysis.",
+          message: "Preparing model upload for analysis.",
           elapsed_seconds: 0,
           stage_elapsed_seconds: 0,
           updated_at: new Date().toISOString(),
@@ -3951,9 +4059,9 @@
         renderAnalysisProgressPanel(state.analysisProgress);
         const progressPoller = startAnalysisProgressPolling("modelMsg", progressJobId);
         let keepProgressPolling = false;
-        setMsg("modelMsg", "Preparing STL upload for analysis...");
+        setMsg("modelMsg", "Preparing model upload for analysis...");
         document.getElementById("modelDownload").innerHTML = "";
-        startPreviewAnalysisMode("Preview scan: preparing uploaded STL for analysis.");
+        startPreviewAnalysisMode(`Preview scan: preparing uploaded ${extension.replace('.', '').toUpperCase()} for analysis.`);
         updateLocks();
         try {
           const fd = new FormData();
@@ -4032,7 +4140,7 @@
       }
 
       async function fixModel() {
-        const file = ensureStlSelected();
+        const file = ensureSupportedModelSelected();
         if (!file) return;
 
         const fixBtn = document.getElementById("fixBtn");
@@ -4105,10 +4213,10 @@
       }
 
       async function retopologizeModel() {
-        const file = ensureStlSelected();
+        const file = ensureSupportedModelSelected();
         if (!file) return;
         if (!state.analysis) {
-          setMsg("modelMsg", "Run Analyze STL first so retopology uses the current detailed report.", "warn");
+          setMsg("modelMsg", "Run Analyze Model first so retopology uses the current detailed report.", "warn");
           return;
         }
 
@@ -4286,7 +4394,7 @@
       async function generateSettings() {
         const analysis = currentAnalysisResult();
         if (!analysis) {
-          setMsg("settingsMsg", "Analyze STL first.", "warn");
+          setMsg("settingsMsg", "Analyze a model first.", "warn");
           return;
         }
 

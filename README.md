@@ -12,7 +12,9 @@ Legacy compatibility note: internal package names, environment variables, SQLite
   - GitHub-hosted sync JSON,
   - direct web JSON feed,
   - supported vendor HTML pages.
-- STL analysis, repair, retopology, live progress polling, cooperative cancel, local 3D preview, and post-repair save/recheck verification.
+- STL, GLB, and 3MF analysis, repair, retopology, live progress polling, cooperative cancel, and post-repair save/recheck verification.
+- Wizard model metadata inspection for STL, GLB, and 3MF uploads with best-effort author, software, timestamp, and AI/tool hints.
+- Local 3D preview for STL uploads, with clear in-app fallback messaging when the selected upload is GLB or 3MF.
 - Settings generation with provenance, confidence, and downloadable slicer artifacts.
 - Chitubox Free export for MSLA and Ultimaker Cura profile export for FDM.
 - Step 3 selection-stage provenance panel showing source tier, confidence, and source link for the chosen printer, material, and preferred profile.
@@ -23,7 +25,7 @@ Legacy compatibility note: internal package names, environment variables, SQLite
 
 1. Open `/wizard` and choose the analyzer target.
 2. Seed or update the local catalog from the official dataset or a remote source.
-3. Upload an STL, run geometry analysis, and optionally repair or retopologize the mesh. Auto-Fix saves the repaired STL and re-checks that saved file before reporting the result.
+3. Upload an STL, GLB, or 3MF model, run geometry analysis, inspect the extracted metadata, and optionally repair or retopologize the mesh. Auto-Fix saves the repaired STL and re-checks that saved file before reporting the result.
 4. Choose a compatible printer and material for the selected target.
 5. Generate slicer-ready settings, review provenance, and download the exported profile.
 
@@ -108,7 +110,7 @@ Every sync response includes a `curation` summary so you can inspect how many ro
 
 At runtime, `app/main.py` initializes local SQLite-backed stores and serves the three browser surfaces. The main processing path is phase-oriented:
 
-1. `app/geometry.py` loads STL/OBJ meshes, repairs obvious topology issues, computes cross-sections, voxelizes when needed, and emits cavity/island/detail/support-risk metrics.
+1. `app/geometry.py` loads STL, GLB, 3MF, and OBJ meshes, extracts best-effort embedded metadata, repairs obvious topology issues, computes cross-sections, voxelizes when needed, and emits cavity/island/detail/support-risk metrics.
 2. `app/logic.py` combines geometry metrics, the selected printer/material profile, and rule-based heuristics to produce print settings.
 3. `app/chitubox.py` renders MSLA exports and `app/cura.py` renders FDM Cura profiles.
 4. `app/sync_service.py` applies normalized sync payloads and `app/web_catalog_scraper.py` translates supported vendor pages into those normalized rows.
@@ -131,7 +133,17 @@ The direct dependencies declared in `pyproject.toml` are:
 - `apscheduler`: persistent scheduled catalog refresh execution.
 - `numpy`: vectorized geometry math and heuristic scoring.
 - `pandas`: catalog import/export transforms and feedback ingestion helpers.
-- `python-multipart`: STL, CSV, and upload form handling.
+- `python-multipart`: model, CSV, and upload form handling.
+
+## Model Metadata Detection
+
+Wizard Step 2 now reports best-effort source metadata for supported model uploads:
+
+- `STL`: header comments or binary header text when present.
+- `GLB`: glTF asset metadata such as `asset.generator` and exporter extras.
+- `3MF`: package metadata like `Application`, `Designer`, and `CreationDate`.
+
+The UI surfaces the detected format, encoding, embedded author/tool/timestamp hints, extracted metadata fields, and an AI-origin heuristic. These signals depend entirely on what the exporting tool wrote into the file. Missing fields are normal, and AI detection remains heuristic rather than authoritative.
 - `trimesh[easy]`: primary mesh loading, repair helpers, slicing, voxelization, and geometry calculations.
 - `pyvista`: richer geometry/detail probes in deeper analysis paths.
 

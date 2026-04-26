@@ -35,11 +35,12 @@ The immediate production target started around Elegoo Mars 5 Ultra behavior. The
   - film-age compensation,
   - profile-aware overrides from catalog.
 - Wizard model workflow with:
-  - always-visible local 3D preview,
+  - always-visible local 3D preview for STL uploads,
   - wire/mesh/solid render modes,
+  - a dedicated model metadata panel with best-effort author, software, timestamp, and AI/tool hints,
   - repair and retopology report panels,
   - live preview scan state during long-running analysis,
-  - browser-console diagnostics for local preview runtime failures.
+  - browser-console diagnostics for local preview runtime failures and explicit fallback messaging when the upload is GLB or 3MF.
 - Retopology backend with:
   - Blender headless execution,
   - quad and voxel remesh modes,
@@ -99,8 +100,8 @@ The immediate production target started around Elegoo Mars 5 Ultra behavior. The
 - Docker image and compose updates for optional Blender-backed retopology.
 - Source-attributed official seed dataset (`data/official_catalog_sync.json`) plus local import script.
 - Wizard pipeline UX hardening for large models:
-  - STL-only upload constraints,
-  - chunked upload staging for large STL files,
+  - STL, GLB, and 3MF upload support in Step 2,
+  - chunked upload staging for large model files,
   - live stage-by-stage analyze status polling,
   - per-stage timing visibility and user-triggered cancellation,
   - adaptive timeout windows by analysis depth + model size.

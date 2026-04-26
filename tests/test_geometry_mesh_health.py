@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from zipfile import ZIP_DEFLATED, ZipFile
+
 import numpy as np
 import trimesh
 
@@ -37,6 +39,82 @@ def _box_mesh_path(tmp_path):
     mesh = trimesh.creation.box(extents=(2.0, 3.0, 4.0))
     path = tmp_path / "box.stl"
     mesh.export(path)
+    return path
+
+
+def _box_mesh_path_with_header(tmp_path, header_text: str):
+    mesh = trimesh.creation.box(extents=(2.0, 3.0, 4.0))
+    data = bytearray(mesh.export(file_type="stl"))
+    data[:80] = header_text.encode("utf-8")[:80].ljust(80, b" ")
+    path = tmp_path / "box_with_header.stl"
+    path.write_bytes(bytes(data))
+    return path
+
+
+def _box_glb_path(tmp_path):
+    mesh = trimesh.creation.box(extents=(2.0, 3.0, 4.0))
+    path = tmp_path / "box.glb"
+    scene = trimesh.Scene(mesh)
+
+    def _postprocess(tree: dict) -> None:
+        asset = tree.setdefault("asset", {})
+        asset["generator"] = "Blender 4.2.1"
+        extras = asset.setdefault("extras", {})
+        extras["author"] = "Alex Artist"
+        extras["created_at"] = "2026-04-21T10:11:12Z"
+
+    path.write_bytes(trimesh.exchange.gltf.export_glb(scene, tree_postprocessor=_postprocess))
+    return path
+
+
+def _box_3mf_path(tmp_path):
+    path = tmp_path / "box.3mf"
+    model_xml = '''<?xml version="1.0" encoding="UTF-8"?>
+<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">
+    <metadata name="Application">PrusaSlicer 2.7.4</metadata>
+    <metadata name="Designer">Jane Doe</metadata>
+    <metadata name="CreationDate">2026-04-22T07:08:09Z</metadata>
+    <metadata name="Description">Exported for wizard metadata test</metadata>
+    <resources>
+        <object id="1" type="model">
+            <mesh>
+                <vertices>
+                    <vertex x="0" y="0" z="0"/>
+                    <vertex x="20" y="0" z="0"/>
+                    <vertex x="0" y="20" z="0"/>
+                    <vertex x="0" y="0" z="20"/>
+                </vertices>
+                <triangles>
+                    <triangle v1="0" v2="1" v3="2"/>
+                    <triangle v1="0" v2="1" v3="3"/>
+                    <triangle v1="0" v2="3" v3="2"/>
+                    <triangle v1="1" v2="2" v3="3"/>
+                </triangles>
+            </mesh>
+        </object>
+    </resources>
+    <build>
+        <item objectid="1"/>
+    </build>
+</model>
+'''
+    with ZipFile(path, "w", compression=ZIP_DEFLATED) as archive:
+        archive.writestr(
+            "[Content_Types].xml",
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+            "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">\n"
+            "  <Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>\n"
+            "  <Default Extension=\"model\" ContentType=\"application/vnd.ms-package.3dmanufacturing-3dmodel+xml\"/>\n"
+            "</Types>",
+        )
+        archive.writestr(
+            "_rels/.rels",
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+            "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n"
+            "  <Relationship Target=\"/3D/3dmodel.model\" Id=\"rel0\" Type=\"http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel\"/>\n"
+            "</Relationships>",
+        )
+        archive.writestr("3D/3dmodel.model", model_xml)
     return path
 
 
@@ -78,6 +156,62 @@ def test_analysis_reports_fdm_support_metrics_for_box_mesh(tmp_path):
     assert analysis.fdm_support_risk_score is not None
     assert analysis.fdm_support_risk_score > 0.0
     assert any("FDM heuristic" in note for note in analysis.notes)
+
+
+def test_analysis_extracts_best_effort_stl_metadata_from_binary_header(tmp_path):
+    path = _box_mesh_path_with_header(
+        tmp_path,
+        "Author=Jane Doe; Software=Meshy AI 2.1; Created=2026-04-20T12:34:56Z",
+    )
+
+    analysis = analyze_geometry(str(path), slice_height_mm=0.25, auto_repair=False)
+
+    metadata = analysis.source_metadata
+    assert metadata is not None
+    assert metadata.file_format == "stl"
+    assert metadata.encoding == "binary"
+    assert metadata.author == "Jane Doe"
+    assert metadata.software == "Meshy AI"
+    assert metadata.software_version == "2.1"
+    assert metadata.software_kind == "ai"
+    assert metadata.embedded_created_at == "2026-04-20T12:34:56Z"
+    assert metadata.likely_ai_generated is True
+    assert any("Meshy AI" in reason for reason in metadata.ai_detection_basis)
+
+
+def test_analysis_extracts_glb_metadata_from_asset_generator(tmp_path):
+    path = _box_glb_path(tmp_path)
+
+    analysis = analyze_geometry(str(path), slice_height_mm=0.25, auto_repair=False)
+
+    metadata = analysis.source_metadata
+    assert metadata is not None
+    assert metadata.file_format == "glb"
+    assert metadata.encoding == "binary"
+    assert metadata.author == "Alex Artist"
+    assert metadata.software == "Blender"
+    assert metadata.software_version == "4.2.1"
+    assert metadata.software_kind == "dcc"
+    assert metadata.embedded_created_at == "2026-04-21T10:11:12Z"
+    assert metadata.likely_ai_generated is False
+
+
+def test_analysis_extracts_3mf_package_metadata(tmp_path):
+    path = _box_3mf_path(tmp_path)
+
+    analysis = analyze_geometry(str(path), slice_height_mm=0.25, auto_repair=False)
+
+    metadata = analysis.source_metadata
+    assert metadata is not None
+    assert metadata.file_format == "3mf"
+    assert metadata.encoding == "zip"
+    assert metadata.author == "Jane Doe"
+    assert metadata.software == "PrusaSlicer"
+    assert metadata.software_version == "2.7.4"
+    assert metadata.software_kind == "slicer"
+    assert metadata.embedded_created_at == "2026-04-22T07:08:09Z"
+    assert metadata.likely_ai_generated is False
+    assert metadata.extracted_fields["unit"] == "millimeter"
 
 
 def test_repair_mesh_file_reports_before_after_fix_state(tmp_path):

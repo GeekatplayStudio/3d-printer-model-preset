@@ -134,11 +134,12 @@ All stores must initialize automatically at startup if missing.
 
 ### Wizard Runtime Analysis and Export
 
-- `POST /wizard/model/check`: guided STL analysis with optional `progress_job_id`.
+- `POST /wizard/model/check`: guided model analysis for `STL`, `GLB`, and `3MF` uploads with optional `progress_job_id`.
 - `GET /wizard/model/check/status/{job_id}`: live wizard analysis status and stage timing lookup.
 - `POST /wizard/model/check/status/{job_id}/cancel`: cooperative cancellation for a running wizard analysis job.
 - `POST /wizard/settings/recommend`: target-aware settings/export generation.
-- upload staging for wizard analysis must stream file chunks instead of buffering the full STL in memory.
+- upload staging for wizard analysis must stream file chunks instead of buffering the full model in memory.
+- geometry analysis responses must expose best-effort `source_metadata` including format, encoding, author/tool hints, embedded timestamps, extracted metadata fields, AI heuristic status, and warnings when the file format does not preserve enough evidence.
 
 ### Catalog and Governance
 
