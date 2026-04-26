@@ -15,8 +15,9 @@ Legacy compatibility note: internal package names, environment variables, SQLite
 - STL analysis, repair, retopology, live progress polling, cooperative cancel, local 3D preview, and post-repair save/recheck verification.
 - Settings generation with provenance, confidence, and downloadable slicer artifacts.
 - Chitubox Free export for MSLA and Ultimaker Cura profile export for FDM.
+- Step 3 selection-stage provenance panel showing source tier, confidence, and source link for the chosen printer, material, and preferred profile.
 - Catalog CRUD, CSV/JSON import/export, version snapshots, audit logs, jobs, schedules, and Prometheus metrics.
-- Source-attributed official seed data updated through `2026-04-24`, including baseline FDM printers, filament materials, and FDM profiles.
+- Source-attributed official seed data updated through `2026-04-26`, now merged as a provenance-backed catalog aggregator with manufacturer-backed filament rows, community cross-check slices, expanded FDM printers, generic filament references, refreshed live Prusament PLA provenance, and normalized FDM profiles.
 
 ## End-To-End Workflow
 
@@ -36,7 +37,7 @@ Supporting UIs:
 
 | Mode | What it does | When to use it |
 | --- | --- | --- |
-| `official_local` | Imports `data/official_catalog_sync.json` bundled with the repo or Docker image. | Best default for local setup and reproducible baseline data. |
+| `official_local` | Imports the checked-in catalog aggregator files bundled with the repo or Docker image. | Best default for local setup and reproducible baseline data with both MSLA and FDM coverage. |
 | `github` | Pulls a normalized sync JSON file from a GitHub repo/path/ref. | Best when your team curates catalog data in GitHub. |
 | `web_json` | Pulls a normalized sync JSON file from a direct HTTP/HTTPS URL. | Best for published feeds outside GitHub. |
 | `web_scrape` | Scrapes supported vendor pages into normalized printer/material/profile rows. | Best when a vendor only publishes specs/settings in HTML. |
@@ -150,6 +151,8 @@ See `docs/LIBRARIES.md` for the fuller dependency breakdown and where each depen
 - Architecture and runtime flow: `docs/ARCHITECTURE.md`
 - Library and tooling breakdown: `docs/LIBRARIES.md`
 - Official seed provenance and source list: `docs/OFFICIAL_DATASET.md`
+- Provenance-backed catalog aggregator tiers and credits: `docs/CATALOG_AGGREGATOR.md`
+- Continuity and anti-drift reference: `docs/CONTINUITY_REFERENCE.md`
 - Product requirements: `docs/PRD.md`
 - Technical requirements: `docs/TRD.md`
 - Project status and near-term milestones: `docs/PROJECT_STATUS.md`
@@ -270,7 +273,7 @@ Import the bundled dataset into the local DB:
 python scripts/import_official_catalog.py --replace-existing
 ```
 
-For more detail, see `docs/OFFICIAL_DATASET.md`.
+For more detail, see `docs/OFFICIAL_DATASET.md` and `docs/CATALOG_AGGREGATOR.md`.
 
 ## Core Storage
 

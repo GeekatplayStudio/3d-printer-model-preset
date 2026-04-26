@@ -12,6 +12,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from app.sync_service import apply_technical_sync
+from app.official_catalog import load_official_sync_payload, official_sync_paths
 
 
 def _default_db_path() -> Path:
@@ -22,12 +23,12 @@ def _default_db_path() -> Path:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Import source-attributed official resin/printer catalog seed data into a local ResinLogic DB.",
+        description="Import the checked-in provenance-backed catalog aggregator into a local ResinLogic DB.",
     )
     parser.add_argument(
         "--seed",
-        default=str(REPO_ROOT / "data" / "official_catalog_sync.json"),
-        help="Path to sync-style JSON payload (default: data/official_catalog_sync.json).",
+        default=None,
+        help="Optional path to a single sync-style JSON payload. When omitted, the checked-in official catalog aggregator files are merged.",
     )
     parser.add_argument(
         "--db",
@@ -41,12 +42,16 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    seed_path = Path(args.seed).expanduser().resolve()
-    if not seed_path.exists():
-        raise SystemExit(f"Seed file not found: {seed_path}")
-
     db_path = Path(args.db).expanduser().resolve() if args.db else _default_db_path().resolve()
-    payload = json.loads(seed_path.read_text(encoding="utf-8"))
+    if args.seed:
+        seed_path = Path(args.seed).expanduser().resolve()
+        if not seed_path.exists():
+            raise SystemExit(f"Seed file not found: {seed_path}")
+        payload = json.loads(seed_path.read_text(encoding="utf-8"))
+        seed_reference = str(seed_path)
+    else:
+        payload = load_official_sync_payload()
+        seed_reference = "; ".join(str(path) for path in official_sync_paths())
 
     # Keep provenance metadata but let operator choose replacement behavior.
     payload["replace_existing"] = bool(args.replace_existing)
@@ -60,7 +65,7 @@ def main() -> int:
             "kind": "official_docs",
             "verified": True,
             "trust_score": 0.92,
-            "seed_file": str(seed_path),
+            "seed_file": seed_reference,
         },
     )
 

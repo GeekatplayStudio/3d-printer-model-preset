@@ -624,6 +624,61 @@
         padding: 8px;
       }
 
+      .catalog-evidence-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .catalog-evidence-card {
+        border: 1px solid #24394d;
+        border-radius: 10px;
+        background: #0b1521;
+        padding: 10px;
+      }
+
+      .catalog-evidence-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+
+      .catalog-evidence-kicker {
+        color: var(--muted);
+        font-size: 0.78rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .catalog-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+      }
+
+      .catalog-badge {
+        border: 1px solid #29425a;
+        border-radius: 999px;
+        padding: 4px 8px;
+        font-size: 0.74rem;
+        color: #cbe0f6;
+        background: #0a1420;
+      }
+
+      .catalog-link {
+        color: #7fe5d5;
+        text-decoration: none;
+      }
+
+      .catalog-link:hover,
+      .catalog-link:focus-visible {
+        text-decoration: underline;
+      }
+
       .check-card {
         border: 1px solid #24394d;
         border-radius: 10px;
@@ -1325,6 +1380,15 @@
 
           <div id="settingsMsg" class="msg">Analyze model first.</div>
 
+          <div id="catalogSelectionPanel" class="catalog-panel" style="display:none">
+            <div class="panel-title">
+              <strong>Catalog Provenance</strong>
+              <span class="status-badge status-info" id="catalogSelectionBadge">Waiting</span>
+            </div>
+            <div class="tiny" id="catalogSelectionSummary">Choose a printer and material to inspect source tier, confidence, and profile evidence.</div>
+            <div id="catalogSelectionDetails" class="catalog-evidence-grid"></div>
+          </div>
+
           <div id="catalogPanel" class="catalog-panel" style="display:none">
             <div class="grid grid-2">
               <div class="catalog-box">
@@ -1364,11 +1428,14 @@
         feedbackHistoryTotal: 0,
         catalogPrinters: [],
         catalogPrintersByTarget: { msla: [], fdm: [] },
+        catalogPrinterDetailsByTarget: { msla: [], fdm: [] },
         catalogResins: [],
         catalogMaterials: [],
         catalogMaterialsByTarget: { msla: [], fdm: [] },
         compatibilityMap: {},
         compatibilityByTarget: { msla: {}, fdm: {} },
+        compatibilityDetailsByTarget: { msla: {}, fdm: {} },
+        catalogMaterialDetailsByTarget: { msla: [], fdm: [] },
         catalogTargets: ["msla"],
         slicersByTarget: { msla: "Chitubox Free", fdm: "Ultimaker Cura" },
         selectedTarget: "msla",
@@ -3284,6 +3351,164 @@
         return state.compatibilityByTarget[normalized] || state.compatibilityMap || {};
       }
 
+      function printerDetailsForTarget(target) {
+        const normalized = normalizeTargetProcess(target);
+        const entries = state.catalogPrinterDetailsByTarget[normalized];
+        return Array.isArray(entries) ? entries : [];
+      }
+
+      function materialDetailsForTarget(target) {
+        const normalized = normalizeTargetProcess(target);
+        const entries = state.catalogMaterialDetailsByTarget[normalized];
+        return Array.isArray(entries) ? entries : [];
+      }
+
+      function compatibilityDetailsForTarget(target) {
+        const normalized = normalizeTargetProcess(target);
+        const details = state.compatibilityDetailsByTarget[normalized];
+        return details && typeof details === "object" ? details : {};
+      }
+
+      function detailByName(entries, name) {
+        const selected = String(name || "").trim();
+        if (!selected) return null;
+        return (Array.isArray(entries) ? entries : []).find((item) => String(item?.name || "").trim() === selected) || null;
+      }
+
+      function compatibilityDetailForSelection(target, printerName, materialName) {
+        const selectedPrinter = String(printerName || "").trim();
+        const selectedMaterial = String(materialName || "").trim();
+        if (!selectedPrinter || !selectedMaterial) return null;
+        const printerMap = compatibilityDetailsForTarget(target)[selectedPrinter];
+        if (!printerMap || typeof printerMap !== "object") return null;
+        return printerMap[selectedMaterial] || null;
+      }
+
+      function formatProvenanceTier(provenance) {
+        const tier = Number(provenance && provenance.source_priority_tier);
+        return Number.isFinite(tier) && tier > 0 ? `Tier ${tier}` : "Tier unknown";
+      }
+
+      function formatProvenanceConfidence(provenance) {
+        const confidence = Number(provenance && provenance.confidence);
+        return Number.isFinite(confidence) ? `Confidence ${Math.round(confidence * 100)}%` : "Confidence pending";
+      }
+
+      function formatSourceType(sourceType) {
+        const value = String(sourceType || "").trim();
+        return value ? value.replaceAll("_", " ") : "source not labeled";
+      }
+
+      function renderProvenanceBadges(provenance) {
+        const details = provenance || {};
+        return `
+          <div class="catalog-badges">
+            <span class="catalog-badge">${escapeHtml(formatProvenanceTier(details))}</span>
+            <span class="catalog-badge">${escapeHtml(formatProvenanceConfidence(details))}</span>
+            <span class="catalog-badge">${escapeHtml(formatSourceType(details.source_type))}</span>
+          </div>
+        `;
+      }
+
+      function renderCatalogEntityList(entries, emptyText, countLabel) {
+        if (!Array.isArray(entries) || !entries.length) {
+          return `<div class='tiny'>${escapeHtml(emptyText)}</div>`;
+        }
+        return `<ol>${entries
+          .map((item) => {
+            const notes = item?.notes ? `<div class="tiny" style="margin-top: 6px">${escapeHtml(item.notes)}</div>` : "";
+            const link = item?.provenance?.source_url
+              ? `<div class="tiny" style="margin-top: 6px"><a class="catalog-link" href="${escapeHtml(item.provenance.source_url)}" target="_blank" rel="noopener noreferrer">Source page</a></div>`
+              : "";
+            const counts = [];
+            if (Number(item?.profile_count) > 0) counts.push(`${Number(item.profile_count)} profiles`);
+            if (Number(item?.compatibility_count) > 0) counts.push(`${Number(item.compatibility_count)} ${countLabel}`);
+            const countText = counts.length ? `<div class="tiny" style="margin-top: 4px">${escapeHtml(counts.join(" | "))}</div>` : "";
+            return `<li><strong>${escapeHtml(item?.name || "")}</strong>${countText}${renderProvenanceBadges(item?.provenance)}${notes}${link}</li>`;
+          })
+          .join("")}</ol>`;
+      }
+
+      function renderCatalogEvidenceCard(title, item, extraLine) {
+        if (!item) return "";
+        const provenance = item.provenance || {};
+        const sourceLink = provenance.source_url
+          ? `<a class="catalog-link" href="${escapeHtml(provenance.source_url)}" target="_blank" rel="noopener noreferrer">Source page</a>`
+          : "No source URL saved";
+        const notes = item.notes ? `<div class="tiny" style="margin-top: 8px">${escapeHtml(item.notes)}</div>` : "";
+        const extra = extraLine ? `<div class="tiny">${escapeHtml(extraLine)}</div>` : "";
+        return `
+          <div class="catalog-evidence-card">
+            <div class="catalog-evidence-title">
+              <div>
+                <div class="catalog-evidence-kicker">${escapeHtml(title)}</div>
+                <strong>${escapeHtml(item.name || item.profile_name || "")}</strong>
+              </div>
+            </div>
+            ${extra}
+            ${renderProvenanceBadges(provenance)}
+            <div class="tiny" style="margin-top: 8px">${escapeHtml(formatSourceType(provenance.source_type))}</div>
+            <div class="tiny" style="margin-top: 4px">${sourceLink}</div>
+            ${notes}
+          </div>
+        `;
+      }
+
+      function renderCatalogSelectionProvenance() {
+        const panel = document.getElementById("catalogSelectionPanel");
+        const badge = document.getElementById("catalogSelectionBadge");
+        const summary = document.getElementById("catalogSelectionSummary");
+        const details = document.getElementById("catalogSelectionDetails");
+        const target = currentTarget();
+        const printerName = document.getElementById("printerSel")?.value || "";
+        const materialName = document.getElementById("resinSel")?.value || "";
+
+        const printer = detailByName(printerDetailsForTarget(target), printerName);
+        const material = detailByName(materialDetailsForTarget(target), materialName);
+        const compatibility = compatibilityDetailForSelection(target, printerName, materialName);
+
+        if (!printer && !material && !compatibility) {
+          panel.style.display = "none";
+          badge.className = "status-badge status-info";
+          badge.textContent = "Waiting";
+          summary.textContent = "Choose a printer and material to inspect source tier, confidence, and profile evidence.";
+          details.innerHTML = "";
+          return;
+        }
+
+        const cards = [
+          renderCatalogEvidenceCard("Printer", printer, printer ? `${Number(printer.profile_count || 0)} profiles linked` : ""),
+          renderCatalogEvidenceCard("Material", material, material ? `${Number(material.compatibility_count || 0)} compatible printers` : ""),
+          compatibility
+            ? renderCatalogEvidenceCard(
+                "Preferred profile",
+                {
+                  name: compatibility.profile_name || `${compatibility.printer_name} + ${compatibility.material_name}`,
+                  notes: compatibility.notes,
+                  provenance: compatibility.provenance || {},
+                },
+                compatibility.layer_height_mm != null
+                  ? `${compatibility.printer_name} + ${compatibility.material_name} at ${compatibility.layer_height_mm} mm`
+                  : `${compatibility.printer_name} + ${compatibility.material_name}`
+              )
+            : "",
+        ]
+          .filter(Boolean)
+          .join("");
+
+        panel.style.display = "block";
+        details.innerHTML = cards;
+        if (compatibility) {
+          badge.className = "status-badge status-pass";
+          badge.textContent = "Matched";
+          summary.textContent = `Best available evidence for this ${targetMeta(target).materialLabel.toLowerCase()} pairing points to ${compatibility.profile_name || "a compatible profile"}.`;
+        } else {
+          badge.className = "status-badge status-warn";
+          badge.textContent = "Partial";
+          summary.textContent = "Source evidence exists for the selected printer or material, but this pair does not expose a preferred compatibility record yet.";
+        }
+      }
+
       function databaseSourceMeta(mode) {
         return DATABASE_SOURCE_META[String(mode || "official_local").trim().toLowerCase()] || DATABASE_SOURCE_META.official_local;
       }
@@ -3468,6 +3693,7 @@
         updateResinOptionsForPrinter();
         renderTargetContext();
         renderCatalogList();
+        renderCatalogSelectionProvenance();
         document.getElementById("settingsSummary").style.display = "none";
         document.getElementById("settingsSummary").innerHTML = "";
         document.getElementById("settingsDownloads").innerHTML = "";
@@ -3484,9 +3710,11 @@
         const allowed = Array.isArray(compatibility[printer]) ? compatibility[printer] : [];
         if (allowed.length > 0) {
           setOptions("resinSel", allowed);
+          renderCatalogSelectionProvenance();
           return;
         }
         setOptions("resinSel", materialsForTarget(currentTarget()));
+        renderCatalogSelectionProvenance();
       }
 
       function escapeHtml(value) {
@@ -3501,17 +3729,21 @@
       function renderCatalogList() {
         const target = currentTarget();
         const meta = targetMeta(target);
-        const printers = printersForTarget(target);
-        const resins = materialsForTarget(target);
+        const printers = printerDetailsForTarget(target);
+        const resins = materialDetailsForTarget(target);
         document.getElementById("catalogPrintersCount").textContent = `Printers: ${printers.length}`;
         document.getElementById("catalogResinsCount").textContent = `${meta.materialLabel}s: ${resins.length}`;
 
-        const printersHtml = printers.length
-          ? `<ol>${printers.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol>`
-          : `<div class='tiny'>No ${escapeHtml(targetMeta(target).label)} printers in catalog yet.</div>`;
-        const resinsHtml = resins.length
-          ? `<ol>${resins.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol>`
-          : `<div class='tiny'>No ${escapeHtml(meta.materialLabel.toLowerCase())} records in catalog yet.</div>`;
+        const printersHtml = renderCatalogEntityList(
+          printers,
+          `No ${targetMeta(target).label} printers in catalog yet.`,
+          "compatible materials"
+        );
+        const resinsHtml = renderCatalogEntityList(
+          resins,
+          `No ${meta.materialLabel.toLowerCase()} records in catalog yet.`,
+          "compatible printers"
+        );
 
         document.getElementById("catalogPrintersList").innerHTML = printersHtml;
         document.getElementById("catalogResinsList").innerHTML = resinsHtml;
@@ -3564,11 +3796,14 @@
         const data = await callApi("/wizard/catalog/options", { headers: headers(false) });
         state.catalogPrinters = data.printers || [];
         state.catalogPrintersByTarget = data.printers_by_target || { msla: [], fdm: [] };
+        state.catalogPrinterDetailsByTarget = data.printer_details_by_target || { msla: [], fdm: [] };
         state.catalogResins = data.resins || [];
         state.catalogMaterials = data.materials || data.resins || [];
         state.catalogMaterialsByTarget = data.materials_by_target || { msla: [], fdm: [] };
+        state.catalogMaterialDetailsByTarget = data.material_details_by_target || { msla: [], fdm: [] };
         state.compatibilityMap = data.compatibility || {};
         state.compatibilityByTarget = data.compatibility_by_target || { msla: {}, fdm: {} };
+        state.compatibilityDetailsByTarget = data.compatibility_details_by_target || { msla: {}, fdm: {} };
         state.catalogTargets = data.targets || ["msla"];
         state.slicersByTarget = { ...state.slicersByTarget, ...(data.slicers_by_target || {}) };
         setOptions(
@@ -3583,6 +3818,7 @@
         updateResinOptionsForPrinter();
         renderTargetContext();
         renderCatalogList();
+        renderCatalogSelectionProvenance();
       }
 
       async function refreshStatus() {
@@ -4142,6 +4378,7 @@
 
       async function init() {
         document.getElementById("printerSel").addEventListener("change", updateResinOptionsForPrinter);
+        document.getElementById("resinSel").addEventListener("change", renderCatalogSelectionProvenance);
         document.getElementById("modelFile").addEventListener("change", onModelFileSelected);
         hydrateHelpBadges();
         onDatabaseSourceChanged();

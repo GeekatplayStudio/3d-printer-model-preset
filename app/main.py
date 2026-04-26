@@ -141,6 +141,7 @@ from app.pipeline import ModularAgenticPipeline
 from app.retopology import RetopologyError, run_blender_retopology
 from app.resin_db import load_resin_database
 from app.scheduler import TechnicalSyncScheduler
+from app.official_catalog import load_official_sync_payload, official_sync_paths
 from app.sync_service import (
     apply_technical_sync,
     fetch_technical_sync_from_github,
@@ -212,7 +213,6 @@ STATIC_DIR = Path(__file__).resolve().parent / "static"
 ADMIN_UI_PATH = STATIC_DIR / "catalog_admin.html"
 APP_UI_PATH = STATIC_DIR / "app.html"
 WIZARD_UI_PATH = STATIC_DIR / "wizard.html"
-OFFICIAL_SYNC_PATH = Path(__file__).resolve().parent.parent / "data" / "official_catalog_sync.json"
 WIZARD_ARTIFACTS_DIR = DATA_DIR / "wizard_artifacts"
 WIZARD_ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
 WIZARD_ARTIFACT_TTL_SECONDS = 7 * 86400
@@ -518,10 +518,7 @@ def _analysis_failure_detail(job_id: str | None, exc: Exception) -> str:
 
 
 def _read_official_sync_payload() -> dict:
-    if not OFFICIAL_SYNC_PATH.exists():
-        raise FileNotFoundError(f"Official catalog file not found: {OFFICIAL_SYNC_PATH}")
-    raw_text = OFFICIAL_SYNC_PATH.read_text(encoding="utf-8")
-    return parse_technical_sync_json(raw_text)
+    return load_official_sync_payload()
 
 
 def _has_source_urls(metadata: object) -> bool:
@@ -533,6 +530,86 @@ def _has_source_urls(metadata: object) -> bool:
 
 def _iso_timestamp() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def _clean_optional_text(value: object) -> str | None:
+    text = str(value or "").strip()
+    return text or None
+
+
+def _catalog_provenance_summary(metadata: object) -> dict[str, object | None]:
+    metadata_obj = metadata if isinstance(metadata, dict) else {}
+
+    source_priority_tier: int | None = None
+    tier_raw = metadata_obj.get("source_priority_tier")
+    try:
+        source_priority_tier = int(tier_raw) if tier_raw is not None else None
+    except (TypeError, ValueError):
+        source_priority_tier = None
+
+    confidence_raw = metadata_obj.get("sync_confidence_score")
+    if confidence_raw is None:
+        confidence_raw = metadata_obj.get("confidence")
+
+    confidence: float | None = None
+    try:
+        confidence = round(float(confidence_raw), 3) if confidence_raw is not None else None
+    except (TypeError, ValueError):
+        confidence = None
+
+    return {
+        "source_url": _clean_optional_text(metadata_obj.get("source_url")),
+        "source_type": _clean_optional_text(metadata_obj.get("source_type")),
+        "source_priority_tier": source_priority_tier,
+        "confidence": confidence,
+        "license_note": _clean_optional_text(metadata_obj.get("license_note")),
+        "retrieved_at": _clean_optional_text(metadata_obj.get("retrieved_at")),
+    }
+
+
+def _wizard_catalog_entity_summary(
+    item: dict,
+    *,
+    target: str,
+    profile_count: int = 0,
+    compatibility_count: int = 0,
+) -> dict[str, object | None]:
+    return {
+        "name": str(item.get("name") or "").strip(),
+        "brand": _clean_optional_text(item.get("brand")),
+        "model": _clean_optional_text(item.get("model")),
+        "material_family": _clean_optional_text(item.get("material_family")),
+        "material_type": _clean_optional_text(item.get("material_type")),
+        "technology": _clean_optional_text(item.get("technology")),
+        "target": target if target in {"msla", "fdm"} else None,
+        "notes": _clean_optional_text(item.get("notes")),
+        "profile_count": max(0, int(profile_count)),
+        "compatibility_count": max(0, int(compatibility_count)),
+        "provenance": _catalog_provenance_summary(item.get("metadata")),
+    }
+
+
+def _wizard_catalog_compatibility_summary(item: dict) -> dict[str, object | None]:
+    metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+    return {
+        "printer_name": str(item.get("printer_name") or "").strip(),
+        "material_name": str(item.get("resin_name") or "").strip(),
+        "profile_name": _clean_optional_text(item.get("profile_name")),
+        "layer_height_mm": item.get("layer_height_mm"),
+        "process": _clean_optional_text(metadata.get("profile_process")),
+        "notes": _clean_optional_text(item.get("notes")),
+        "provenance": _catalog_provenance_summary(metadata),
+    }
+
+
+def _wizard_catalog_profile_rank(item: dict, index: int) -> tuple[int, float, int, int]:
+    provenance = _catalog_provenance_summary(item.get("metadata"))
+    tier = provenance.get("source_priority_tier")
+    confidence = provenance.get("confidence")
+    tier_rank = 5 - int(tier) if isinstance(tier, int) else 0
+    confidence_rank = float(confidence) if isinstance(confidence, float) else 0.0
+    default_rank = 1 if bool(item.get("is_default")) else 0
+    return (tier_rank, confidence_rank, default_rank, index)
 
 
 def _safe_slug(value: str, fallback: str) -> str:
@@ -1199,10 +1276,27 @@ def catalog_health() -> dict[str, object]:
 def wizard_catalog_options(auth: AuthContext = Depends(require_role("viewer"))) -> WizardCatalogOptionsResponse:
     _ = auth
     profiles = list_profiles(db_path=CATALOG_PATH, active_only=True, limit=5000)
+    printer_rows = list_printers(db_path=CATALOG_PATH, limit=2000)
+    material_rows = list_catalog_resins(db_path=CATALOG_PATH, limit=3000)
+
+    printer_rows_by_name = {
+        str(item.get("name") or "").strip(): item
+        for item in printer_rows
+        if str(item.get("name") or "").strip()
+    }
+    material_rows_by_name = {
+        str(item.get("name") or "").strip(): item
+        for item in material_rows
+        if str(item.get("name") or "").strip()
+    }
 
     compatibility_sets: dict[str, set[str]] = {}
     compatibility_by_target_sets: dict[str, dict[str, set[str]]] = {"msla": {}, "fdm": {}}
-    for item in profiles:
+    profile_counts_by_target: dict[str, dict[str, int]] = {"msla": {}, "fdm": {}}
+    material_profile_counts_by_target: dict[str, dict[str, int]] = {"msla": {}, "fdm": {}}
+    best_profile_by_pair: dict[tuple[str, str, str], tuple[tuple[int, float, int, int], dict[str, object | None]]] = {}
+
+    for index, item in enumerate(profiles):
         printer = str(item.get("printer_name", "")).strip()
         resin = str(item.get("resin_name", "")).strip()
         if not printer or not resin:
@@ -1210,6 +1304,15 @@ def wizard_catalog_options(auth: AuthContext = Depends(require_role("viewer"))) 
         compatibility_sets.setdefault(printer, set()).add(resin)
         target = _wizard_target_from_catalog_item(item)
         compatibility_by_target_sets.setdefault(target, {}).setdefault(printer, set()).add(resin)
+        profile_counts_by_target.setdefault(target, {})[printer] = profile_counts_by_target.setdefault(target, {}).get(printer, 0) + 1
+        material_profile_counts_by_target.setdefault(target, {})[resin] = (
+            material_profile_counts_by_target.setdefault(target, {}).get(resin, 0) + 1
+        )
+        pair_key = (target, printer, resin)
+        candidate = (_wizard_catalog_profile_rank(item, index), _wizard_catalog_compatibility_summary(item))
+        existing = best_profile_by_pair.get(pair_key)
+        if existing is None or candidate[0] > existing[0]:
+            best_profile_by_pair[pair_key] = candidate
 
     compatibility = {key: sorted(values) for key, values in compatibility_sets.items()}
     compatibility_by_target = {
@@ -1229,7 +1332,6 @@ def wizard_catalog_options(auth: AuthContext = Depends(require_role("viewer"))) 
     resins = sorted({material for values in materials_by_target.values() for material in values})
 
     if not printers:
-        printer_rows = list_printers(db_path=CATALOG_PATH, limit=2000)
         printer_groups: dict[str, set[str]] = {"msla": set(), "fdm": set()}
         for item in printer_rows:
             name = str(item.get("name", "")).strip()
@@ -1239,7 +1341,6 @@ def wizard_catalog_options(auth: AuthContext = Depends(require_role("viewer"))) 
         printers_by_target = {key: sorted(values) for key, values in printer_groups.items()}
         printers = sorted({name for values in printer_groups.values() for name in values})
     if not resins:
-        material_rows = list_catalog_resins(db_path=CATALOG_PATH, limit=3000)
         material_groups: dict[str, set[str]] = {"msla": set(), "fdm": set()}
         for item in material_rows:
             name = str(item.get("name", "")).strip()
@@ -1257,6 +1358,58 @@ def wizard_catalog_options(auth: AuthContext = Depends(require_role("viewer"))) 
     if not targets:
         targets = ["msla"]
 
+    material_compatibility_counts_by_target: dict[str, dict[str, int]] = {target: {} for target in targets}
+    for target, printer_map in compatibility_by_target.items():
+        material_counts = material_compatibility_counts_by_target.setdefault(target, {})
+        for printer_name, material_names in printer_map.items():
+            _ = printer_name
+            for material_name in material_names:
+                material_counts[material_name] = material_counts.get(material_name, 0) + 1
+
+    printer_details_by_target: dict[str, list[dict[str, object | None]]] = {}
+    material_details_by_target: dict[str, list[dict[str, object | None]]] = {}
+    compatibility_details_by_target: dict[str, dict[str, dict[str, dict[str, object | None]]]] = {
+        target: {} for target in targets
+    }
+
+    for target in targets:
+        printer_details: list[dict[str, object | None]] = []
+        for name in printers_by_target.get(target, []):
+            row = printer_rows_by_name.get(name, {"name": name})
+            printer_details.append(
+                _wizard_catalog_entity_summary(
+                    row,
+                    target=target,
+                    profile_count=profile_counts_by_target.get(target, {}).get(name, 0),
+                    compatibility_count=len(compatibility_by_target.get(target, {}).get(name, [])),
+                )
+            )
+        printer_details_by_target[target] = printer_details
+
+        material_details: list[dict[str, object | None]] = []
+        for name in materials_by_target.get(target, []):
+            row = material_rows_by_name.get(name, {"name": name})
+            material_details.append(
+                _wizard_catalog_entity_summary(
+                    row,
+                    target=target,
+                    profile_count=material_profile_counts_by_target.get(target, {}).get(name, 0),
+                    compatibility_count=material_compatibility_counts_by_target.get(target, {}).get(name, 0),
+                )
+            )
+        material_details_by_target[target] = material_details
+
+        target_pairs: dict[str, dict[str, dict[str, object | None]]] = {}
+        for printer_name, material_names in compatibility_by_target.get(target, {}).items():
+            pair_details: dict[str, dict[str, object | None]] = {}
+            for material_name in material_names:
+                candidate = best_profile_by_pair.get((target, printer_name, material_name))
+                if candidate is not None:
+                    pair_details[material_name] = candidate[1]
+            if pair_details:
+                target_pairs[printer_name] = pair_details
+        compatibility_details_by_target[target] = target_pairs
+
     return WizardCatalogOptionsResponse(
         printers=printers,
         resins=resins,
@@ -1266,6 +1419,9 @@ def wizard_catalog_options(auth: AuthContext = Depends(require_role("viewer"))) 
         printers_by_target=printers_by_target,
         materials_by_target=materials_by_target,
         compatibility_by_target=compatibility_by_target,
+        printer_details_by_target=printer_details_by_target,
+        material_details_by_target=material_details_by_target,
+        compatibility_details_by_target=compatibility_details_by_target,
         slicers_by_target={target: WIZARD_SLICERS_BY_TARGET[target] for target in targets},
     )
 
@@ -1323,7 +1479,7 @@ def wizard_database_status(auth: AuthContext = Depends(require_role("viewer"))) 
         mode="standalone" if standalone_mode() else "server",
         data_dir=str(DATA_DIR),
         storage_path=str(CATALOG_PATH),
-        official_dataset_file=str(OFFICIAL_SYNC_PATH),
+        official_dataset_file="; ".join(str(path) for path in official_sync_paths()),
         official_dataset_updated_at=official_updated_at,
         printers_total=printers_total,
         printers_with_sources=printers_with_sources,
@@ -1437,7 +1593,7 @@ def wizard_database_setup(
                 "kind": "official_docs",
                 "verified": True,
                 "trust_score": 0.92,
-                "source_file": str(OFFICIAL_SYNC_PATH),
+                "source_file": "; ".join(str(path) for path in official_sync_paths()),
                 "retrieved_at": _iso_timestamp(),
             }
         elif mode == "github":

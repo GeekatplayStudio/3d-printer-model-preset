@@ -39,6 +39,7 @@ Primary module: `app/geometry.py`
 - `[x]` wizard target selector plus Cura export for the first FDM workflow
 - `[x]` wizard source selection for local, GitHub, and curated web JSON catalog updates
 - `[x]` supported vendor HTML scraping path for Anycubic product pages and settings guide
+- `[x]` selection-step provenance panel for printer/material/profile evidence in the wizard
 - `[~]` broader FDM wizard guidance and extra slicer/export targets
 - `[ ]` direct SDCP bidirectional runtime integration
 
@@ -65,8 +66,10 @@ Primary modules: `app/feedback_sources.py`, `app/feedback_store.py`, `app/camera
 - `[x]` admin UI with search and row-level edit/delete
 - `[x]` compatibility mapping for wizard printer->resin constrained selection
 - `[x]` material typing and FDM/filament profile support without breaking resin compatibility
+- `[x]` provenance-backed official catalog aggregator with multi-slice bundled seed inputs
+- `[x]` row-aware dedupe that prefers stronger source tier and row confidence over file order
 - `[ ]` migration/version policy for schema changes
-- `[ ]` stricter data validation and dedupe rules for bulk ingestion
+- `[~]` broader trust gating and validation coverage for remote/community bulk ingestion
 
 Primary modules: `app/catalog_store.py`, `app/audit_store.py`, `app/static/catalog_admin.html`
 
@@ -87,8 +90,8 @@ Primary modules: `app/auth.py`, `app/job_queue.py`, `app/scheduler.py`, `app/mon
 
 ## Immediate Next Sprint
 
-1. Broaden FDM wizard guidance, filament family coverage, and additional slicer/export targets.
-2. Harden suction-cup confidence with benchmark corpus and cavity classification checks.
-3. Add stricter trust gating policies (optional block on non-verified settings in wizard).
+1. Broaden Tier 1 manufacturer-backed FDM coverage and add more verified printer-material bundles.
+2. Add stronger trust gating policies, including optional operator warnings or blocks for low-tier profile selections.
+3. Harden suction-cup confidence with benchmark corpus and cavity classification checks.
 4. Define schema migration strategy and release policy.
 5. Broaden source-specific HTML scrapers for more vendors/community sites when a normalized JSON feed is not available.

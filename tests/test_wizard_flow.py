@@ -174,6 +174,9 @@ def test_wizard_ui_and_status_route(tmp_path, monkeypatch):
     assert "/phase3/history/query" in ui.text
     assert "Smart check:" in ui.text
     assert "/phase3/history/summary" in ui.text
+    assert "Catalog Provenance" in ui.text
+    assert "catalogSelectionPanel" in ui.text
+    assert "catalogSelectionDetails" in ui.text
 
 
 def test_wizard_static_preview_assets_are_served(tmp_path, monkeypatch):
@@ -243,7 +246,40 @@ def test_wizard_setup_local_dataset_and_catalog_options(tmp_path, monkeypatch):
     assert options_body["materials_by_target"]["msla"]
     assert options_body["printers_by_target"]["fdm"]
     assert options_body["materials_by_target"]["fdm"]
+    assert len(options_body["printers_by_target"]["fdm"]) >= 5
+    assert len(options_body["materials_by_target"]["fdm"]) >= 13
+    assert "Bambu Lab A1" in options_body["printers_by_target"]["fdm"]
+    assert "Generic ABS" in options_body["materials_by_target"]["fdm"]
+    assert "Anycubic ABS Filament" in options_body["materials_by_target"]["fdm"]
     assert isinstance(options_body["compatibility"], dict)
+    assert options_body["printer_details_by_target"]["fdm"]
+    assert options_body["material_details_by_target"]["fdm"]
+    assert options_body["compatibility_details_by_target"]["fdm"]
+
+    printer_details = {item["name"]: item for item in options_body["printer_details_by_target"]["fdm"]}
+    material_details = {item["name"]: item for item in options_body["material_details_by_target"]["fdm"]}
+
+    assert printer_details["Bambu Lab A1"]["provenance"]["source_priority_tier"] == 2
+    assert material_details["Anycubic ABS Filament"]["provenance"]["source_priority_tier"] == 1
+    assert material_details["Anycubic ABS Filament"]["provenance"]["source_url"].startswith(
+        "https://store.anycubic.com/products/abs-filament"
+    )
+    assert material_details["Prusament PLA Galaxy Black"]["provenance"]["source_url"].startswith(
+        "https://www.prusa3d.com/product/prusament-pla-prusa-galaxy-black-1kg-nfc/"
+    )
+
+    compatibility_detail = options_body["compatibility_details_by_target"]["fdm"]["Anycubic Kobra S1"][
+        "Anycubic ABS Filament"
+    ]
+    assert compatibility_detail["profile_name"] == "Anycubic ABS Structural"
+    assert compatibility_detail["provenance"]["source_priority_tier"] == 1
+    assert compatibility_detail["provenance"]["confidence"] >= 0.8
+
+    high_speed_detail = options_body["compatibility_details_by_target"]["fdm"]["Anycubic Kobra S1"][
+        "Anycubic High Speed PLA"
+    ]
+    assert high_speed_detail["profile_name"] == "Anycubic High Speed PLA Rapid"
+    assert high_speed_detail["provenance"]["source_priority_tier"] == 1
 
 
 def test_wizard_gap_report_and_update_controls(tmp_path, monkeypatch):

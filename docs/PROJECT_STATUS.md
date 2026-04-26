@@ -2,7 +2,7 @@
 
 ## What This Project Is
 
-Geekatplay Studio 3D Print Ops is an agentic print optimization platform with the most mature workflow still centered on resin/MSLA.
+Geekatplay Studio 3D Print Ops is an agentic print optimization platform with mature resin/MSLA workflows and a now-proven provenance-aware FDM/filament branch.
 
 It combines:
 
@@ -11,7 +11,7 @@ It combines:
 - parameter decision logic,
 - operational tooling for maintaining technical databases across supported printers, resins, and filament materials.
 
-The immediate production target started around Elegoo Mars 5 Ultra behavior. The catalog and optimization layers now include an initial FDM/filament branch, but the wizard/export surface is still centered on resin/MSLA workflows.
+The immediate production target started around Elegoo Mars 5 Ultra behavior. The catalog and optimization layers now include a broader FDM/filament branch with bundled manufacturer-backed filament coverage, row-aware dedupe, and selection-step provenance surfaced in the wizard.
 
 ## What Has Been Done
 
@@ -77,7 +77,13 @@ The immediate production target started around Elegoo Mars 5 Ultra behavior. The
   - Step 1 can also scrape supported vendor web pages into normalized printer/material/profile records,
   - supported page scraping currently targets Anycubic official product pages and the official Anycubic resin settings guide,
   - remote sources can be saved as wizard auto-update schedules and triggered manually from the wizard.
-- Bundled official seed dataset refreshed through `2026-04-24` and now includes baseline FDM printers, filament materials, and FDM profiles for local target coverage.
+- Bundled official seed dataset refreshed through `2026-04-26` and now ships as a four-slice provenance-backed aggregator:
+  - conservative MSLA baseline,
+  - FDM printer and generic filament expansion,
+  - manufacturer-backed filament rows and normalized FDM profiles,
+  - community cross-check duplicates held behind row-aware dedupe rules.
+- Live Docker reseed revalidated the bundled catalog against the running wizard endpoints with 7 curated FDM printers, 15 curated FDM materials, and 47 curated compatibility profiles in `/wizard/catalog/options` and `/wizard/database/status`.
+- Wizard Step 3 provenance surface now shows source tier, confidence, and source links for the selected printer, material, and preferred compatibility profile.
 - Version snapshots and restore.
 - Audit logs for all key catalog mutations.
 
@@ -114,7 +120,7 @@ The immediate production target started around Elegoo Mars 5 Ultra behavior. The
 
 ### High Priority
 
-- Implement stronger validation and curation pipelines for external data ingestion to reduce noisy profile inputs.
+- Broaden the current row-aware validation and trust gating beyond bundled seeds so more remote/community inputs can be accepted without lowering operator confidence.
 - Add production-grade migration/version strategy for SQLite schemas.
 - Introduce configuration profiles per printer family (not only Mars-first defaults).
 - Broaden FDM wizard guidance, filament-family coverage, and additional slicer/export targets beyond Cura.
@@ -139,7 +145,7 @@ The immediate production target started around Elegoo Mars 5 Ultra behavior. The
 
 ## Near-Term Milestones
 
-1. FDM wizard/export completion and broader filament-family coverage.
-2. Broader Open3D corpus benchmark coverage and tuning.
-3. Data quality and validation hardening.
+1. Broaden manufacturer-backed FDM coverage and add stronger low-confidence guardrails in the wizard.
+2. Define schema migration/version strategy for long-lived SQLite deployments.
+3. Broader Open3D corpus benchmark coverage and tuning.
 4. Frontend redesign with workflow-first UX.

@@ -243,8 +243,74 @@ def parse_technical_sync_json(text: str) -> dict[str, Any]:
     return payload
 
 
+def _row_metadata(row: dict[str, Any]) -> dict[str, Any]:
+    metadata = row.get("metadata")
+    return metadata if isinstance(metadata, dict) else {}
+
+
+def _metadata_source_priority_tier(metadata: dict[str, Any]) -> int | None:
+    raw = metadata.get("source_priority_tier")
+    try:
+        tier = int(raw)
+    except (TypeError, ValueError):
+        return None
+    return tier if 1 <= tier <= 4 else None
+
+
+def _metadata_confidence(metadata: dict[str, Any]) -> float | None:
+    for key in ("confidence", "sync_confidence_score"):
+        raw = metadata.get(key)
+        try:
+            value = float(raw)
+        except (TypeError, ValueError):
+            continue
+        return max(0.0, min(1.0, value))
+    return None
+
+
+def _metadata_precedence(
+    metadata: dict[str, Any],
+    *,
+    fallback_confidence: float = 0.0,
+    row_index: int,
+) -> tuple[int, float, int, int]:
+    tier = _metadata_source_priority_tier(metadata) or 4
+    confidence = _metadata_confidence(metadata)
+    if confidence is None:
+        confidence = max(0.0, min(1.0, fallback_confidence))
+
+    retrieved_date = None
+    for key in ("retrieved_at", "last_verified_at", "updated_at"):
+        retrieved_date = _parse_date_value(metadata.get(key))
+        if retrieved_date is not None:
+            break
+
+    return (5 - tier, round(confidence, 3), retrieved_date.toordinal() if retrieved_date else 0, row_index)
+
+
+def _resolved_profile_confidence(
+    *,
+    quality: float,
+    source_reliability: float,
+    recency_weight: float,
+    metadata: dict[str, Any],
+) -> float:
+    confidence = quality * source_reliability * recency_weight
+    explicit_confidence = _metadata_confidence(metadata)
+    if explicit_confidence is not None:
+        confidence = (confidence * 0.7) + (explicit_confidence * 0.3)
+
+    tier_bonus = {
+        1: 0.08,
+        2: 0.03,
+        3: -0.05,
+        4: -0.1,
+    }.get(_metadata_source_priority_tier(metadata), 0.0)
+    return round(max(0.0, min(1.0, confidence + tier_bonus)), 3)
+
+
 def _curate_printers(rows: list[Any], report: dict[str, Any]) -> list[dict[str, Any]]:
-    by_name: dict[str, dict[str, Any]] = {}
+    by_name: dict[str, tuple[dict[str, Any], tuple[int, float, int, int]]] = {}
     for idx, row in enumerate(rows, start=1):
         if not isinstance(row, dict):
             _add_curation_note(report, f"Printer row {idx} dropped: expected JSON object.")
@@ -302,14 +368,21 @@ def _curate_printers(rows: list[Any], report: dict[str, Any]) -> list[dict[str, 
         }
 
         key = name.lower()
+        precedence = _metadata_precedence(printer["metadata"], row_index=idx)
         if key in by_name:
-            _add_curation_note(report, f"Duplicate printer '{name}' found; keeping latest row.")
-        by_name[key] = printer
-    return list(by_name.values())
+            _, old_precedence = by_name[key]
+            if precedence > old_precedence:
+                _add_curation_note(report, f"Duplicate printer '{name}' found; replaced prior row using stronger provenance.")
+                by_name[key] = (printer, precedence)
+            else:
+                _add_curation_note(report, f"Duplicate printer '{name}' found; kept prior row with stronger provenance.")
+        else:
+            by_name[key] = (printer, precedence)
+    return [item for item, _ in by_name.values()]
 
 
 def _curate_resins(rows: list[Any], report: dict[str, Any]) -> list[dict[str, Any]]:
-    by_name: dict[str, dict[str, Any]] = {}
+    by_name: dict[str, tuple[dict[str, Any], tuple[int, float, int, int]]] = {}
     for idx, row in enumerate(rows, start=1):
         if not isinstance(row, dict):
             _add_curation_note(report, f"Resin row {idx} dropped: expected JSON object.")
@@ -384,10 +457,17 @@ def _curate_resins(rows: list[Any], report: dict[str, Any]) -> list[dict[str, An
         }
 
         key = name.lower()
+        precedence = _metadata_precedence(resin["metadata"], row_index=idx)
         if key in by_name:
-            _add_curation_note(report, f"Duplicate resin '{name}' found; keeping latest row.")
-        by_name[key] = resin
-    return list(by_name.values())
+            _, old_precedence = by_name[key]
+            if precedence > old_precedence:
+                _add_curation_note(report, f"Duplicate resin '{name}' found; replaced prior row using stronger provenance.")
+                by_name[key] = (resin, precedence)
+            else:
+                _add_curation_note(report, f"Duplicate resin '{name}' found; kept prior row with stronger provenance.")
+        else:
+            by_name[key] = (resin, precedence)
+    return [item for item, _ in by_name.values()]
 
 
 def _curate_profiles(
@@ -605,7 +685,13 @@ def _curate_profiles(
             has_rest_timing=(rest_before is not None and rest_after is not None),
         )
         recency_weight = _recency_weight_for_profile(row)
-        confidence = round(quality * source_reliability * recency_weight, 3)
+        row_metadata = _as_dict(row.get("metadata"))
+        confidence = _resolved_profile_confidence(
+            quality=quality,
+            source_reliability=source_reliability,
+            recency_weight=recency_weight,
+            metadata=row_metadata,
+        )
 
         profile = {
             "printer_id": printer_id,
@@ -637,7 +723,7 @@ def _curate_profiles(
             "is_active": _as_bool(row.get("is_active"), default=True),
             "notes": _clean_text(row.get("notes")),
             "metadata": {
-                **_as_dict(row.get("metadata")),
+                **row_metadata,
                 "profile_process": profile_process,
                 "sync_quality_score": quality,
                 "sync_confidence_score": confidence,
@@ -649,19 +735,25 @@ def _curate_profiles(
         printer_ref: Any = printer_id if printer_id is not None else f"n:{str(printer_name).lower()}"
         resin_ref: Any = resin_id if resin_id is not None else f"n:{str(resin_name).lower()}"
         key = (printer_ref, resin_ref, profile_name.lower(), layer_height)
+        precedence = _metadata_precedence(profile["metadata"], fallback_confidence=confidence, row_index=idx)
         if key in by_key:
             _, old_quality, old_confidence, old_idx = by_key[key]
-            replace = confidence > old_confidence or (confidence == old_confidence and idx > old_idx)
+            old_precedence = _metadata_precedence(
+                _row_metadata(by_key[key][0]),
+                fallback_confidence=old_confidence,
+                row_index=old_idx,
+            )
+            replace = precedence > old_precedence
             if replace:
                 _add_curation_note(
                     report,
-                    f"Duplicate profile '{profile_name}' found; replaced prior row using higher confidence score.",
+                    f"Duplicate profile '{profile_name}' found; replaced prior row using stronger provenance.",
                 )
                 by_key[key] = (profile, quality, confidence, idx)
             else:
                 _add_curation_note(
                     report,
-                    f"Duplicate profile '{profile_name}' found; kept prior row with stronger confidence score.",
+                    f"Duplicate profile '{profile_name}' found; kept prior row with stronger provenance.",
                 )
         else:
             by_key[key] = (profile, quality, confidence, idx)
@@ -899,6 +991,7 @@ def _extract_profile_date(row: dict[str, Any]) -> date | None:
         "updated_at",
         "created_at",
         "last_verified_at",
+        "retrieved_at",
         "tested_at",
         "date",
         "timestamp",

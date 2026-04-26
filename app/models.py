@@ -740,6 +740,39 @@ class WizardRunUpdateNowRequest(BaseModel):
     schedule_id: int | None = None
 
 
+class WizardCatalogProvenanceSummary(BaseModel):
+    source_url: str | None = None
+    source_type: str | None = None
+    source_priority_tier: int | None = Field(default=None, ge=1, le=4)
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    license_note: str | None = None
+    retrieved_at: str | None = None
+
+
+class WizardCatalogEntitySummary(BaseModel):
+    name: str
+    brand: str | None = None
+    model: str | None = None
+    material_family: str | None = None
+    material_type: str | None = None
+    technology: str | None = None
+    target: WizardTargetProcess | None = None
+    notes: str | None = None
+    profile_count: int = Field(default=0, ge=0)
+    compatibility_count: int = Field(default=0, ge=0)
+    provenance: WizardCatalogProvenanceSummary = Field(default_factory=WizardCatalogProvenanceSummary)
+
+
+class WizardCatalogCompatibilitySummary(BaseModel):
+    printer_name: str
+    material_name: str
+    profile_name: str | None = None
+    layer_height_mm: float | None = None
+    process: str | None = None
+    notes: str | None = None
+    provenance: WizardCatalogProvenanceSummary = Field(default_factory=WizardCatalogProvenanceSummary)
+
+
 class WizardCatalogOptionsResponse(BaseModel):
     printers: list[str] = Field(default_factory=list)
     resins: list[str] = Field(default_factory=list)
@@ -749,6 +782,11 @@ class WizardCatalogOptionsResponse(BaseModel):
     printers_by_target: dict[str, list[str]] = Field(default_factory=dict)
     materials_by_target: dict[str, list[str]] = Field(default_factory=dict)
     compatibility_by_target: dict[str, dict[str, list[str]]] = Field(default_factory=dict)
+    printer_details_by_target: dict[str, list[WizardCatalogEntitySummary]] = Field(default_factory=dict)
+    material_details_by_target: dict[str, list[WizardCatalogEntitySummary]] = Field(default_factory=dict)
+    compatibility_details_by_target: dict[str, dict[str, dict[str, WizardCatalogCompatibilitySummary]]] = Field(
+        default_factory=dict
+    )
     slicers_by_target: dict[str, str] = Field(default_factory=dict)
 
 

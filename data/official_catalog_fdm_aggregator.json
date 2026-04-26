@@ -1,0 +1,861 @@
+{
+  "schema_version": "sync-1.3-fdm-aggregator",
+  "updated_at": "2026-04-25",
+  "replace_existing": false,
+  "printers": [
+    {
+      "name": "Bambu Lab A1",
+      "brand": "Bambu Lab",
+      "model": "A1",
+      "technology": "FDM",
+      "xy_resolution_um": null,
+      "build_volume_x_mm": null,
+      "build_volume_y_mm": null,
+      "build_volume_z_mm": null,
+      "tilt_release_supported": null,
+      "wifi_supported": null,
+      "notes": "Profile-backed FDM seed row derived from the Bambu Lab A1 machine namespace in the SimplyPrint/Orca profile repositories.",
+      "metadata": {
+        "manufacturer": "Bambu Lab",
+        "source_urls": [
+          "https://github.com/SimplyPrint/slicer-profiles-db/",
+          "https://github.com/OrcaSlicer/OrcaSlicer/wiki/How-to-create-profiles/442903d4c97adcc01f036023739d6b41ca119be9"
+        ],
+        "source_type": "slicer_profile_repository",
+        "source_priority_tier": 2,
+        "confidence": 0.84,
+        "sync_confidence_score": 0.84,
+        "license_note": "Derived from upstream slicer profile repositories. Preserve attribution and review the upstream repository license before redistributing raw profile content.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "profiles/orcaslicer/BBL/machine/Bambu Lab A1 0.4 nozzle.json"
+      }
+    },
+    {
+      "name": "Bambu Lab A1 mini",
+      "brand": "Bambu Lab",
+      "model": "A1 mini",
+      "technology": "FDM",
+      "xy_resolution_um": null,
+      "build_volume_x_mm": null,
+      "build_volume_y_mm": null,
+      "build_volume_z_mm": null,
+      "tilt_release_supported": null,
+      "wifi_supported": null,
+      "notes": "Profile-backed FDM seed row derived from the Bambu Lab A1 mini machine namespace in the SimplyPrint/Orca profile repositories.",
+      "metadata": {
+        "manufacturer": "Bambu Lab",
+        "source_urls": [
+          "https://github.com/SimplyPrint/slicer-profiles-db/",
+          "https://github.com/OrcaSlicer/OrcaSlicer/wiki/How-to-create-profiles/442903d4c97adcc01f036023739d6b41ca119be9"
+        ],
+        "source_type": "slicer_profile_repository",
+        "source_priority_tier": 2,
+        "confidence": 0.84,
+        "sync_confidence_score": 0.84,
+        "license_note": "Derived from upstream slicer profile repositories. Preserve attribution and review the upstream repository license before redistributing raw profile content.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "profiles/orcaslicer/BBL/machine/Bambu Lab A1 mini 0.4 nozzle.json"
+      }
+    },
+    {
+      "name": "Creality Ender-3 S1",
+      "brand": "Creality",
+      "model": "Ender-3 S1",
+      "technology": "FDM",
+      "xy_resolution_um": null,
+      "build_volume_x_mm": null,
+      "build_volume_y_mm": null,
+      "build_volume_z_mm": null,
+      "tilt_release_supported": null,
+      "wifi_supported": null,
+      "notes": "Profile-backed FDM seed row derived from the Ender-3 S1 Orca/SimplyPrint machine library.",
+      "metadata": {
+        "manufacturer": "Creality",
+        "source_urls": [
+          "https://github.com/SimplyPrint/slicer-profiles-db/",
+          "https://github.com/OrcaSlicer/OrcaSlicer/wiki/How-to-create-profiles/442903d4c97adcc01f036023739d6b41ca119be9"
+        ],
+        "source_type": "slicer_profile_repository",
+        "source_priority_tier": 2,
+        "confidence": 0.82,
+        "sync_confidence_score": 0.82,
+        "license_note": "Derived from upstream slicer profile repositories. Preserve attribution and review the upstream repository license before redistributing raw profile content.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "profiles/orcaslicer/Creality/machine/Creality Ender-3 S1 0.4 nozzle.json"
+      }
+    },
+    {
+      "name": "Elegoo Neptune 4",
+      "brand": "Elegoo",
+      "model": "Neptune 4",
+      "technology": "FDM",
+      "xy_resolution_um": null,
+      "build_volume_x_mm": null,
+      "build_volume_y_mm": null,
+      "build_volume_z_mm": null,
+      "tilt_release_supported": null,
+      "wifi_supported": null,
+      "notes": "Profile-backed FDM seed row derived from the Neptune 4 slicer profile namespaces.",
+      "metadata": {
+        "manufacturer": "Elegoo",
+        "source_urls": [
+          "https://github.com/SimplyPrint/slicer-profiles-db/",
+          "https://github.com/prusa3d/PrusaSlicer-settings",
+          "https://github.com/OrcaSlicer/OrcaSlicer/wiki/How-to-create-profiles/442903d4c97adcc01f036023739d6b41ca119be9"
+        ],
+        "source_type": "slicer_profile_repository",
+        "source_priority_tier": 2,
+        "confidence": 0.82,
+        "sync_confidence_score": 0.82,
+        "license_note": "Derived from upstream slicer profile repositories. Preserve attribution and review the upstream repository license before redistributing raw profile content.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "profiles/orcaslicer/Elegoo/machine/Elegoo Neptune 4 (0.4 nozzle).json"
+      }
+    },
+    {
+      "name": "Anycubic Kobra S1",
+      "brand": "Anycubic",
+      "model": "Kobra S1",
+      "technology": "FDM",
+      "xy_resolution_um": null,
+      "build_volume_x_mm": null,
+      "build_volume_y_mm": null,
+      "build_volume_z_mm": null,
+      "tilt_release_supported": null,
+      "wifi_supported": null,
+      "notes": "Profile-backed FDM seed row derived from the Kobra S1 Orca/SimplyPrint machine library.",
+      "metadata": {
+        "manufacturer": "Anycubic",
+        "source_urls": [
+          "https://github.com/SimplyPrint/slicer-profiles-db/",
+          "https://github.com/OrcaSlicer/OrcaSlicer/wiki/How-to-create-profiles/442903d4c97adcc01f036023739d6b41ca119be9",
+          "https://store.anycubic.com/"
+        ],
+        "source_type": "slicer_profile_repository",
+        "source_priority_tier": 2,
+        "confidence": 0.82,
+        "sync_confidence_score": 0.82,
+        "license_note": "Derived from upstream slicer profile repositories. Preserve attribution and review the upstream repository license before redistributing raw profile content.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "profiles/orcaslicer/Anycubic/machine/Anycubic Kobra S1 0.4 nozzle.json"
+      }
+    }
+  ],
+  "resins": [
+    {
+      "name": "Generic PLA",
+      "brand": "Generic",
+      "series": "Reference FDM",
+      "material_type": "filament",
+      "material_family": "PLA",
+      "filament_diameter_mm": 1.75,
+      "technical_goal": "General-purpose balanced FDM baseline",
+      "nozzle_temp_min_c": 190.0,
+      "nozzle_temp_max_c": 220.0,
+      "bed_temp_c": 60.0,
+      "notes": "Reference filament envelope normalized from educational materials guides for broad FDM starter coverage.",
+      "metadata": {
+        "source_urls": [
+          "https://www.simplify3d.com/resources/materials-guide/properties-table/",
+          "https://3dprintmatrix.org/"
+        ],
+        "source_type": "reference_material_guide",
+        "source_priority_tier": 4,
+        "confidence": 0.58,
+        "sync_confidence_score": 0.58,
+        "license_note": "Reference-only values normalized from the Simplify3D materials guide. Retain attribution and verify upstream usage terms before redistributing raw tables.",
+        "retrieved_at": "2026-04-25"
+      }
+    },
+    {
+      "name": "Generic PETG",
+      "brand": "Generic",
+      "series": "Reference FDM",
+      "material_type": "filament",
+      "material_family": "PETG",
+      "filament_diameter_mm": 1.75,
+      "technical_goal": "Durable everyday FDM parts",
+      "nozzle_temp_min_c": 230.0,
+      "nozzle_temp_max_c": 250.0,
+      "bed_temp_c": 80.0,
+      "notes": "Reference PETG envelope normalized from educational materials guides for broad FDM compatibility.",
+      "metadata": {
+        "source_urls": [
+          "https://www.simplify3d.com/resources/materials-guide/properties-table/",
+          "https://3dprintmatrix.org/"
+        ],
+        "source_type": "reference_material_guide",
+        "source_priority_tier": 4,
+        "confidence": 0.58,
+        "sync_confidence_score": 0.58,
+        "license_note": "Reference-only values normalized from the Simplify3D materials guide. Retain attribution and verify upstream usage terms before redistributing raw tables.",
+        "retrieved_at": "2026-04-25"
+      }
+    },
+    {
+      "name": "Generic ABS",
+      "brand": "Generic",
+      "series": "Reference FDM",
+      "material_type": "filament",
+      "material_family": "ABS",
+      "filament_diameter_mm": 1.75,
+      "technical_goal": "Enclosed durable engineering FDM parts",
+      "nozzle_temp_min_c": 220.0,
+      "nozzle_temp_max_c": 250.0,
+      "bed_temp_c": 100.0,
+      "notes": "Reference ABS envelope normalized from educational materials guides for broader FDM catalog coverage.",
+      "metadata": {
+        "source_urls": [
+          "https://www.simplify3d.com/resources/materials-guide/properties-table/",
+          "https://3dprintmatrix.org/"
+        ],
+        "source_type": "reference_material_guide",
+        "source_priority_tier": 4,
+        "confidence": 0.58,
+        "sync_confidence_score": 0.58,
+        "license_note": "Reference-only values normalized from the Simplify3D materials guide. Retain attribution and verify upstream usage terms before redistributing raw tables.",
+        "retrieved_at": "2026-04-25"
+      }
+    },
+    {
+      "name": "Generic ASA",
+      "brand": "Generic",
+      "series": "Reference FDM",
+      "material_type": "filament",
+      "material_family": "ASA",
+      "filament_diameter_mm": 1.75,
+      "technical_goal": "Outdoor-stable engineering FDM parts",
+      "nozzle_temp_min_c": 240.0,
+      "nozzle_temp_max_c": 260.0,
+      "bed_temp_c": 100.0,
+      "notes": "Reference ASA envelope normalized from educational materials guides for engineering FDM use cases.",
+      "metadata": {
+        "source_urls": [
+          "https://www.simplify3d.com/resources/materials-guide/properties-table/",
+          "https://3dprintmatrix.org/"
+        ],
+        "source_type": "reference_material_guide",
+        "source_priority_tier": 4,
+        "confidence": 0.58,
+        "sync_confidence_score": 0.58,
+        "license_note": "Reference-only values normalized from the Simplify3D materials guide. Retain attribution and verify upstream usage terms before redistributing raw tables.",
+        "retrieved_at": "2026-04-25"
+      }
+    },
+    {
+      "name": "Generic TPU 95A",
+      "brand": "Generic",
+      "series": "Reference FDM",
+      "material_type": "filament",
+      "material_family": "TPU",
+      "filament_diameter_mm": 1.75,
+      "technical_goal": "Flexible general-purpose elastomer prints",
+      "nozzle_temp_min_c": 220.0,
+      "nozzle_temp_max_c": 240.0,
+      "bed_temp_c": 50.0,
+      "notes": "Reference TPU envelope normalized from educational materials guides for flexible FDM support.",
+      "metadata": {
+        "source_urls": [
+          "https://www.simplify3d.com/resources/materials-guide/properties-table/",
+          "https://3dprintmatrix.org/"
+        ],
+        "source_type": "reference_material_guide",
+        "source_priority_tier": 4,
+        "confidence": 0.58,
+        "sync_confidence_score": 0.58,
+        "license_note": "Reference-only values normalized from the Simplify3D materials guide. Retain attribution and verify upstream usage terms before redistributing raw tables.",
+        "retrieved_at": "2026-04-25"
+      }
+    },
+    {
+      "name": "Generic Nylon",
+      "brand": "Generic",
+      "series": "Reference FDM",
+      "material_type": "filament",
+      "material_family": "NYLON",
+      "filament_diameter_mm": 1.75,
+      "technical_goal": "Wear-tolerant engineering filament baseline",
+      "nozzle_temp_min_c": 240.0,
+      "nozzle_temp_max_c": 270.0,
+      "bed_temp_c": 90.0,
+      "notes": "Reference Nylon envelope normalized from educational materials guides for engineering filament support.",
+      "metadata": {
+        "source_urls": [
+          "https://www.simplify3d.com/resources/materials-guide/properties-table/",
+          "https://3dprintmatrix.org/"
+        ],
+        "source_type": "reference_material_guide",
+        "source_priority_tier": 4,
+        "confidence": 0.58,
+        "sync_confidence_score": 0.58,
+        "license_note": "Reference-only values normalized from the Simplify3D materials guide. Retain attribution and verify upstream usage terms before redistributing raw tables.",
+        "retrieved_at": "2026-04-25"
+      }
+    }
+  ],
+  "profiles": [
+    {
+      "printer_name": "Bambu Lab A1",
+      "resin_name": "Generic PLA",
+      "profile_name": "Generic PLA Balanced",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 210.0,
+      "bed_temp_c": 60.0,
+      "print_speed_mm_s": 60.0,
+      "first_layer_speed_mm_s": 22.0,
+      "travel_speed_mm_s": 180.0,
+      "retraction_distance_mm": 0.8,
+      "retraction_speed_mm_s": 35.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 100,
+      "infill_percent": 15.0,
+      "wall_count": 2,
+      "support_style": "tree",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Normalized PLA baseline for the Bambu Lab A1 from slicer profile repositories plus reference filament guidance.",
+      "metadata": {
+        "source_urls": [
+          "https://github.com/SimplyPrint/slicer-profiles-db/",
+          "https://github.com/OrcaSlicer/OrcaSlicer/wiki/How-to-create-profiles/442903d4c97adcc01f036023739d6b41ca119be9",
+          "https://www.simplify3d.com/resources/materials-guide/properties-table/"
+        ],
+        "source_type": "aggregated_profile_bundle",
+        "source_priority_tier": 2,
+        "confidence": 0.8,
+        "sync_confidence_score": 0.8,
+        "license_note": "Derived from upstream slicer profile repositories and reference material guides. Preserve attribution and review upstream licenses before redistributing raw profile content.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Bambu Lab A1 0.4 nozzle + Generic PLA"
+      }
+    },
+    {
+      "printer_name": "Bambu Lab A1",
+      "resin_name": "Generic PETG",
+      "profile_name": "Generic PETG Structural",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 240.0,
+      "bed_temp_c": 80.0,
+      "print_speed_mm_s": 45.0,
+      "first_layer_speed_mm_s": 20.0,
+      "travel_speed_mm_s": 160.0,
+      "retraction_distance_mm": 0.8,
+      "retraction_speed_mm_s": 30.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 45,
+      "infill_percent": 20.0,
+      "wall_count": 3,
+      "support_style": "normal",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Normalized PETG baseline for the Bambu Lab A1 from slicer profile repositories plus reference filament guidance.",
+      "metadata": {
+        "source_urls": [
+          "https://github.com/SimplyPrint/slicer-profiles-db/",
+          "https://github.com/OrcaSlicer/OrcaSlicer/wiki/How-to-create-profiles/442903d4c97adcc01f036023739d6b41ca119be9",
+          "https://www.simplify3d.com/resources/materials-guide/properties-table/"
+        ],
+        "source_type": "aggregated_profile_bundle",
+        "source_priority_tier": 2,
+        "confidence": 0.8,
+        "sync_confidence_score": 0.8,
+        "license_note": "Derived from upstream slicer profile repositories and reference material guides. Preserve attribution and review upstream licenses before redistributing raw profile content.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Bambu Lab A1 0.4 nozzle + Generic PETG"
+      }
+    },
+    {
+      "printer_name": "Bambu Lab A1",
+      "resin_name": "Generic TPU 95A",
+      "profile_name": "Generic TPU Flexible",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 225.0,
+      "bed_temp_c": 50.0,
+      "print_speed_mm_s": 28.0,
+      "first_layer_speed_mm_s": 16.0,
+      "travel_speed_mm_s": 120.0,
+      "retraction_distance_mm": 0.5,
+      "retraction_speed_mm_s": 18.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 60,
+      "infill_percent": 15.0,
+      "wall_count": 2,
+      "support_style": "tree",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Normalized TPU baseline for the Bambu Lab A1 from slicer profile repositories plus reference filament guidance.",
+      "metadata": {
+        "source_urls": [
+          "https://github.com/SimplyPrint/slicer-profiles-db/",
+          "https://github.com/OrcaSlicer/OrcaSlicer/wiki/How-to-create-profiles/442903d4c97adcc01f036023739d6b41ca119be9",
+          "https://www.simplify3d.com/resources/materials-guide/properties-table/"
+        ],
+        "source_type": "aggregated_profile_bundle",
+        "source_priority_tier": 2,
+        "confidence": 0.76,
+        "sync_confidence_score": 0.76,
+        "license_note": "Derived from upstream slicer profile repositories and reference material guides. Preserve attribution and review upstream licenses before redistributing raw profile content.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Bambu Lab A1 0.4 nozzle + Generic TPU"
+      }
+    },
+    {
+      "printer_name": "Bambu Lab A1 mini",
+      "resin_name": "Generic PLA",
+      "profile_name": "Generic PLA Balanced",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 210.0,
+      "bed_temp_c": 60.0,
+      "print_speed_mm_s": 55.0,
+      "first_layer_speed_mm_s": 22.0,
+      "travel_speed_mm_s": 170.0,
+      "retraction_distance_mm": 0.8,
+      "retraction_speed_mm_s": 35.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 100,
+      "infill_percent": 15.0,
+      "wall_count": 2,
+      "support_style": "tree",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Normalized PLA baseline for the Bambu Lab A1 mini from slicer profile repositories plus reference filament guidance.",
+      "metadata": {
+        "source_urls": [
+          "https://github.com/SimplyPrint/slicer-profiles-db/",
+          "https://github.com/OrcaSlicer/OrcaSlicer/wiki/How-to-create-profiles/442903d4c97adcc01f036023739d6b41ca119be9",
+          "https://www.simplify3d.com/resources/materials-guide/properties-table/"
+        ],
+        "source_type": "aggregated_profile_bundle",
+        "source_priority_tier": 2,
+        "confidence": 0.8,
+        "sync_confidence_score": 0.8,
+        "license_note": "Derived from upstream slicer profile repositories and reference material guides. Preserve attribution and review upstream licenses before redistributing raw profile content.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Bambu Lab A1 mini 0.4 nozzle + Generic PLA"
+      }
+    },
+    {
+      "printer_name": "Bambu Lab A1 mini",
+      "resin_name": "Generic PETG",
+      "profile_name": "Generic PETG Balanced",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 240.0,
+      "bed_temp_c": 80.0,
+      "print_speed_mm_s": 42.0,
+      "first_layer_speed_mm_s": 20.0,
+      "travel_speed_mm_s": 150.0,
+      "retraction_distance_mm": 0.8,
+      "retraction_speed_mm_s": 30.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 45,
+      "infill_percent": 20.0,
+      "wall_count": 3,
+      "support_style": "normal",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Normalized PETG baseline for the Bambu Lab A1 mini from slicer profile repositories plus reference filament guidance.",
+      "metadata": {
+        "source_urls": [
+          "https://github.com/SimplyPrint/slicer-profiles-db/",
+          "https://github.com/OrcaSlicer/OrcaSlicer/wiki/How-to-create-profiles/442903d4c97adcc01f036023739d6b41ca119be9",
+          "https://www.simplify3d.com/resources/materials-guide/properties-table/"
+        ],
+        "source_type": "aggregated_profile_bundle",
+        "source_priority_tier": 2,
+        "confidence": 0.8,
+        "sync_confidence_score": 0.8,
+        "license_note": "Derived from upstream slicer profile repositories and reference material guides. Preserve attribution and review upstream licenses before redistributing raw profile content.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Bambu Lab A1 mini 0.4 nozzle + Generic PETG"
+      }
+    },
+    {
+      "printer_name": "Creality Ender-3 S1",
+      "resin_name": "Generic PLA",
+      "profile_name": "Generic PLA Balanced",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 210.0,
+      "bed_temp_c": 60.0,
+      "print_speed_mm_s": 55.0,
+      "first_layer_speed_mm_s": 22.0,
+      "travel_speed_mm_s": 170.0,
+      "retraction_distance_mm": 0.8,
+      "retraction_speed_mm_s": 35.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 100,
+      "infill_percent": 15.0,
+      "wall_count": 2,
+      "support_style": "tree",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Normalized PLA baseline for the Ender-3 S1 from slicer profile repositories plus reference filament guidance.",
+      "metadata": {
+        "source_urls": [
+          "https://github.com/SimplyPrint/slicer-profiles-db/",
+          "https://github.com/OrcaSlicer/OrcaSlicer/wiki/How-to-create-profiles/442903d4c97adcc01f036023739d6b41ca119be9",
+          "https://www.simplify3d.com/resources/materials-guide/properties-table/"
+        ],
+        "source_type": "aggregated_profile_bundle",
+        "source_priority_tier": 2,
+        "confidence": 0.78,
+        "sync_confidence_score": 0.78,
+        "license_note": "Derived from upstream slicer profile repositories and reference material guides. Preserve attribution and review upstream licenses before redistributing raw profile content.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Creality Ender-3 S1 0.4 nozzle + Generic PLA"
+      }
+    },
+    {
+      "printer_name": "Creality Ender-3 S1",
+      "resin_name": "Generic PETG",
+      "profile_name": "Generic PETG Balanced",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 240.0,
+      "bed_temp_c": 80.0,
+      "print_speed_mm_s": 42.0,
+      "first_layer_speed_mm_s": 20.0,
+      "travel_speed_mm_s": 155.0,
+      "retraction_distance_mm": 0.8,
+      "retraction_speed_mm_s": 30.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 45,
+      "infill_percent": 20.0,
+      "wall_count": 3,
+      "support_style": "normal",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Normalized PETG baseline for the Ender-3 S1 from slicer profile repositories plus reference filament guidance.",
+      "metadata": {
+        "source_urls": [
+          "https://github.com/SimplyPrint/slicer-profiles-db/",
+          "https://github.com/OrcaSlicer/OrcaSlicer/wiki/How-to-create-profiles/442903d4c97adcc01f036023739d6b41ca119be9",
+          "https://www.simplify3d.com/resources/materials-guide/properties-table/"
+        ],
+        "source_type": "aggregated_profile_bundle",
+        "source_priority_tier": 2,
+        "confidence": 0.78,
+        "sync_confidence_score": 0.78,
+        "license_note": "Derived from upstream slicer profile repositories and reference material guides. Preserve attribution and review upstream licenses before redistributing raw profile content.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Creality Ender-3 S1 0.4 nozzle + Generic PETG"
+      }
+    },
+    {
+      "printer_name": "Creality Ender-3 S1",
+      "resin_name": "Generic ABS",
+      "profile_name": "Generic ABS Enclosed",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 250.0,
+      "bed_temp_c": 100.0,
+      "chamber_temp_c": 45.0,
+      "print_speed_mm_s": 50.0,
+      "first_layer_speed_mm_s": 18.0,
+      "travel_speed_mm_s": 170.0,
+      "retraction_distance_mm": 1.0,
+      "retraction_speed_mm_s": 35.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 20,
+      "infill_percent": 25.0,
+      "wall_count": 3,
+      "support_style": "normal",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Normalized ABS baseline for the Ender-3 S1 from slicer profile repositories plus reference filament guidance.",
+      "metadata": {
+        "source_urls": [
+          "https://github.com/SimplyPrint/slicer-profiles-db/",
+          "https://github.com/OrcaSlicer/OrcaSlicer/wiki/How-to-create-profiles/442903d4c97adcc01f036023739d6b41ca119be9",
+          "https://www.simplify3d.com/resources/materials-guide/properties-table/"
+        ],
+        "source_type": "aggregated_profile_bundle",
+        "source_priority_tier": 2,
+        "confidence": 0.74,
+        "sync_confidence_score": 0.74,
+        "license_note": "Derived from upstream slicer profile repositories and reference material guides. Preserve attribution and review upstream licenses before redistributing raw profile content.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Creality Ender-3 S1 0.4 nozzle + Generic ABS"
+      }
+    },
+    {
+      "printer_name": "Elegoo Neptune 4",
+      "resin_name": "Generic PLA",
+      "profile_name": "Generic PLA Balanced",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 210.0,
+      "bed_temp_c": 60.0,
+      "print_speed_mm_s": 60.0,
+      "first_layer_speed_mm_s": 22.0,
+      "travel_speed_mm_s": 180.0,
+      "retraction_distance_mm": 0.8,
+      "retraction_speed_mm_s": 35.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 100,
+      "infill_percent": 15.0,
+      "wall_count": 2,
+      "support_style": "tree",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Normalized PLA baseline for the Neptune 4 from slicer profile repositories plus reference filament guidance.",
+      "metadata": {
+        "source_urls": [
+          "https://github.com/SimplyPrint/slicer-profiles-db/",
+          "https://github.com/prusa3d/PrusaSlicer-settings",
+          "https://www.simplify3d.com/resources/materials-guide/properties-table/"
+        ],
+        "source_type": "aggregated_profile_bundle",
+        "source_priority_tier": 2,
+        "confidence": 0.78,
+        "sync_confidence_score": 0.78,
+        "license_note": "Derived from upstream slicer profile repositories and reference material guides. Preserve attribution and review upstream licenses before redistributing raw profile content.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Elegoo Neptune 4 0.4 nozzle + Generic PLA"
+      }
+    },
+    {
+      "printer_name": "Elegoo Neptune 4",
+      "resin_name": "Generic PETG",
+      "profile_name": "Generic PETG Balanced",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 240.0,
+      "bed_temp_c": 80.0,
+      "print_speed_mm_s": 45.0,
+      "first_layer_speed_mm_s": 20.0,
+      "travel_speed_mm_s": 160.0,
+      "retraction_distance_mm": 0.8,
+      "retraction_speed_mm_s": 30.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 45,
+      "infill_percent": 20.0,
+      "wall_count": 3,
+      "support_style": "normal",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Normalized PETG baseline for the Neptune 4 from slicer profile repositories plus reference filament guidance.",
+      "metadata": {
+        "source_urls": [
+          "https://github.com/SimplyPrint/slicer-profiles-db/",
+          "https://github.com/prusa3d/PrusaSlicer-settings",
+          "https://www.simplify3d.com/resources/materials-guide/properties-table/"
+        ],
+        "source_type": "aggregated_profile_bundle",
+        "source_priority_tier": 2,
+        "confidence": 0.78,
+        "sync_confidence_score": 0.78,
+        "license_note": "Derived from upstream slicer profile repositories and reference material guides. Preserve attribution and review upstream licenses before redistributing raw profile content.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Elegoo Neptune 4 0.4 nozzle + Generic PETG"
+      }
+    },
+    {
+      "printer_name": "Elegoo Neptune 4",
+      "resin_name": "Generic ASA",
+      "profile_name": "Generic ASA Structural",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 255.0,
+      "bed_temp_c": 100.0,
+      "chamber_temp_c": 45.0,
+      "print_speed_mm_s": 48.0,
+      "first_layer_speed_mm_s": 18.0,
+      "travel_speed_mm_s": 165.0,
+      "retraction_distance_mm": 1.0,
+      "retraction_speed_mm_s": 35.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 15,
+      "infill_percent": 25.0,
+      "wall_count": 3,
+      "support_style": "normal",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Normalized ASA baseline for the Neptune 4 from slicer profile repositories plus reference filament guidance.",
+      "metadata": {
+        "source_urls": [
+          "https://github.com/SimplyPrint/slicer-profiles-db/",
+          "https://github.com/prusa3d/PrusaSlicer-settings",
+          "https://www.simplify3d.com/resources/materials-guide/properties-table/"
+        ],
+        "source_type": "aggregated_profile_bundle",
+        "source_priority_tier": 2,
+        "confidence": 0.74,
+        "sync_confidence_score": 0.74,
+        "license_note": "Derived from upstream slicer profile repositories and reference material guides. Preserve attribution and review upstream licenses before redistributing raw profile content.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Elegoo Neptune 4 0.4 nozzle + Generic ASA"
+      }
+    },
+    {
+      "printer_name": "Anycubic Kobra S1",
+      "resin_name": "Generic PLA",
+      "profile_name": "Generic PLA Balanced",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 210.0,
+      "bed_temp_c": 60.0,
+      "print_speed_mm_s": 60.0,
+      "first_layer_speed_mm_s": 22.0,
+      "travel_speed_mm_s": 180.0,
+      "retraction_distance_mm": 0.8,
+      "retraction_speed_mm_s": 35.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 100,
+      "infill_percent": 15.0,
+      "wall_count": 2,
+      "support_style": "tree",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Normalized PLA baseline for the Kobra S1 from slicer profile repositories plus reference filament guidance.",
+      "metadata": {
+        "source_urls": [
+          "https://github.com/SimplyPrint/slicer-profiles-db/",
+          "https://github.com/OrcaSlicer/OrcaSlicer/wiki/How-to-create-profiles/442903d4c97adcc01f036023739d6b41ca119be9",
+          "https://www.simplify3d.com/resources/materials-guide/properties-table/"
+        ],
+        "source_type": "aggregated_profile_bundle",
+        "source_priority_tier": 2,
+        "confidence": 0.78,
+        "sync_confidence_score": 0.78,
+        "license_note": "Derived from upstream slicer profile repositories and reference material guides. Preserve attribution and review upstream licenses before redistributing raw profile content.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Anycubic Kobra S1 0.4 nozzle + Generic PLA"
+      }
+    },
+    {
+      "printer_name": "Anycubic Kobra S1",
+      "resin_name": "Generic PETG",
+      "profile_name": "Generic PETG Balanced",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 240.0,
+      "bed_temp_c": 80.0,
+      "print_speed_mm_s": 45.0,
+      "first_layer_speed_mm_s": 20.0,
+      "travel_speed_mm_s": 160.0,
+      "retraction_distance_mm": 0.8,
+      "retraction_speed_mm_s": 30.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 45,
+      "infill_percent": 20.0,
+      "wall_count": 3,
+      "support_style": "normal",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Normalized PETG baseline for the Kobra S1 from slicer profile repositories plus reference filament guidance.",
+      "metadata": {
+        "source_urls": [
+          "https://github.com/SimplyPrint/slicer-profiles-db/",
+          "https://github.com/OrcaSlicer/OrcaSlicer/wiki/How-to-create-profiles/442903d4c97adcc01f036023739d6b41ca119be9",
+          "https://www.simplify3d.com/resources/materials-guide/properties-table/"
+        ],
+        "source_type": "aggregated_profile_bundle",
+        "source_priority_tier": 2,
+        "confidence": 0.78,
+        "sync_confidence_score": 0.78,
+        "license_note": "Derived from upstream slicer profile repositories and reference material guides. Preserve attribution and review upstream licenses before redistributing raw profile content.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Anycubic Kobra S1 0.4 nozzle + Generic PETG"
+      }
+    },
+    {
+      "printer_name": "Anycubic Kobra S1",
+      "resin_name": "Generic ABS",
+      "profile_name": "Generic ABS Enclosed",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 250.0,
+      "bed_temp_c": 100.0,
+      "chamber_temp_c": 45.0,
+      "print_speed_mm_s": 50.0,
+      "first_layer_speed_mm_s": 18.0,
+      "travel_speed_mm_s": 170.0,
+      "retraction_distance_mm": 1.0,
+      "retraction_speed_mm_s": 35.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 20,
+      "infill_percent": 25.0,
+      "wall_count": 3,
+      "support_style": "normal",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Normalized ABS baseline for the Kobra S1 from slicer profile repositories plus reference filament guidance.",
+      "metadata": {
+        "source_urls": [
+          "https://github.com/SimplyPrint/slicer-profiles-db/",
+          "https://github.com/OrcaSlicer/OrcaSlicer/wiki/How-to-create-profiles/442903d4c97adcc01f036023739d6b41ca119be9",
+          "https://www.simplify3d.com/resources/materials-guide/properties-table/"
+        ],
+        "source_type": "aggregated_profile_bundle",
+        "source_priority_tier": 2,
+        "confidence": 0.74,
+        "sync_confidence_score": 0.74,
+        "license_note": "Derived from upstream slicer profile repositories and reference material guides. Preserve attribution and review upstream licenses before redistributing raw profile content.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Anycubic Kobra S1 0.4 nozzle + Generic ABS"
+      }
+    },
+    {
+      "printer_name": "Prusa MK4S",
+      "resin_name": "Generic ASA",
+      "profile_name": "Generic ASA Structural",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 255.0,
+      "bed_temp_c": 100.0,
+      "chamber_temp_c": 45.0,
+      "print_speed_mm_s": 48.0,
+      "first_layer_speed_mm_s": 18.0,
+      "travel_speed_mm_s": 165.0,
+      "retraction_distance_mm": 1.0,
+      "retraction_speed_mm_s": 35.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 15,
+      "infill_percent": 25.0,
+      "wall_count": 3,
+      "support_style": "normal",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Normalized ASA baseline for the MK4S from PrusaSlicer bundle structure plus reference filament guidance.",
+      "metadata": {
+        "source_urls": [
+          "https://github.com/prusa3d/PrusaSlicer-settings",
+          "https://www.simplify3d.com/resources/materials-guide/properties-table/"
+        ],
+        "source_type": "aggregated_profile_bundle",
+        "source_priority_tier": 2,
+        "confidence": 0.82,
+        "sync_confidence_score": 0.82,
+        "license_note": "Derived from upstream slicer profile repositories and reference material guides. Preserve attribution and review upstream licenses before redistributing raw profile content.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "PrusaResearch live bundle + Generic ASA"
+      }
+    },
+    {
+      "printer_name": "Prusa MK4S",
+      "resin_name": "Generic Nylon",
+      "profile_name": "Generic Nylon Engineering",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 260.0,
+      "bed_temp_c": 90.0,
+      "chamber_temp_c": 45.0,
+      "print_speed_mm_s": 40.0,
+      "first_layer_speed_mm_s": 18.0,
+      "travel_speed_mm_s": 150.0,
+      "retraction_distance_mm": 1.0,
+      "retraction_speed_mm_s": 25.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 20,
+      "infill_percent": 25.0,
+      "wall_count": 3,
+      "support_style": "normal",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Normalized Nylon baseline for the MK4S from PrusaSlicer bundle structure plus reference filament guidance.",
+      "metadata": {
+        "source_urls": [
+          "https://github.com/prusa3d/PrusaSlicer-settings",
+          "https://www.simplify3d.com/resources/materials-guide/properties-table/"
+        ],
+        "source_type": "aggregated_profile_bundle",
+        "source_priority_tier": 2,
+        "confidence": 0.78,
+        "sync_confidence_score": 0.78,
+        "license_note": "Derived from upstream slicer profile repositories and reference material guides. Preserve attribution and review upstream licenses before redistributing raw profile content.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "PrusaResearch live bundle + Generic Nylon"
+      }
+    }
+  ]
+}

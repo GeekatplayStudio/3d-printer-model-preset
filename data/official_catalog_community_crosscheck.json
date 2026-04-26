@@ -1,0 +1,155 @@
+{
+  "schema_version": "sync-1.3-community-crosscheck",
+  "updated_at": "2026-04-25",
+  "replace_existing": false,
+  "printers": [
+    {
+      "name": "Bambu Lab A1",
+      "brand": "Bambu Lab",
+      "model": "A1",
+      "technology": "FDM",
+      "xy_resolution_um": null,
+      "build_volume_x_mm": null,
+      "build_volume_y_mm": null,
+      "build_volume_z_mm": null,
+      "tilt_release_supported": null,
+      "wifi_supported": null,
+      "notes": "Community cross-check row retained only as a lower-priority validation source for the Bambu Lab A1 namespace.",
+      "metadata": {
+        "manufacturer": "Bambu Lab",
+        "source_urls": [
+          "https://community.element14.com/technologies/3d-printing-design/b/blog/posts/bambu-lab-a1-review"
+        ],
+        "source_type": "community_profile_repository",
+        "source_priority_tier": 3,
+        "confidence": 0.66,
+        "sync_confidence_score": 0.66,
+        "license_note": "Community article data is provisional. Verify critical specs against official manufacturer sources before production use.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Community cross-check only"
+      }
+    }
+  ],
+  "resins": [
+    {
+      "name": "Anycubic ABS Filament",
+      "brand": "Anycubic",
+      "series": "Cross-check",
+      "material_type": "filament",
+      "material_family": "ABS",
+      "filament_diameter_mm": 1.75,
+      "density_g_cm3": 1.04,
+      "technical_goal": "Community cross-check envelope for ABS filament.",
+      "nozzle_temp_min_c": 235.0,
+      "nozzle_temp_max_c": 265.0,
+      "bed_temp_c": 95.0,
+      "notes": "Lower-priority community cross-check row that should never override the official Anycubic ABS record.",
+      "metadata": {
+        "source_urls": [
+          "https://3dprintmatrix.org/"
+        ],
+        "source_type": "community_database",
+        "source_priority_tier": 3,
+        "confidence": 0.64,
+        "sync_confidence_score": 0.64,
+        "license_note": "Community-contributed source. Verify critical specs against official sources before production use.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Cross-check duplicate"
+      }
+    },
+    {
+      "name": "Prusament PA11 Carbon Fiber Black 800g (NFC)",
+      "brand": "Prusament",
+      "series": "Cross-check",
+      "material_type": "filament",
+      "material_family": "PA11-CF",
+      "filament_diameter_mm": 1.75,
+      "density_g_cm3": null,
+      "technical_goal": "Community cross-check envelope for PA11-CF.",
+      "nozzle_temp_min_c": 270.0,
+      "nozzle_temp_max_c": 290.0,
+      "bed_temp_c": 105.0,
+      "notes": "Lower-priority community cross-check row that should never override the official Prusament PA11-CF record.",
+      "metadata": {
+        "source_urls": [
+          "https://3dprintmatrix.org/"
+        ],
+        "source_type": "community_database",
+        "source_priority_tier": 3,
+        "confidence": 0.63,
+        "sync_confidence_score": 0.63,
+        "license_note": "Community-contributed source. Verify critical specs against official sources before production use.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Cross-check duplicate"
+      }
+    }
+  ],
+  "profiles": [
+    {
+      "printer_name": "Anycubic Kobra S1",
+      "resin_name": "Anycubic ABS Filament",
+      "profile_name": "Anycubic ABS Structural",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 245.0,
+      "bed_temp_c": 90.0,
+      "print_speed_mm_s": 95.0,
+      "first_layer_speed_mm_s": 25.0,
+      "travel_speed_mm_s": 180.0,
+      "retraction_distance_mm": 0.8,
+      "retraction_speed_mm_s": 30.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 35,
+      "infill_percent": 20.0,
+      "wall_count": 3,
+      "support_style": "normal",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Community cross-check duplicate for ABS settings on the Kobra S1.",
+      "metadata": {
+        "source_urls": [
+          "https://3dprintmatrix.org/"
+        ],
+        "source_type": "community_profile_repository",
+        "source_priority_tier": 3,
+        "confidence": 0.67,
+        "sync_confidence_score": 0.67,
+        "license_note": "Community-contributed source. Verify critical specs against official sources before production use.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Cross-check duplicate"
+      }
+    },
+    {
+      "printer_name": "Prusa MK4S",
+      "resin_name": "Prusament PA11 Carbon Fiber Black 800g (NFC)",
+      "profile_name": "Prusament PA11-CF Engineering",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 280.0,
+      "bed_temp_c": 105.0,
+      "print_speed_mm_s": 55.0,
+      "first_layer_speed_mm_s": 20.0,
+      "travel_speed_mm_s": 170.0,
+      "retraction_distance_mm": 0.8,
+      "retraction_speed_mm_s": 30.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 15,
+      "infill_percent": 25.0,
+      "wall_count": 4,
+      "support_style": "normal",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Community cross-check duplicate for the Prusament PA11-CF engineering profile.",
+      "metadata": {
+        "source_urls": [
+          "https://community.element14.com/technologies/3d-printing-design/b/blog/posts/nylon-carbon-fiber-filament-guide"
+        ],
+        "source_type": "community_profile_repository",
+        "source_priority_tier": 3,
+        "confidence": 0.68,
+        "sync_confidence_score": 0.68,
+        "license_note": "Community article data is provisional. Verify critical specs against official manufacturer sources before production use.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Cross-check duplicate"
+      }
+    }
+  ]
+}

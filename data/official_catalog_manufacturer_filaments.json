@@ -1,0 +1,500 @@
+{
+  "schema_version": "sync-1.3-manufacturer-filaments",
+  "updated_at": "2026-04-25",
+  "replace_existing": false,
+  "printers": [],
+  "resins": [
+    {
+      "name": "Anycubic ABS Filament",
+      "brand": "Anycubic",
+      "series": "Functional Filaments",
+      "material_type": "filament",
+      "material_family": "ABS",
+      "filament_diameter_mm": 1.75,
+      "density_g_cm3": 1.05,
+      "technical_goal": "Structural ABS for enclosed FDM printing with reduced warping.",
+      "nozzle_temp_min_c": 240.0,
+      "nozzle_temp_max_c": 280.0,
+      "bed_temp_c": 100.0,
+      "notes": "Official Anycubic ABS product page with TDS-backed print parameters and density.",
+      "metadata": {
+        "manufacturer": "Anycubic",
+        "source_urls": [
+          "https://store.anycubic.com/products/abs-filament"
+        ],
+        "source_type": "manufacturer_product_page",
+        "source_priority_tier": 1,
+        "confidence": 0.94,
+        "sync_confidence_score": 0.94,
+        "license_note": "Official manufacturer reference content aggregated with attribution.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Official ABS filament product page and linked TDS"
+      }
+    },
+    {
+      "name": "Anycubic ASA Filament",
+      "brand": "Anycubic",
+      "series": "Functional Filaments",
+      "material_type": "filament",
+      "material_family": "ASA",
+      "filament_diameter_mm": 1.75,
+      "density_g_cm3": 1.07,
+      "technical_goal": "Outdoor-stable engineering filament with lower odor than ABS.",
+      "nozzle_temp_min_c": 255.0,
+      "nozzle_temp_max_c": 275.0,
+      "bed_temp_c": 100.0,
+      "notes": "Official Anycubic ASA product page with TDS-backed temperature, speed, and density ranges.",
+      "metadata": {
+        "manufacturer": "Anycubic",
+        "source_urls": [
+          "https://store.anycubic.com/products/asa-filament"
+        ],
+        "source_type": "manufacturer_product_page",
+        "source_priority_tier": 1,
+        "confidence": 0.94,
+        "sync_confidence_score": 0.94,
+        "license_note": "Official manufacturer reference content aggregated with attribution.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Official ASA filament product page and linked TDS"
+      }
+    },
+    {
+      "name": "Anycubic TPU 95A",
+      "brand": "Anycubic",
+      "series": "Functional Filaments",
+      "material_type": "filament",
+      "material_family": "TPU",
+      "filament_diameter_mm": 1.75,
+      "density_g_cm3": 1.23,
+      "technical_goal": "Flexible TPU for soft parts, wearable parts, and damping components.",
+      "nozzle_temp_min_c": 195.0,
+      "nozzle_temp_max_c": 230.0,
+      "bed_temp_c": 60.0,
+      "notes": "Official Anycubic TPU 95A product page with TDS-backed temperature, speed, and density ranges.",
+      "metadata": {
+        "manufacturer": "Anycubic",
+        "source_urls": [
+          "https://store.anycubic.com/products/tpu-filament"
+        ],
+        "source_type": "manufacturer_product_page",
+        "source_priority_tier": 1,
+        "confidence": 0.94,
+        "sync_confidence_score": 0.94,
+        "license_note": "Official manufacturer reference content aggregated with attribution.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Official TPU 95A product page and linked TDS"
+      }
+    },
+    {
+      "name": "Anycubic High Speed PLA",
+      "brand": "Anycubic",
+      "series": "PLA High Speed",
+      "material_type": "filament",
+      "material_family": "PLA",
+      "filament_diameter_mm": 1.75,
+      "density_g_cm3": 1.19,
+      "technical_goal": "High-throughput PLA for rapid FDM printing with maintained surface quality.",
+      "nozzle_temp_min_c": 190.0,
+      "nozzle_temp_max_c": 260.0,
+      "bed_temp_c": 60.0,
+      "notes": "Official Anycubic PLA High Speed page with expanded temperature bands, print-speed tiers, and density.",
+      "metadata": {
+        "manufacturer": "Anycubic",
+        "source_urls": [
+          "https://store.anycubic.com/products/high-speed-pla-filament"
+        ],
+        "source_type": "manufacturer_product_page",
+        "source_priority_tier": 1,
+        "confidence": 0.94,
+        "sync_confidence_score": 0.94,
+        "license_note": "Official manufacturer reference content aggregated with attribution.",
+        "retrieved_at": "2026-04-26",
+        "source_mode": "Official PLA High Speed product page and specification table"
+      }
+    },
+    {
+      "name": "Anycubic PETG Filament",
+      "brand": "Anycubic",
+      "series": "PETG Filament",
+      "material_type": "filament",
+      "material_family": "PETG",
+      "filament_diameter_mm": 1.75,
+      "density_g_cm3": 1.23,
+      "technical_goal": "Durable PETG for weather-resistant functional parts and everyday structural prints.",
+      "nozzle_temp_min_c": 230.0,
+      "nozzle_temp_max_c": 250.0,
+      "bed_temp_c": 65.0,
+      "notes": "Official Anycubic PETG page with TDS-backed temperature, speed, and density guidance.",
+      "metadata": {
+        "manufacturer": "Anycubic",
+        "source_urls": [
+          "https://store.anycubic.com/products/petg-filament"
+        ],
+        "source_type": "manufacturer_product_page",
+        "source_priority_tier": 1,
+        "confidence": 0.94,
+        "sync_confidence_score": 0.94,
+        "license_note": "Official manufacturer reference content aggregated with attribution.",
+        "retrieved_at": "2026-04-26",
+        "source_mode": "Official PETG filament product page and linked TDS"
+      }
+    },
+    {
+      "name": "Prusament PLA Galaxy Black",
+      "brand": "Prusament",
+      "series": "Prusament PLA",
+      "material_type": "filament",
+      "material_family": "PLA",
+      "filament_diameter_mm": 1.75,
+      "density_g_cm3": null,
+      "technical_goal": "Official Prusament PLA baseline for clean visual prints, large models, and detailed parts.",
+      "nozzle_temp_min_c": 215.0,
+      "nozzle_temp_max_c": 215.0,
+      "bed_temp_c": 55.0,
+      "notes": "Official Prusament PLA Galaxy Black NFC product page with live technical parameters and supported Prusa print-profile guidance.",
+      "metadata": {
+        "manufacturer": "Prusa",
+        "source_urls": [
+          "https://www.prusa3d.com/product/prusament-pla-prusa-galaxy-black-1kg-nfc/"
+        ],
+        "source_type": "manufacturer_product_page",
+        "source_priority_tier": 1,
+        "confidence": 0.94,
+        "sync_confidence_score": 0.94,
+        "license_note": "Official manufacturer reference content aggregated with attribution.",
+        "retrieved_at": "2026-04-26",
+        "source_mode": "Official Prusament PLA Galaxy Black NFC product page"
+      }
+    },
+    {
+      "name": "Prusament ASA Natural 800g (NFC)",
+      "brand": "Prusament",
+      "series": "Prusament ASA",
+      "material_type": "filament",
+      "material_family": "ASA",
+      "filament_diameter_mm": 1.75,
+      "density_g_cm3": null,
+      "technical_goal": "Official Prusa outdoor-grade ASA for weather-resistant engineering parts.",
+      "nozzle_temp_min_c": 255.0,
+      "nozzle_temp_max_c": 265.0,
+      "bed_temp_c": 110.0,
+      "notes": "Official Prusa material guidance and catalog references for Prusament ASA Natural with 260 plus/minus 5 C nozzle and 110 plus/minus 5 C bed targets.",
+      "metadata": {
+        "manufacturer": "Prusa",
+        "source_urls": [
+          "https://help.prusa3d.com/materials",
+          "https://www.prusa3d.com/category/filament/"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_priority_tier": 1,
+        "confidence": 0.92,
+        "sync_confidence_score": 0.92,
+        "license_note": "Official manufacturer reference content aggregated with attribution.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Official Prusa material guidance cross-checked against current filament catalog"
+      }
+    },
+    {
+      "name": "Prusament PA11 Carbon Fiber Black 800g (NFC)",
+      "brand": "Prusament",
+      "series": "Prusament PA11 Carbon Fiber",
+      "material_type": "filament",
+      "material_family": "PA11-CF",
+      "filament_diameter_mm": 1.75,
+      "density_g_cm3": null,
+      "technical_goal": "Engineering-grade PA11-CF for high-heat, chemical-resistant structural parts.",
+      "nozzle_temp_min_c": 275.0,
+      "nozzle_temp_max_c": 295.0,
+      "bed_temp_c": 110.0,
+      "notes": "Official Prusa product page and printing setup for PA11 Carbon Fiber Black.",
+      "metadata": {
+        "manufacturer": "Prusa",
+        "source_urls": [
+          "https://www.prusa3d.com/product/prusament-pa11-carbon-fiber-black-800g/",
+          "https://help.prusa3d.com/materials"
+        ],
+        "source_type": "manufacturer_product_page",
+        "source_priority_tier": 1,
+        "confidence": 0.94,
+        "sync_confidence_score": 0.94,
+        "license_note": "Official manufacturer reference content aggregated with attribution.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Official PA11 Carbon Fiber product page and Prusa material guidance"
+      }
+    }
+  ],
+  "profiles": [
+    {
+      "printer_name": "Anycubic Kobra S1",
+      "resin_name": "Anycubic ABS Filament",
+      "profile_name": "Anycubic ABS Structural",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 250.0,
+      "bed_temp_c": 100.0,
+      "print_speed_mm_s": 85.0,
+      "first_layer_speed_mm_s": 22.0,
+      "travel_speed_mm_s": 180.0,
+      "retraction_distance_mm": 0.8,
+      "retraction_speed_mm_s": 35.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 20,
+      "infill_percent": 25.0,
+      "wall_count": 3,
+      "support_style": "normal",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Manufacturer-backed ABS baseline for the Kobra S1 using official Anycubic ABS temperature and speed guidance.",
+      "metadata": {
+        "source_urls": [
+          "https://store.anycubic.com/products/abs-filament",
+          "https://github.com/SimplyPrint/slicer-profiles-db/"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_priority_tier": 1,
+        "confidence": 0.92,
+        "sync_confidence_score": 0.92,
+        "license_note": "Official manufacturer reference content aggregated with attribution.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Anycubic ABS official settings normalized for Kobra S1 0.4 mm"
+      }
+    },
+    {
+      "printer_name": "Anycubic Kobra S1",
+      "resin_name": "Anycubic ASA Filament",
+      "profile_name": "Anycubic ASA Outdoor",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 265.0,
+      "bed_temp_c": 100.0,
+      "print_speed_mm_s": 70.0,
+      "first_layer_speed_mm_s": 20.0,
+      "travel_speed_mm_s": 170.0,
+      "retraction_distance_mm": 0.8,
+      "retraction_speed_mm_s": 35.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 15,
+      "infill_percent": 25.0,
+      "wall_count": 3,
+      "support_style": "normal",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Manufacturer-backed ASA baseline for outdoor parts on the Kobra S1.",
+      "metadata": {
+        "source_urls": [
+          "https://store.anycubic.com/products/asa-filament",
+          "https://github.com/SimplyPrint/slicer-profiles-db/"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_priority_tier": 1,
+        "confidence": 0.92,
+        "sync_confidence_score": 0.92,
+        "license_note": "Official manufacturer reference content aggregated with attribution.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Anycubic ASA official settings normalized for Kobra S1 0.4 mm"
+      }
+    },
+    {
+      "printer_name": "Anycubic Kobra S1",
+      "resin_name": "Anycubic TPU 95A",
+      "profile_name": "Anycubic TPU Flexible",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 220.0,
+      "bed_temp_c": 55.0,
+      "print_speed_mm_s": 55.0,
+      "first_layer_speed_mm_s": 18.0,
+      "travel_speed_mm_s": 150.0,
+      "retraction_distance_mm": 0.6,
+      "retraction_speed_mm_s": 25.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 35,
+      "infill_percent": 18.0,
+      "wall_count": 2,
+      "support_style": "tree",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Manufacturer-backed TPU 95A baseline tuned around the official Anycubic TPU range.",
+      "metadata": {
+        "source_urls": [
+          "https://store.anycubic.com/products/tpu-filament",
+          "https://github.com/SimplyPrint/slicer-profiles-db/"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_priority_tier": 1,
+        "confidence": 0.91,
+        "sync_confidence_score": 0.91,
+        "license_note": "Official manufacturer reference content aggregated with attribution.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Anycubic TPU 95A official settings normalized for Kobra S1 0.4 mm"
+      }
+    },
+    {
+      "printer_name": "Anycubic Kobra S1",
+      "resin_name": "Anycubic High Speed PLA",
+      "profile_name": "Anycubic High Speed PLA Rapid",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 220.0,
+      "bed_temp_c": 60.0,
+      "print_speed_mm_s": 200.0,
+      "first_layer_speed_mm_s": 25.0,
+      "travel_speed_mm_s": 220.0,
+      "retraction_distance_mm": 0.8,
+      "retraction_speed_mm_s": 35.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 100,
+      "infill_percent": 15.0,
+      "wall_count": 2,
+      "support_style": "tree",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Manufacturer-backed high-speed PLA baseline for the Kobra S1, normalized from Anycubic's 150 to 300 mm/s speed band.",
+      "metadata": {
+        "source_urls": [
+          "https://store.anycubic.com/products/high-speed-pla-filament",
+          "https://github.com/SimplyPrint/slicer-profiles-db/"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_priority_tier": 1,
+        "confidence": 0.94,
+        "sync_confidence_score": 0.94,
+        "license_note": "Official manufacturer reference content aggregated with attribution.",
+        "retrieved_at": "2026-04-26",
+        "source_mode": "Anycubic PLA High Speed official settings normalized for Kobra S1 0.4 mm"
+      }
+    },
+    {
+      "printer_name": "Anycubic Kobra S1",
+      "resin_name": "Anycubic PETG Filament",
+      "profile_name": "Anycubic PETG Durable",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 240.0,
+      "bed_temp_c": 65.0,
+      "print_speed_mm_s": 120.0,
+      "first_layer_speed_mm_s": 22.0,
+      "travel_speed_mm_s": 180.0,
+      "retraction_distance_mm": 0.8,
+      "retraction_speed_mm_s": 30.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 40,
+      "infill_percent": 20.0,
+      "wall_count": 3,
+      "support_style": "normal",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Manufacturer-backed PETG baseline for the Kobra S1 using official Anycubic PETG temperature and speed guidance.",
+      "metadata": {
+        "source_urls": [
+          "https://store.anycubic.com/products/petg-filament",
+          "https://github.com/SimplyPrint/slicer-profiles-db/"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_priority_tier": 1,
+        "confidence": 0.94,
+        "sync_confidence_score": 0.94,
+        "license_note": "Official manufacturer reference content aggregated with attribution.",
+        "retrieved_at": "2026-04-26",
+        "source_mode": "Anycubic PETG official settings normalized for Kobra S1 0.4 mm"
+      }
+    },
+    {
+      "printer_name": "Prusa MK4S",
+      "resin_name": "Prusament PLA Galaxy Black",
+      "profile_name": "PLA Quality",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 215.0,
+      "bed_temp_c": 55.0,
+      "print_speed_mm_s": 55.0,
+      "first_layer_speed_mm_s": 20.0,
+      "travel_speed_mm_s": 180.0,
+      "retraction_distance_mm": 0.8,
+      "retraction_speed_mm_s": 35.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 100,
+      "infill_percent": 15.0,
+      "wall_count": 2,
+      "support_style": "tree",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Manufacturer-backed MK4S PLA profile refreshed to the live Prusament Galaxy Black NFC product page and current technical parameters.",
+      "metadata": {
+        "source_urls": [
+          "https://www.prusa3d.com/product/prusament-pla-prusa-galaxy-black-1kg-nfc/",
+          "https://github.com/prusa3d/PrusaSlicer-settings"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_priority_tier": 1,
+        "confidence": 0.94,
+        "sync_confidence_score": 0.94,
+        "license_note": "Official manufacturer reference content aggregated with attribution.",
+        "retrieved_at": "2026-04-26",
+        "source_mode": "Prusament PLA Galaxy Black NFC settings normalized for MK4S 0.4 mm"
+      }
+    },
+    {
+      "printer_name": "Prusa MK4S",
+      "resin_name": "Prusament ASA Natural 800g (NFC)",
+      "profile_name": "Prusament ASA Outdoor",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 260.0,
+      "bed_temp_c": 110.0,
+      "print_speed_mm_s": 55.0,
+      "first_layer_speed_mm_s": 20.0,
+      "travel_speed_mm_s": 180.0,
+      "retraction_distance_mm": 0.8,
+      "retraction_speed_mm_s": 35.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 15,
+      "infill_percent": 25.0,
+      "wall_count": 3,
+      "support_style": "normal",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Official Prusa ASA baseline centered on the published 260 plus/minus 5 C nozzle and 110 plus/minus 5 C bed guidance.",
+      "metadata": {
+        "source_urls": [
+          "https://help.prusa3d.com/materials",
+          "https://github.com/prusa3d/PrusaSlicer-settings"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_priority_tier": 1,
+        "confidence": 0.9,
+        "sync_confidence_score": 0.9,
+        "license_note": "Official manufacturer reference content aggregated with attribution.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Prusa material guidance normalized for MK4S 0.4 mm"
+      }
+    },
+    {
+      "printer_name": "Prusa MK4S",
+      "resin_name": "Prusament PA11 Carbon Fiber Black 800g (NFC)",
+      "profile_name": "Prusament PA11-CF Engineering",
+      "layer_height_mm": 0.2,
+      "nozzle_temp_c": 285.0,
+      "bed_temp_c": 110.0,
+      "print_speed_mm_s": 45.0,
+      "first_layer_speed_mm_s": 18.0,
+      "travel_speed_mm_s": 165.0,
+      "retraction_distance_mm": 0.8,
+      "retraction_speed_mm_s": 30.0,
+      "nozzle_diameter_mm": 0.4,
+      "fan_speed_percent": 10,
+      "infill_percent": 30.0,
+      "wall_count": 4,
+      "support_style": "normal",
+      "is_default": true,
+      "is_active": true,
+      "notes": "Official Prusa PA11-CF engineering profile centered on the published 285 plus/minus 10 C nozzle and 110 plus/minus 10 C bed guidance.",
+      "metadata": {
+        "source_urls": [
+          "https://www.prusa3d.com/product/prusament-pa11-carbon-fiber-black-800g/",
+          "https://github.com/prusa3d/PrusaSlicer-settings"
+        ],
+        "source_type": "manufacturer_settings_guide",
+        "source_priority_tier": 1,
+        "confidence": 0.93,
+        "sync_confidence_score": 0.93,
+        "license_note": "Official manufacturer reference content aggregated with attribution.",
+        "retrieved_at": "2026-04-25",
+        "source_mode": "Prusa PA11 Carbon Fiber official settings normalized for MK4S 0.4 mm"
+      }
+    }
+  ]
+}
