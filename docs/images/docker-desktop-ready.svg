@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
+  <title id="title">Docker Desktop ready walkthrough</title>
+  <desc id="desc">Illustrated guide showing Docker Desktop running before starting the app.</desc>
+  <rect width="1280" height="720" fill="#edf6ff"/>
+  <rect x="52" y="44" width="1176" height="632" rx="28" fill="#ffffff" stroke="#0f172a" stroke-width="4"/>
+  <rect x="52" y="44" width="1176" height="64" rx="28" fill="#0b4f8a"/>
+  <text x="90" y="86" font-family="Segoe UI, Arial, sans-serif" font-size="30" fill="#ffffff">Docker Desktop</text>
+
+  <text x="96" y="164" font-family="Segoe UI, Arial, sans-serif" font-size="42" font-weight="700" fill="#102a43">Step 2: Wait until Docker is running</text>
+  <text x="96" y="206" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#486581">Start the containers only after Docker Desktop says it is ready.</text>
+
+  <rect x="96" y="254" width="510" height="316" rx="22" fill="#f8fbff" stroke="#b6d4fe" stroke-width="3"/>
+  <rect x="128" y="292" width="130" height="130" rx="24" fill="#0ea5e9"/>
+  <rect x="156" y="322" width="30" height="28" rx="6" fill="#ffffff"/>
+  <rect x="192" y="322" width="30" height="28" rx="6" fill="#ffffff"/>
+  <rect x="174" y="354" width="30" height="28" rx="6" fill="#ffffff"/>
+  <path d="M 156 394 C 184 408, 220 408, 246 394" fill="#ffffff"/>
+  <text x="290" y="344" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" fill="#0f172a">Engine status</text>
+  <rect x="290" y="368" width="210" height="52" rx="26" fill="#d1fae5" stroke="#10b981" stroke-width="2"/>
+  <text x="346" y="402" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#047857">Running</text>
+  <text x="128" y="474" font-family="Segoe UI, Arial, sans-serif" font-size="22" fill="#334e68">If you just installed Docker, the first startup can take a minute or two.</text>
+  <text x="128" y="510" font-family="Segoe UI, Arial, sans-serif" font-size="22" fill="#334e68">If Windows asks for WSL2 or a restart, finish that first.</text>
+
+  <rect x="676" y="248" width="456" height="336" rx="22" fill="#fefae0" stroke="#e9c46a" stroke-width="3"/>
+  <text x="712" y="296" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="700" fill="#6b4f00">What to do next</text>
+  <circle cx="724" cy="344" r="10" fill="#2a9d8f"/>
+  <text x="748" y="352" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#6b4f00">Open the project folder</text>
+  <circle cx="724" cy="398" r="10" fill="#2a9d8f"/>
+  <text x="748" y="406" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#6b4f00">Run start.bat docker</text>
+  <circle cx="724" cy="452" r="10" fill="#2a9d8f"/>
+  <text x="748" y="460" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#6b4f00">Or run install.bat docker the first time</text>
+  <circle cx="724" cy="506" r="10" fill="#2a9d8f"/>
+  <text x="748" y="514" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#6b4f00">Wait for the first build to finish</text>
+
+  <path d="M 612 408 C 670 408, 690 408, 724 408" fill="none" stroke="#ef476f" stroke-width="8" stroke-linecap="round"/>
+  <polygon points="706,392 734,408 706,424" fill="#ef476f"/>
+
+  <rect x="96" y="610" width="576" height="34" rx="12" fill="#0b4f8a" opacity="0.12"/>
+  <text x="112" y="634" font-family="Segoe UI, Arial, sans-serif" font-size="22" fill="#0b4f8a">If Docker is not running yet, start.bat waits and install.bat will explain what to fix.</text>
+</svg>

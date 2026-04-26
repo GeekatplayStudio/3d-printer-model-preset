@@ -173,14 +173,191 @@ See `docs/LIBRARIES.md` for the fuller dependency breakdown and where each depen
 
 ## Installation
 
-### Prerequisites
+### Fastest Beginner Path On Windows
+
+If you are on Windows and want the easiest setup, use Docker Desktop and the included `install.bat` helper. This is the recommended path for most non-technical users because you do not need to set up Python yourself.
+
+Quick visual reference:
+
+![GitHub Download ZIP walkthrough](docs/images/github-download-zip.svg)
+
+1. Install Docker Desktop.
+  - Easiest option in PowerShell:
+
+  ```powershell
+  winget install -e --id Docker.DockerDesktop
+  ```
+
+  - If Docker Desktop asks to enable WSL2, virtualization, or restart Windows, allow it.
+  - Start Docker Desktop once and wait until it says Docker is running.
+2. Download the project from GitHub.
+  - Easiest option for beginners: open the GitHub repo, click `Code`, then click `Download ZIP`.
+  - Extract the ZIP to a normal folder such as `C:\Projects\3d-printer-model-preset`.
+  - Do not run the app from inside the ZIP file.
+3. Open the extracted folder.
+4. Double-click `install.bat` and choose the Docker option, or open Command Prompt in that folder and run:
+
+  ```bat
+  install.bat docker
+  ```
+
+5. Wait for the first build to finish.
+  - The first Docker build can take several minutes because it downloads Blender and the geometry libraries.
+6. Open the app.
+  - The installer opens the wizard automatically.
+  - If it does not, open these URLs manually:
+    - Wizard: `http://127.0.0.1:8000/wizard`
+    - Ops console: `http://127.0.0.1:8000/app`
+    - Catalog admin: `http://127.0.0.1:8000/catalog/admin`
+    - Prometheus: `http://127.0.0.1:9090`
+
+![Docker Desktop ready walkthrough](docs/images/docker-desktop-ready.svg)
+
+![First launch wizard walkthrough](docs/images/first-launch-wizard.svg)
+
+7. To stop the app later, double-click `stop.bat`, choose Docker, or run:
+
+  ```bat
+  stop.bat docker
+  ```
+
+8. To start it again later, open Docker Desktop if needed and run:
+
+  ```bat
+  start.bat docker
+  ```
+
+### GitHub Download Step By Step
+
+If you have never downloaded a project from GitHub before, use one of these two methods.
+
+#### Option A: Download ZIP
+
+1. Open the repository page in GitHub.
+2. Click the green `Code` button.
+3. Click `Download ZIP`.
+4. Wait for the ZIP file to finish downloading.
+5. Right-click the ZIP file and choose `Extract All...`.
+6. Open the extracted folder.
+
+#### Option B: Use Git
+
+If you prefer Git, install it first:
+
+```powershell
+winget install -e --id Git.Git
+```
+
+Then clone the repo:
+
+```bash
+git clone https://github.com/GeekatplayStudio/3d-printer-model-preset.git
+cd 3d-printer-model-preset
+```
+
+### Windows Helper Script
+
+The repo now includes `install.bat` for Windows users.
+
+- `install.bat docker`: best-effort installs Docker Desktop with `winget` if it is missing, waits for Docker to start, runs `docker compose up --build -d`, and opens the wizard.
+- `install.bat local`: best-effort installs Python 3.12 with `winget` if it is missing, creates `.venv`, installs the app, starts the API in a new terminal, and opens the wizard.
+- `install.bat check`: reports whether `winget`, Python, and Docker are ready on the current PC.
+- `start.bat docker`: starts the already-installed Docker version and opens the wizard.
+- `start.bat local`: starts the already-installed local Python version and opens the wizard.
+- `stop.bat docker`: stops the Docker version.
+- `stop.bat local`: stops the local Python API window started by the helper scripts.
+
+Examples:
+
+```bat
+install.bat docker
+install.bat local
+install.bat check
+start.bat docker
+start.bat local
+stop.bat docker
+stop.bat local
+```
+
+Important limits:
+
+- The script cannot bypass Windows admin prompts.
+- The script cannot skip Docker Desktop's own first-run setup.
+- If Windows asks you to restart after enabling Docker requirements, restart once and rerun the same command.
+- If `winget` is not installed, install `App Installer` from the Microsoft Store or install the missing tools manually.
+- The walkthrough images above are quick-reference visuals so beginners can confirm they are on the right screen.
+
+### Install Common Windows Prerequisites Manually
+
+If you want to install the common Windows tools yourself first, these are the usual commands:
+
+```powershell
+winget install -e --id Git.Git
+winget install -e --id Python.Python.3.12
+winget install -e --id Docker.DockerDesktop
+```
+
+Notes:
+
+- Git is optional if you use `Download ZIP`.
+- Python is optional if you use the Docker path.
+- Docker Desktop is optional if you use the local Python path.
+
+### Manual Docker Setup
+
+Use this when you want the simplest cross-platform runtime with the same services as the shipped Docker setup.
+
+Prerequisites:
+
+- Windows or macOS: Docker Desktop
+- Linux: Docker Engine plus the Docker Compose plugin
+
+Steps:
+
+```bash
+git clone https://github.com/GeekatplayStudio/3d-printer-model-preset.git
+cd 3d-printer-model-preset
+docker compose up --build -d
+```
+
+Services:
+
+- Wizard: `http://127.0.0.1:8000/wizard`
+- Ops console: `http://127.0.0.1:8000/app`
+- Catalog admin: `http://127.0.0.1:8000/catalog/admin`
+- Prometheus: `http://127.0.0.1:9090`
+
+Stop the stack:
+
+```bash
+docker compose down
+```
+
+Start it again later:
+
+```bash
+docker compose up -d
+```
+
+Docker persistence note: `docker-compose.yml` mounts `./local-data` into `/app/local-data`. On startup, the app records `official_catalog_seed_state.json` beside the active `tech_catalog.db` and automatically upserts bundled official seed changes when the bundled dataset `updated_at` value is newer than the last recorded import. Use Step 1 in the wizard or `scripts/import_official_catalog.py` when you want a manual `replace_existing` import, a remote source refresh, or an immediate refresh without restarting the runtime.
+
+### Manual Local Python Setup
+
+Use this path when you do not want Docker.
+
+Prerequisites:
 
 - Python 3.12+
-- Git
 - `pip`
-- Docker Desktop if you want the containerized path
+- Git if you plan to clone instead of downloading the ZIP
 
-### Local Python Setup
+Windows install command for Python if needed:
+
+```powershell
+winget install -e --id Python.Python.3.12
+```
+
+Create the virtual environment:
 
 ```bash
 git clone https://github.com/GeekatplayStudio/3d-printer-model-preset.git
@@ -217,7 +394,7 @@ pip install -e .[dev,open3d-spike]
 Run the API:
 
 ```bash
-uvicorn app.main:app --reload
+uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 Open:
@@ -226,28 +403,13 @@ Open:
 - `http://127.0.0.1:8000/app`
 - `http://127.0.0.1:8000/catalog/admin`
 
-### Docker Compose Setup
+### Beginner Troubleshooting
 
-```bash
-git clone https://github.com/GeekatplayStudio/3d-printer-model-preset.git
-cd 3d-printer-model-preset
-docker compose up --build -d
-```
-
-Services:
-
-- Wizard: `http://127.0.0.1:8000/wizard`
-- Ops console: `http://127.0.0.1:8000/app`
-- Catalog admin: `http://127.0.0.1:8000/catalog/admin`
-- Prometheus: `http://127.0.0.1:9090`
-
-Stop the stack:
-
-```bash
-docker compose down
-```
-
-Docker persistence note: `docker-compose.yml` mounts `./local-data` into `/app/local-data`. On startup, the app records `official_catalog_seed_state.json` beside the active `tech_catalog.db` and automatically upserts bundled official seed changes when the bundled dataset `updated_at` value is newer than the last recorded import. Use Step 1 or `scripts/import_official_catalog.py` when you want a manual `replace_existing` import, a remote source refresh, or an immediate refresh without restarting the runtime.
+- If `install.bat docker` says Docker is not ready, open Docker Desktop manually, wait for it to say it is running, then rerun `install.bat docker`.
+- If `install.bat local` says Python is still not available after install, close the terminal, open a new one, and run the same command again.
+- If `winget` is not recognized, install `App Installer` from the Microsoft Store and rerun the command.
+- If `http://127.0.0.1:8000/wizard` does not open, wait another minute and refresh once. The first start is the slowest.
+- If port `8000` is already in use, stop the old app or old Docker container before starting again.
 
 ## Tests
 

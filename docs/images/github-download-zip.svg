@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
+  <title id="title">GitHub download ZIP walkthrough</title>
+  <desc id="desc">Illustrated guide showing the GitHub Code button and Download ZIP action.</desc>
+  <rect width="1280" height="720" fill="#f4efe4"/>
+  <rect x="40" y="36" width="1200" height="648" rx="28" fill="#ffffff" stroke="#1b1b1b" stroke-width="4"/>
+  <rect x="40" y="36" width="1200" height="60" rx="28" fill="#19323c"/>
+  <circle cx="82" cy="66" r="10" fill="#ff8a5b"/>
+  <circle cx="112" cy="66" r="10" fill="#ffd166"/>
+  <circle cx="142" cy="66" r="10" fill="#7bd389"/>
+  <text x="180" y="74" font-family="Segoe UI, Arial, sans-serif" font-size="28" fill="#ffffff">GitHub Repository</text>
+
+  <text x="92" y="155" font-family="Segoe UI, Arial, sans-serif" font-size="40" font-weight="700" fill="#111111">Step 1: Click Code, then Download ZIP</text>
+  <text x="92" y="195" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#495057">Use this if you do not want to install Git first.</text>
+
+  <rect x="92" y="240" width="820" height="360" rx="20" fill="#f7f9fb" stroke="#d0d7de" stroke-width="3"/>
+  <text x="124" y="288" font-family="Segoe UI, Arial, sans-serif" font-size="26" fill="#57606a">GeekatplayStudio / 3d-printer-model-preset</text>
+  <rect x="662" y="270" width="170" height="54" rx="12" fill="#2da44e"/>
+  <text x="718" y="305" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#ffffff">&lt;/&gt; Code</text>
+
+  <rect x="700" y="332" width="308" height="216" rx="18" fill="#ffffff" stroke="#1f2328" stroke-width="3"/>
+  <text x="728" y="376" font-family="Segoe UI, Arial, sans-serif" font-size="25" fill="#1f2328">Local</text>
+  <text x="728" y="420" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#57606a">Open with GitHub Desktop</text>
+  <text x="728" y="458" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#57606a">Open with Visual Studio</text>
+  <rect x="718" y="485" width="270" height="46" rx="10" fill="#dff3e4" stroke="#2da44e" stroke-width="2"/>
+  <text x="748" y="515" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#116329">Download ZIP</text>
+
+  <path d="M 975 470 C 1100 430, 1115 355, 1005 318" fill="none" stroke="#ef476f" stroke-width="8" stroke-linecap="round"/>
+  <polygon points="997,337 1018,307 980,304" fill="#ef476f"/>
+  <path d="M 1015 507 C 1120 525, 1160 590, 1065 622" fill="none" stroke="#118ab2" stroke-width="8" stroke-linecap="round"/>
+  <polygon points="1074,642 1035,626 1069,602" fill="#118ab2"/>
+
+  <rect x="928" y="110" width="250" height="156" rx="18" fill="#fff4d6" stroke="#e9c46a" stroke-width="3"/>
+  <text x="955" y="154" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#6b4f00">Beginner tip</text>
+  <text x="955" y="194" font-family="Segoe UI, Arial, sans-serif" font-size="22" fill="#6b4f00">After the ZIP downloads:</text>
+  <text x="955" y="226" font-family="Segoe UI, Arial, sans-serif" font-size="22" fill="#6b4f00">1. Right-click it</text>
+  <text x="955" y="256" font-family="Segoe UI, Arial, sans-serif" font-size="22" fill="#6b4f00">2. Choose Extract All...</text>
+
+  <rect x="92" y="620" width="420" height="34" rx="12" fill="#19323c" opacity="0.12"/>
+  <text x="108" y="644" font-family="Segoe UI, Arial, sans-serif" font-size="22" fill="#19323c">Do not run the app directly from the ZIP file.</text>
+</svg>
